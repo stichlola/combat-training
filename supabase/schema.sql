@@ -31,3 +31,7 @@ create policy "Utenti aggiornano i propri dati"
   on public.user_data for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Migrazione per database esistenti (esegui se la tabella era già creata):
+alter table public.user_data add column if not exists session jsonb;
+alter table public.user_data add column if not exists history jsonb;

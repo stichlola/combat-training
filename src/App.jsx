@@ -3,7 +3,8 @@ import { supabase } from "./lib/supabase";
 import {
   Dumbbell, Flame, Timer, Plus, Check, ChevronRight, Play, Square,
   Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search,
-  User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save
+  User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save,
+  Pencil, Info, Pause
 } from "lucide-react";
 
 /* ====================== EXERCISE LIBRARY (pre-loaded) ====================== */
@@ -15,6 +16,7 @@ const EXERCISE_DB = {
   Bicipiti: ["Curl Bilanciere", "Curl Manubri Alternato", "Curl Panca Scott", "Hammer Curl", "Curl ai Cavi", "Curl Concentrato", "Spider Curl"],
   Tricipiti: ["Pushdown Tricipiti", "Pushdown Corda", "French Press", "Estensioni Sopra la Testa", "Panca Presa Stretta", "Dip tra Panche", "Kickback Manubrio"],
   Core: ["Plank", "Crunch", "Crunch ai Cavi", "Russian Twist", "Leg Raise", "Hanging Leg Raise", "Ab Wheel", "Side Plank"],
+  Cardio: ["Corsa", "Camminata Veloce", "Tapis Roulant", "Cyclette", "Ellittica", "Vogatore", "Salto della Corda", "Stepper"],
 };
 const GROUPS = Object.keys(EXERCISE_DB);
 const findGroup = (name) => {
@@ -24,7 +26,83 @@ const findGroup = (name) => {
   return "Altro";
 };
 
-const MOCK_HISTORY = []; // lo storico si popola completando i workout
+
+/* ---------------- Descrizioni esecuzione esercizi ---------------- */
+const EXERCISE_INFO = {
+  "Panca Piana Bilanciere": "Sdraiati sulla panca con scapole addotte e piedi a terra. Impugna il bilanciere poco oltre le spalle, scendi controllato fino a sfiorare il petto e spingi verso l'alto senza bloccare i gomiti. Mantieni i glutei sulla panca.",
+  "Panca Inclinata Bilanciere": "Panca a 30-45°. Scendi con il bilanciere verso la parte alta del petto e spingi in verticale. Enfatizza la porzione clavicolare del pettorale.",
+  "Chest Press": "Regola il sedile con le maniglie all'altezza del petto. Spingi in avanti senza estendere completamente i gomiti e torna lento in apertura mantenendo tensione.",
+  "Croci Manubri": "Sdraiato, braccia semiflesse e fisse. Apri i manubri ad arco fino ad avvertire allungamento sul petto, poi richiudi come per abbracciare. Movimento ampio, carichi moderati.",
+  "Push-Up": "Mani poco oltre le spalle, corpo in linea dalla testa ai talloni. Scendi con il petto verso terra tenendo i gomiti a ~45° e spingi su senza inarcare la schiena.",
+  "Dip alle Parallele": "Sospeso alle parallele, busto leggermente inclinato avanti per il petto. Scendi finché le spalle sono poco sotto i gomiti e risali spingendo. Fermati prima se avverti fastidio alle spalle.",
+  "Trazioni": "Presa prona poco oltre le spalle. Parti da braccia distese, tira il petto verso la sbarra portando i gomiti in basso e indietro, scendi controllato senza slanci.",
+  "Lat Machine Avanti": "Impugna larga la sbarra, busto leggermente indietro. Tira verso l'alto del petto pensando a spingere i gomiti in basso, risali frenando il carico.",
+  "Rematore Bilanciere": "Busto inclinato ~45° con schiena neutra e core attivo. Tira il bilanciere verso l'ombelico tenendo i gomiti vicini al corpo, scendi controllato.",
+  "Pulley Basso": "Seduto, gambe semiflesse e schiena dritta. Tira la maniglia verso l'addome stringendo le scapole, torna avanti allungando senza incurvare la schiena.",
+  "Stacco da Terra": "Piedi sotto il bilanciere, schiena neutra, petto in fuori. Spingi il pavimento con le gambe e sali estendendo anche e ginocchia insieme, bilanciere aderente al corpo. Tecnica prima del carico.",
+  "Squat Bilanciere": "Bilanciere sui trapezi, piedi poco oltre le spalle. Scendi spingendo le anche indietro e le ginocchia in linea con le punte fino a cosce parallele (o sotto), risali spingendo con tutto il piede.",
+  "Leg Press": "Piedi al centro della pedana alla larghezza spalle. Scendi controllato fino a ~90° senza staccare il bacino dallo schienale, spingi senza bloccare le ginocchia.",
+  "Affondi Manubri": "Passo avanti ampio, scendi in verticale finché il ginocchio posteriore sfiora terra. Il ginocchio anteriore resta in linea con il piede. Spingi con il tallone per risalire.",
+  "Stacco Rumeno": "Gambe quasi tese, scendi facendo scivolare il bilanciere lungo le cosce spingendo le anche indietro, schiena neutra. Risali contraendo glutei e femorali.",
+  "Leg Extension": "Regola il cuscinetto sopra le caviglie. Estendi le gambe con controllo fino a contrarre il quadricipite, scendi frenando senza far cadere il pacco pesi.",
+  "Leg Curl Sdraiato": "Cuscinetto sopra i talloni. Fletti le gambe portando i talloni verso i glutei senza sollevare il bacino, torna lento in allungamento.",
+  "Hip Thrust": "Scapole appoggiate alla panca, bilanciere sul bacino. Spingi con i talloni ed estendi le anche fino ad allineare busto e cosce, contraendo forte i glutei in alto.",
+  "Calf Raise in Piedi": "Avampiedi sul rialzo, talloni liberi. Sali il più in alto possibile sulle punte, pausa, scendi in massimo allungamento. Movimento lento e completo.",
+  "Military Press": "In piedi, bilanciere alle clavicole, core e glutei contratti. Spingi in verticale portando la testa leggermente avanti a fine spinta. Non inarcare la zona lombare.",
+  "Alzate Laterali": "Manubri ai fianchi, gomiti semiflessi. Solleva lateralmente fino all'altezza delle spalle guidando con i gomiti, scendi lento. Carichi leggeri, zero slanci.",
+  "Arnold Press": "Parti con i manubri davanti alle spalle e palmi verso di te; spingendo in alto ruota i polsi fino ad avere i palmi in avanti. Torna ruotando in senso inverso.",
+  "Face Pull": "Corda all'altezza del viso. Tira verso la fronte aprendo i gomiti in fuori e ruotando esternamente le spalle. Ottimo per la salute della cuffia.",
+  "Curl Bilanciere": "In piedi, gomiti fermi ai fianchi. Fletti gli avambracci portando il bilanciere alle spalle senza oscillare il busto, scendi in 2-3 secondi.",
+  "Hammer Curl": "Come il curl ma con presa neutra (palmi che si guardano). Colpisce brachiale e avambraccio. Gomiti fissi, discesa controllata.",
+  "Curl Panca Scott": "Braccia appoggiate sul cuscino inclinato. Fletti fino in alto e scendi quasi a braccia distese senza mai perdere tensione. Isola il bicipite eliminando lo slancio.",
+  "Pushdown Tricipiti": "Alla poulie alta, gomiti bloccati ai fianchi. Estendi gli avambracci fino in basso contraendo il tricipite, risali frenando fino ai 90°.",
+  "French Press": "Sdraiato, bilanciere EZ sopra la fronte. Piega solo i gomiti scendendo verso la testa e riestendi. Gomiti stretti e fermi per tutto il movimento.",
+  "Panca Presa Stretta": "Come la panca piana ma con presa alla larghezza spalle e gomiti vicini al corpo. Il carico si sposta sui tricipiti.",
+  "Plank": "Avambracci a terra, corpo in linea, addome e glutei contratti. Non far cadere il bacino né alzarlo. Respira e mantieni la posizione per il tempo previsto.",
+  "Crunch": "Sdraiato, gambe piegate, mani alle tempie. Solleva le scapole arrotondando la parte alta della schiena, espira contraendo l'addome, scendi lento.",
+  "Leg Raise": "Sdraiato, mani sotto i glutei. Solleva le gambe tese fino alla verticale e scendile lente senza toccare terra, schiena lombare sempre aderente.",
+  "Russian Twist": "Seduto con busto inclinato indietro e gambe sollevate. Ruota il busto da un lato all'altro toccando terra accanto al fianco, con o senza peso.",
+  "Corsa": "Postura eretta, sguardo avanti, appoggio sotto il baricentro. Mantieni un ritmo in cui riesci a parlare a frasi corte (fondo lento) o spingi a intervalli per l'alta intensità. Aumenta il volume gradualmente.",
+  "Tapis Roulant": "Imposta velocità o pendenza adatte al tuo livello, non aggrapparti ai corrimano. Camminata in salita (5-10%) è un'ottima alternativa a basso impatto.",
+  "Cyclette": "Regola la sella all'altezza dell'anca: gamba quasi distesa nel punto più basso. Cadenza fluida 70-90 rpm, resistenza tale da mantenere lo sforzo costante.",
+  "Vogatore": "Sequenza: spinta gambe → apertura busto → tirata braccia; ritorno in ordine inverso. La forza viene per il 60% dalle gambe. Schiena neutra sempre.",
+  "Salto della Corda": "Salta basso sull'avampiede, polsi che ruotano la corda, gomiti vicini al corpo. Ottimo per condizionamento: alterna round da 1-3 minuti a pause brevi.",
+};
+const INFO_FALLBACK = {
+  Petto: "Esercizio per il pettorale: scapole addotte, movimento controllato in discesa e spinta senza bloccare i gomiti. Concentrati sul sentire lavorare il petto, non solo braccia e spalle.",
+  Dorso: "Esercizio di tirata per il dorso: parti da braccia distese, tira guidando con i gomiti (non con le mani) e stringi le scapole a fine movimento. Torna in allungamento frenando il carico.",
+  Gambe: "Esercizio per la parte inferiore: schiena neutra, ginocchia in linea con le punte dei piedi, scendi controllato e spingi con tutto il piede. La profondità corretta vale più del carico.",
+  Spalle: "Esercizio per i deltoidi: carichi moderati, niente slanci, movimento guidato dai gomiti. Ferma l'alzata all'altezza delle spalle e scendi lentamente.",
+  Bicipiti: "Esercizio di flessione per i bicipiti: gomiti fermi vicino al busto, sali contraendo e scendi in 2-3 secondi senza oscillare il corpo.",
+  Tricipiti: "Esercizio di estensione per i tricipiti: gomiti bloccati e vicini al corpo, estendi completamente contraendo e risali frenando il carico.",
+  Core: "Esercizio per il core: bacino stabile, zona lombare protetta, movimento lento guidato dall'addome con espirazione nella fase di contrazione.",
+  Cardio: "Attività aerobica: mantieni un ritmo sostenibile e costante, monitora respiro o frequenza cardiaca, e incrementa durata o intensità in modo graduale settimana dopo settimana.",
+  Altro: "Esegui il movimento in modo lento e controllato, con postura corretta e senza compensi. Se non conosci la tecnica, chiedi una dimostrazione al trainer della tua palestra.",
+};
+
+/* ---------------- Mapping import → database esercizi ---------------- */
+/* Cerca la corrispondenza migliore col DB; il testo in eccesso del titolo finisce nelle note */
+const normalizeEx = (s) => s.toLowerCase().replace(/[^a-zà-ù0-9 ]/gi, " ").replace(/\s+/g, " ").trim();
+const matchToDb = (title) => {
+  const t = normalizeEx(title);
+  let best = null;
+  for (const list of Object.values(EXERCISE_DB)) {
+    for (const dbEx of list) {
+      const d = normalizeEx(dbEx);
+      if (t === d) return { name: dbEx, note: "" };
+      if ((t.startsWith(d + " ") || t.includes(" " + d + " ") || t.endsWith(" " + d)) &&
+          (!best || d.length > normalizeEx(best).length)) best = dbEx;
+    }
+  }
+  if (best) {
+    const note = title.replace(new RegExp(best.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), "")
+      .replace(/^[\s\-–—·,:]+|[\s\-–—·,:]+$/g, "");
+    return { name: best, note };
+  }
+  return { name: title, note: "" };
+};
+
+
 
 const DEFAULT_ROUTINES = [];
 const DEFAULT_PRS = {};
@@ -107,6 +185,13 @@ button{background:none;border:none;color:inherit;font-family:inherit;text-align:
 button.btn{text-align:center}
 
 .fade-in{animation:fi .3s ease both}
+/* --- modali e overlay --- */
+.modal-back{position:fixed;inset:0;background:rgba(2,6,10,.82);backdrop-filter:blur(3px);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{width:100%;max-width:430px;background:#071523;border:1px solid #57c8f2;box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto}
+.float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c2a3d;border:1px solid #57c8f2;cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
+.float-timer{position:fixed;left:50%;transform:translateX(-50%);bottom:86px;z-index:96;background:#071523;border:1px solid #ffd76a;box-shadow:0 0 24px rgba(255,215,106,.22);padding:12px 16px;min-width:270px}
+.set-grid-t{display:grid;grid-template-columns:32px 1fr 64px 48px;gap:8px;align-items:center}
+
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .toast-in{animation:ti .35s cubic-bezier(.34,1.4,.64,1)}
 @keyframes ti{from{transform:translate(-50%,-16px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
@@ -262,6 +347,8 @@ export default function App() {
   const [nutri, setNutri] = useState(null);
   const [routines, setRoutines] = useState(DEFAULT_ROUTINES);
   const [prs, setPrs] = useState(DEFAULT_PRS);
+  const [session, setSession] = useState(null);   // sessione attiva: persiste su Supabase, si riprende al rientro
+  const [history, setHistory] = useState([]);     // mission log allenamenti completati
 
   /* Sessione: ascolta login/logout e idrata i dati utente dal DB */
   useEffect(() => {
@@ -273,6 +360,8 @@ export default function App() {
         if (data.nutrition) setNutri(data.nutrition);
         if (data.routines) setRoutines(data.routines);
         if (data.prs) setPrs(data.prs);
+        if (data.session) setSession(data.session);
+        if (data.history) setHistory(data.history);
         if (data.xp != null) setXp(data.xp);
         if (data.level != null) setLevel(data.level);
       }
@@ -301,10 +390,11 @@ export default function App() {
     saveRef2.current = setTimeout(() => {
       supabase.from("user_data").upsert({
         user_id: user.id, body, nutrition: nutri, routines, prs,
+        session, history,
         xp, level, streak, updated_at: new Date().toISOString(),
       }).then(({ error }) => error && console.error("Save error:", error.message));
     }, 800);
-  }, [user, hydrated, body, nutri, routines, prs, xp, level]);
+  }, [user, hydrated, body, nutri, routines, prs, session, history, xp, level]);
 
   const fireToast = (t) => {
     setToast(t);
@@ -408,7 +498,7 @@ export default function App() {
         </aside>
 
         <main className="main-area">
-          {tab === "training" && <Training addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} />}
+          {tab === "training" && <Training addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
             <NutritionTab body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
@@ -440,11 +530,12 @@ export default function App() {
 }
 
 /* ================================ TRAINING ================================ */
-function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
+function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
   const [view, setView] = useState("home");
-  const [activeId, setActiveId] = useState(null);
-
+  const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
+  const [confirmAbandon, setConfirmAbandon] = useState(false);
+
   const deleteRoutine = (id) => {
     setRoutines((rs) => rs.filter((r) => r.id !== id));
     setConfirmDel(null);
@@ -452,18 +543,41 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
   };
 
   const saveRoutine = (r, msg) => {
-    setRoutines((rs) => [...rs, r]);
-    setView("home");
+    setRoutines((rs) => rs.find((x) => x.id === r.id) ? rs.map((x) => x.id === r.id ? r : x) : [...rs, r]);
+    setView("home"); setEditId(null);
     fireToast({ title: msg || "◈ SCHEDA SALVATA", sub: r.name });
   };
 
-  if (activeId != null) {
-    const active = routines.find((r) => r.id === activeId);
-    return <WorkoutLog routine={active} prs={prs} setPrs={setPrs} addXp={addXp} fireToast={fireToast}
-      update={(fn) => setRoutines((rs) => rs.map((r) => r.id === activeId ? fn(r) : r))}
-      exit={() => setActiveId(null)} />;
+  /* Inizia Allenamento: crea una sessione attiva e persistente (copia del modello) */
+  const startSession = (r) => {
+    setSession({
+      routineId: r.id,
+      name: r.name,
+      startedAt: Date.now(),
+      exercises: r.exercises.map((e) => ({
+        ...e,
+        sets: e.sets.map((s) => ({ ...s, done: false, elapsed: 0 })),
+      })),
+    });
+    setView("session");
+  };
+
+  const abandonSession = () => {
+    setSession(null); setConfirmAbandon(false);
+    fireToast({ title: "◈ SESSIONE ABBANDONATA", sub: "Nessun record salvato" });
+  };
+
+  if (view === "session" && session) {
+    return <SessionView session={session} setSession={setSession} prs={prs} setPrs={setPrs}
+      addXp={addXp} fireToast={fireToast}
+      routines={routines} setRoutines={setRoutines} setHistory={setHistory}
+      exitToHome={() => setView("home")} />;
   }
-  if (view === "builder") return <RoutineBuilder onClose={() => setView("home")} onSave={(r) => saveRoutine(r)} />;
+  if (view === "builder") {
+    const initial = editId != null ? routines.find((r) => r.id === editId) : null;
+    return <RoutineEditor initial={initial} onClose={() => { setView("home"); setEditId(null); }}
+      onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
+  }
   if (view === "ai") return <AIWorkout onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ SCHEDA AI GENERATA")} />;
   if (view === "import") return <DocImport onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ DOCUMENTO INTERPRETATO")} />;
 
@@ -471,6 +585,31 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
     <div className="fade-in two-col">
       {/* LEFT: routines */}
       <div className="col stack">
+
+        {/* Sessione in corso: banner di ripresa */}
+        {session && (
+          <Panel accent style={{ borderColor: "#ffd76a" }}>
+            <div className="row between g12">
+              <div className="grow">
+                <div className="f-hud t-amber blink" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 12 }}>● SESSIONE IN CORSO</div>
+                <div className="t-bright" style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{session.name}</div>
+                <div className="tiny t-faint">avviata alle {new Date(session.startedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</div>
+              </div>
+              <div className="col" style={{ gap: 6, alignItems: "flex-end" }}>
+                <Btn small primary onClick={() => setView("session")}>Riprendi ▶</Btn>
+                {confirmAbandon ? (
+                  <span className="row g8">
+                    <span onClick={abandonSession} className="tap tiny t-red" style={{ cursor: "pointer", fontWeight: 700 }}>CONFERMA</span>
+                    <span onClick={() => setConfirmAbandon(false)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>no</span>
+                  </span>
+                ) : (
+                  <span onClick={() => setConfirmAbandon(true)} className="tap micro t-faint" style={{ cursor: "pointer" }}>abbandona</span>
+                )}
+              </div>
+            </div>
+          </Panel>
+        )}
+
         <div className="row between">
           <h2 className="hud-title">▸ Schede attive</h2>
           <Btn small onClick={() => setView("builder")}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> Nuova</Btn>
@@ -484,41 +623,42 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
           </Panel>
         )}
         {routines.map((r) => (
-          <button key={r.id} onClick={() => setActiveId(r.id)} className="tap" style={{ width: "100%", cursor: "pointer" }}>
-            <Panel hover>
-              <div className="row between g12">
-                <div className="grow">
-                  <div className="f-hud t-bright" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 15 }}>{r.name}</div>
-                  <div className="tiny t-dim" style={{ marginTop: 2 }}>
-                    {r.exercises.length} ESERCIZI · {r.exercises.reduce((a, e) => a + e.sets.length, 0)} SERIE
-                  </div>
-                  <div className="row wrap g6" style={{ marginTop: 8 }}>
-                    {[...new Set(r.exercises.map((e) => e.group))].map((g) => (
-                      <span key={g} className="chip cham-s">{g}</span>
-                    ))}
-                  </div>
+          <Panel key={r.id} hover>
+            <div className="row between g12">
+              <div className="grow">
+                <div className="f-hud t-bright" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 15 }}>{r.name}</div>
+                <div className="tiny t-dim" style={{ marginTop: 2 }}>
+                  {r.exercises.length} ESERCIZI · {r.exercises.reduce((a, e) => a + e.sets.length, 0)} SERIE
                 </div>
-                <div className="row g8" style={{ flexShrink: 0 }}>
-                  {confirmDel === r.id ? (
-                    <>
-                      <span onClick={(e) => { e.stopPropagation(); deleteRoutine(r.id); }}
-                        className="tap tiny t-red" style={{ cursor: "pointer", fontWeight: 700 }}>ELIMINA</span>
-                      <span onClick={(e) => { e.stopPropagation(); setConfirmDel(null); }}
-                        className="tap tiny t-faint" style={{ cursor: "pointer" }}>annulla</span>
-                    </>
-                  ) : (
-                    <>
-                      <span onClick={(e) => { e.stopPropagation(); setConfirmDel(r.id); }}
-                        className="tap" style={{ cursor: "pointer", color: "#3f637c" }}>
-                        <Trash2 size={15} />
-                      </span>
-                      <Play size={18} color="#57c8f2" />
-                    </>
-                  )}
+                <div className="row wrap g6" style={{ marginTop: 8 }}>
+                  {[...new Set(r.exercises.map((e) => e.group))].map((g) => (
+                    <span key={g} className="chip cham-s">{g}</span>
+                  ))}
                 </div>
               </div>
-            </Panel>
-          </button>
+              <div className="col" style={{ gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
+                {confirmDel === r.id ? (
+                  <div className="row g8">
+                    <span onClick={() => deleteRoutine(r.id)} className="tap tiny t-red" style={{ cursor: "pointer", fontWeight: 700 }}>ELIMINA</span>
+                    <span onClick={() => setConfirmDel(null)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>annulla</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="row g8">
+                      <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap" title="Modifica modello"
+                        style={{ cursor: "pointer", color: "#3f637c" }}><Pencil size={15} /></span>
+                      <span onClick={() => setConfirmDel(r.id)} className="tap" title="Elimina"
+                        style={{ cursor: "pointer", color: "#3f637c" }}><Trash2 size={15} /></span>
+                    </div>
+                    <Btn small primary disabled={!!session} onClick={() => startSession(r)}
+                      title={session ? "Chiudi prima la sessione attiva" : ""}>
+                      <Play size={11} style={{ display: "inline", verticalAlign: -1 }} /> Inizia
+                    </Btn>
+                  </>
+                )}
+              </div>
+            </div>
+          </Panel>
         ))}
 
         <button onClick={() => setView("import")} className="tap" style={{ width: "100%", cursor: "pointer" }}>
@@ -544,17 +684,17 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
       <div className="col stack">
         <Panel>
           <div className="hud-label" style={{ marginBottom: 8 }}>▸ Mission log — ultimi allenamenti</div>
-          {MOCK_HISTORY.length === 0 && (
+          {(!history || history.length === 0) && (
             <div className="tiny t-faint" style={{ padding: "8px 0" }}>
               Nessun allenamento registrato. Completa il primo workout per iniziare il log.
             </div>
           )}
-          {MOCK_HISTORY.map((h, i) => (
+          {(history || []).slice(0, 8).map((h, i) => (
             <div key={i} className="divider-row g12">
               <div className="micro" style={{ width: 46, flexShrink: 0 }}>{h.date}</div>
               <div className="grow">
                 <div className="row g6 t-bright" style={{ fontSize: 14 }}>
-                  {h.name}{h.pr && <Trophy size={11} color="#ffd76a" />}
+                  {h.name}{h.pr > 0 && <Trophy size={11} color="#ffd76a" />}
                 </div>
                 <div className="tiny t-faint">{h.sets} serie · {h.duration}</div>
               </div>
@@ -592,6 +732,7 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
 function ExerciseLibrary() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState("Petto");
+  const [info, setInfo] = useState(null);
   const filtered = useMemo(() => {
     if (!q) return EXERCISE_DB;
     const out = {};
@@ -603,6 +744,7 @@ function ExerciseLibrary() {
   }, [q]);
   return (
     <Panel>
+      {info && <ExerciseInfoModal name={info.name} group={info.group} onClose={() => setInfo(null)} />}
       <div className="hud-label" style={{ marginBottom: 8 }}>▸ Libreria esercizi</div>
       <div style={{ position: "relative", marginBottom: 12 }}>
         <Search size={14} color="#3f637c" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
@@ -620,7 +762,12 @@ function ExerciseLibrary() {
             {(open === g || q) && (
               <div className="fade-in" style={{ paddingLeft: 12, paddingTop: 4 }}>
                 {list.map((e) => (
-                  <div key={e} style={{ fontSize: 14, padding: "5px 0", borderBottom: "1px solid #0a1826" }}>{e}</div>
+                  <div key={e} className="row between" style={{ fontSize: 14, padding: "5px 0", borderBottom: "1px solid #0a1826" }}>
+                    <span>{e}</span>
+                    <span onClick={() => setInfo({ name: e, group: g })} className="tap" style={{ cursor: "pointer", color: "#3f637c" }}>
+                      <Info size={13} />
+                    </span>
+                  </div>
                 ))}
               </div>
             )}
@@ -631,70 +778,268 @@ function ExerciseLibrary() {
   );
 }
 
-/* ---------------- Workout Log ---------------- */
-function WorkoutLog({ routine, prs, setPrs, addXp, fireToast, update, exit }) {
-  const [restTime, setRestTime] = useState(0);
-  const [restRunning, setRestRunning] = useState(false);
+/* ---------------- Modale info esercizio (anteprima + esecuzione) ---------------- */
+/* Le immagini/GIF si aggiungono in EXERCISE_MEDIA: { "Nome Esercizio": "https://..." } */
+const EXERCISE_MEDIA = {};
+const GROUP_ICONS = { Petto: "▣", Dorso: "◈", Gambe: "▼", Spalle: "▲", Bicipiti: "◐", Tricipiti: "◑", Cardio: "♥", Core: "◆", Altro: "◇" };
+
+function ExerciseInfoModal({ name, group, onClose }) {
+  const media = EXERCISE_MEDIA[name];
+  const desc = EXERCISE_INFO[name] || INFO_FALLBACK[group] || INFO_FALLBACK.Altro;
+  return (
+    <div className="modal-back" onClick={onClose}>
+      <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="row between" style={{ marginBottom: 12 }}>
+          <div>
+            <div className="t-bright" style={{ fontSize: 17, fontWeight: 700 }}>{name}</div>
+            <div className="micro t-cyan">{(group || "").toUpperCase()}</div>
+          </div>
+          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: 4 }}>✕</span>
+        </div>
+        <div className="cham-s" style={{
+          height: 160, marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center",
+          background: "#04101b", border: "1px solid #0e2233", overflow: "hidden",
+        }}>
+          {media
+            ? <img src={media} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 44, color: "#1b3a52", lineHeight: 1 }}>{GROUP_ICONS[group] || "◇"}</div>
+                <div className="micro" style={{ marginTop: 8 }}>ANTEPRIMA NON DISPONIBILE</div>
+              </div>}
+        </div>
+        <div className="hud-label" style={{ marginBottom: 6 }}>▸ Esecuzione</div>
+        <div className="t-dim" style={{ fontSize: 14, lineHeight: 1.7 }}>{desc}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Timer interset in sovraimpressione ---------------- */
+/* Nascosto di default: si apre dal pulsante flottante, si chiude a piacere */
+function FloatingTimer() {
+  const [open, setOpen] = useState(false);
+  const [dur, setDur] = useState(90);
+  const [left, setLeft] = useState(90);
+  const [running, setRunning] = useState(false);
 
   useEffect(() => {
-    if (!restRunning) return;
-    if (restTime <= 0) {
-      setRestRunning(false);
-      fireToast({ title: "◈ REST COMPLETE", sub: "Prossima serie", color: "#ffd76a" });
-      return;
-    }
-    const t = setTimeout(() => setRestTime((s) => s - 1), 1000);
+    if (!running) return;
+    if (left <= 0) { setRunning(false); return; }
+    const t = setTimeout(() => setLeft((s) => s - 1), 1000);
     return () => clearTimeout(t);
-  }, [restRunning, restTime]);
+  }, [running, left]);
 
-  const toggleSet = (ei, si) => {
-    const s = routine.exercises[ei].sets[si];
-    const ex = routine.exercises[ei];
-    update((r) => ({
-      ...r,
-      exercises: r.exercises.map((e, i) => i !== ei ? e : {
-        ...e, sets: e.sets.map((st, j) => j !== si ? st : { ...st, done: !st.done }),
-      }),
-    }));
-    if (!s.done) {
-      addXp(10);
-      setRestTime(90); setRestRunning(true);
-      if ((s.w || 0) > (prs[ex.name] || 0)) {
-        setPrs((p) => ({ ...p, [ex.name]: s.w }));
-        fireToast({ title: "▲ NEW RECORD", sub: `${ex.name} — ${s.w} KG`, color: "#ffd76a" });
-      }
-    }
-  };
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const bump = (d) => { const n = Math.max(15, dur + d); setDur(n); setLeft(n); setRunning(false); };
 
-  const updateSet = (ei, si, field, val) => update((r) => ({
-    ...r,
-    exercises: r.exercises.map((e, i) => i !== ei ? e : {
+  return (
+    <>
+      <button onClick={() => setOpen(!open)} className="float-timer-btn cham-s tap" title="Timer di recupero">
+        <Timer size={20} color={running && left > 0 ? "#ffd76a" : "#57c8f2"} className={running && left > 0 ? "blink" : ""} />
+      </button>
+      {open && (
+        <div className="float-timer cham-s fade-in">
+          <div className="row between" style={{ marginBottom: 8 }}>
+            <span className="hud-label">RECUPERO</span>
+            <span onClick={() => setOpen(false)} className="tap t-faint" style={{ cursor: "pointer", fontSize: 15, padding: 2 }}>✕</span>
+          </div>
+          <div className="row g12" style={{ alignItems: "center" }}>
+            <span onClick={() => bump(-15)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>−15</span>
+            <span className={`f-hud ${left === 0 ? "t-amber" : "t-bright"}`} style={{ fontSize: 30, fontWeight: 700, minWidth: 88, textAlign: "center" }}>
+              {left === 0 ? "GO!" : fmt(left)}
+            </span>
+            <span onClick={() => bump(30)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>+30</span>
+          </div>
+          <div className="cham-s" style={{ height: 5, background: "#0e2233", margin: "8px 0" }}>
+            <div style={{ height: "100%", width: `${(left / dur) * 100}%`, background: left === 0 ? "#ffd76a" : "#57c8f2", transition: "width 1s linear" }} />
+          </div>
+          <div className="row g8">
+            {running
+              ? <Btn small onClick={() => setRunning(false)} style={{ flex: 1 }}><Pause size={11} style={{ display: "inline", verticalAlign: -1 }} /> Pausa</Btn>
+              : <Btn small primary onClick={() => { if (left === 0) setLeft(dur); setRunning(true); }} style={{ flex: 1 }}><Play size={11} style={{ display: "inline", verticalAlign: -1 }} /> Avvia</Btn>}
+            <Btn small onClick={() => { setLeft(dur); setRunning(false); }} style={{ flex: 1 }}>↻ Reset</Btn>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ---------------- Sessione di allenamento attiva ---------------- */
+function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
+  const [info, setInfo] = useState(null);
+  const [confirmExit, setConfirmExit] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [sessionPrCount, setSessionPrCount] = useState(0);
+  const [runKey, setRunKey] = useState(null); // cronometro attivo per esercizi a tempo: "ei-si"
+
+  /* Cronometro cardio: incrementa elapsed della riga attiva */
+  useEffect(() => {
+    if (!runKey) return;
+    const t = setInterval(() => {
+      const [ei, si] = runKey.split("-").map(Number);
+      setSession((s) => ({
+        ...s,
+        exercises: s.exercises.map((e, i) => i !== ei ? e : {
+          ...e, sets: e.sets.map((st, j) => j !== si ? st : { ...st, elapsed: (st.elapsed || 0) + 1 }),
+        }),
+      }));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [runKey]);
+
+  const upd = (fn) => setSession((s) => fn(s));
+
+  const updateSet = (ei, si, field, val) => upd((s) => ({
+    ...s,
+    exercises: s.exercises.map((e, i) => i !== ei ? e : {
       ...e, sets: e.sets.map((st, j) => j !== si ? st : { ...st, [field]: val === "" ? "" : Number(val) }),
     }),
   }));
 
-  const addSet = (ei) => update((r) => ({
-    ...r,
-    exercises: r.exercises.map((e, i) => i !== ei ? e : { ...e, sets: [...e.sets, { ...e.sets[e.sets.length - 1], done: false }] }),
+  const updateNote = (ei, val) => upd((s) => ({
+    ...s, exercises: s.exercises.map((e, i) => i !== ei ? e : { ...e, note: val }),
   }));
 
-  const volume = routine.exercises.reduce((v, e) => v + e.sets.filter((s) => s.done).reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0), 0);
-  const totalSets = routine.exercises.reduce((a, e) => a + e.sets.length, 0);
-  const doneSets = routine.exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).length, 0);
+  const toggleSet = (ei, si) => {
+    const ex = session.exercises[ei];
+    const st = ex.sets[si];
+    if (st.done && runKey === `${ei}-${si}`) setRunKey(null);
+    upd((s) => ({
+      ...s,
+      exercises: s.exercises.map((e, i) => i !== ei ? e : {
+        ...e, sets: e.sets.map((x, j) => j !== si ? x : { ...x, done: !x.done }),
+      }),
+    }));
+    if (!st.done) {
+      addXp(10);
+      if (runKey === `${ei}-${si}`) setRunKey(null);
+      if (ex.mode !== "time" && (st.w || 0) > (prs[ex.name] || 0)) {
+        setPrs((p) => ({ ...p, [ex.name]: st.w }));
+        setSessionPrCount((c) => c + 1);
+        fireToast({ title: "▲ NEW RECORD", sub: `${ex.name} — ${st.w} KG`, color: "#ffd76a" });
+      }
+    }
+  };
 
-  const finish = () => {
+  const addSet = (ei) => upd((s) => ({
+    ...s,
+    exercises: s.exercises.map((e, i) => i !== ei ? e : {
+      ...e,
+      sets: [...e.sets, e.mode === "time"
+        ? { sec: 600, dist: "", elapsed: 0, done: false }
+        : { ...e.sets[e.sets.length - 1], done: false }],
+    }),
+  }));
+
+  const removeSet = (ei, si) => {
+    if (runKey === `${ei}-${si}`) setRunKey(null);
+    upd((s) => ({
+      ...s,
+      exercises: s.exercises.map((e, i) => i !== ei ? e : {
+        ...e, sets: e.sets.filter((_, j) => j !== si),
+      }).filter((e) => e.sets.length > 0),
+    }));
+  };
+
+  const fmt = (sec) => `${Math.floor((sec || 0) / 60)}:${String((sec || 0) % 60).padStart(2, "0")}`;
+
+  const volume = session.exercises.reduce((v, e) => e.mode === "time" ? v :
+    v + e.sets.filter((s) => s.done).reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0), 0);
+  const cardioSec = session.exercises.reduce((v, e) => e.mode !== "time" ? v :
+    v + e.sets.reduce((a, s) => a + (s.elapsed || 0), 0), 0);
+  const totalSets = session.exercises.reduce((a, e) => a + e.sets.length, 0);
+  const doneSets = session.exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).length, 0);
+  const durMin = Math.max(1, Math.round((Date.now() - session.startedAt) / 60000));
+
+  /* Fine allenamento: record + eventuale aggiornamento del modello base */
+  const complete = (alsoTemplate) => {
+    if (alsoTemplate) {
+      setRoutines((rs) => rs.map((r) => r.id !== session.routineId ? r : {
+        ...r,
+        name: session.name,
+        exercises: session.exercises.map((e) => ({
+          ...e, sets: e.sets.map((s) => ({ ...s, done: false, elapsed: 0 })),
+        })),
+      }));
+    }
+    setHistory((h) => [{
+      date: new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }),
+      name: session.name,
+      sets: doneSets,
+      duration: `${durMin}m`,
+      volume,
+      cardio: Math.round(cardioSec / 60),
+      pr: sessionPrCount,
+    }, ...(h || [])].slice(0, 30));
     addXp(60);
-    fireToast({ title: "◈ MISSION COMPLETE", sub: `+60 XP · VOLUME ${volume.toLocaleString()} KG` });
-    setRestRunning(false);
-    exit();
+    fireToast({ title: "◈ MISSION COMPLETE", sub: `+60 XP · ${durMin} MIN` });
+    setRunKey(null);
+    setSession(null);
+    exitToHome();
   };
 
   return (
-    <div className="fade-in stack" style={{ maxWidth: 640 }}>
-      <div className="row between">
-        <Btn small onClick={exit}>‹ Esci</Btn>
-        <span className="hud-title">{routine.name}</span>
-        <Btn small primary onClick={finish}>Fine ✓</Btn>
+    <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
+      {info && <ExerciseInfoModal name={info.name} group={info.group} onClose={() => setInfo(null)} />}
+      <FloatingTimer />
+
+      {/* Conferma uscita: la sessione resta attiva */}
+      {confirmExit && (
+        <div className="modal-back" onClick={() => setConfirmExit(false)}>
+          <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", marginBottom: 8 }}>SESSIONE ANCORA ATTIVA</div>
+            <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 16 }}>
+              Uscendo la sessione resta in corso: la ritrovi in Training e ci rientri anche
+              se chiudi l'app. Per registrare l'allenamento usa "Termina".
+            </div>
+            <div className="row g8">
+              <Btn onClick={() => setConfirmExit(false)} style={{ flex: 1 }}>Resta</Btn>
+              <Btn primary onClick={() => { setConfirmExit(false); exitToHome(); }} style={{ flex: 1 }}>Esci ›</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Riepilogo finale + salvataggio nel modello */}
+      {finishing && (
+        <div className="modal-back">
+          <div className="modal-box cham fade-in">
+            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 15, marginBottom: 4 }}>◈ MISSION COMPLETE</div>
+            <div className="tiny t-faint" style={{ marginBottom: 14 }}>{session.name}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              {[
+                ["DURATA", `${durMin} min`, "t-bright"],
+                ["SERIE", `${doneSets}/${totalSets}`, "t-bright"],
+                ["VOLUME", `${volume.toLocaleString()} kg`, "t-cyan"],
+                ["CARDIO", `${Math.round(cardioSec / 60)} min`, "t-cyan"],
+                ["XP", "+" + (60 + doneSets * 10), "t-amber"],
+                ["RECORD", sessionPrCount > 0 ? `🏆 ${sessionPrCount}` : "—", "t-amber"],
+              ].map(([l, v, c]) => (
+                <div key={l} className="cham-s" style={{ padding: "10px 12px", background: "#04101b", border: "1px solid #0e2233" }}>
+                  <div className="micro">{l}</div>
+                  <div className={`f-hud ${c}`} style={{ fontWeight: 700, fontSize: 17 }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 12 }}>
+              Vuoi salvare le modifiche fatte in sessione (pesi, serie, nome, note) anche nel <span className="t-cyan">modello base</span> della scheda?
+            </div>
+            <div className="stack-s">
+              <Btn primary full onClick={() => complete(true)}>Sì, aggiorna il modello ✓</Btn>
+              <Btn full onClick={() => complete(false)}>No, salva solo il record</Btn>
+              <button onClick={() => setFinishing(false)} className="tap micro t-faint" style={{ cursor: "pointer", padding: 6 }}>‹ torna alla sessione</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="row between g8">
+        <Btn small onClick={() => setConfirmExit(true)}>‹ Esci</Btn>
+        <input className="hud-input cham-s f-hud" value={session.name}
+          onChange={(e) => upd((s) => ({ ...s, name: e.target.value.toUpperCase() }))}
+          style={{ textAlign: "center", fontWeight: 700, letterSpacing: ".12em", fontSize: 13, flex: 1 }} />
+        <Btn small primary onClick={() => setFinishing(true)}>Termina ✓</Btn>
       </div>
 
       <Panel style={{ padding: 12 }}>
@@ -708,50 +1053,80 @@ function WorkoutLog({ routine, prs, setPrs, addXp, fireToast, update, exit }) {
             <div className="micro">SERIE</div>
           </div>
           <div>
-            <div className={`f-hud ${restRunning ? "t-amber blink" : "t-faint"}`} style={{ fontWeight: 700, fontSize: 16 }}>
-              {restRunning ? `${Math.floor(restTime / 60)}:${String(restTime % 60).padStart(2, "0")}` : "--:--"}
-            </div>
-            <div className="micro">REST</div>
+            <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 16 }}>{durMin}<span className="t-faint">m</span></div>
+            <div className="micro">DURATA</div>
           </div>
         </div>
       </Panel>
 
-      {restRunning && (
-        <Panel accent style={{ padding: 12 }}>
-          <div className="row g12">
-            <Timer size={16} color="#ffd76a" />
-            <div className="grow cham-s" style={{ height: 6, background: "#0e2233" }}>
-              <div style={{ height: "100%", width: `${(restTime / 90) * 100}%`, background: "#ffd76a", transition: "width 1s linear", boxShadow: "0 0 8px rgba(255,215,106,.5)" }} />
-            </div>
-            <button onClick={() => setRestRunning(false)} className="tap" style={{ cursor: "pointer", color: "#3f637c" }}><Square size={14} /></button>
-          </div>
-        </Panel>
-      )}
-
-      {routine.exercises.map((ex, ei) => (
+      {session.exercises.map((ex, ei) => (
         <Panel key={ei}>
-          <div className="row between" style={{ marginBottom: 12 }}>
-            <div>
-              <div className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{ex.name}</div>
-              <div className="micro">{ex.group.toUpperCase()} · PR {prs[ex.name] || "—"} KG</div>
+          <div className="row between g8" style={{ marginBottom: 4 }}>
+            <div className="grow">
+              <div className="row g6">
+                <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{ex.name}</span>
+                <span onClick={() => setInfo({ name: ex.name, group: ex.group })} className="tap"
+                  style={{ cursor: "pointer", color: "#3f637c" }}><Info size={14} /></span>
+              </div>
+              <div className="micro">{(ex.group || "").toUpperCase()}{ex.mode !== "time" && ` · PR ${prs[ex.name] || "—"} KG`}</div>
             </div>
-            {prs[ex.name] && <Trophy size={15} color="#ffd76a" />}
+            {prs[ex.name] && ex.mode !== "time" && <Trophy size={15} color="#ffd76a" />}
           </div>
-          <div className="set-grid micro" style={{ marginBottom: 4, padding: "0 4px" }}>
-            <span>SET</span><span>KG</span><span>REPS</span><span></span>
-          </div>
-          {ex.sets.map((s, si) => (
-            <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-              <span className="f-hud t-faint" style={{ fontSize: 12, textAlign: "center" }}>{si + 1}</span>
-              <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
-                onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
-              <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r}
-                onChange={(e) => updateSet(ei, si, "r", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
-              <button onClick={() => toggleSet(ei, si)} className={`check-btn cham-s tap ${s.done ? "check-on" : ""}`}>
-                <Check size={15} strokeWidth={3} />
-              </button>
-            </div>
-          ))}
+          <input className="hud-input cham-s" value={ex.note || ""} onChange={(e) => updateNote(ei, e.target.value)}
+            placeholder="Note esercizio..." style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9" }} />
+
+          {ex.mode === "time" ? (
+            <>
+              <div className="set-grid-t micro" style={{ marginBottom: 4, padding: "0 4px" }}>
+                <span>SET</span><span>TEMPO</span><span>KM</span><span></span>
+              </div>
+              {ex.sets.map((s, si) => (
+                <div key={si} className={`set-grid-t cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
+                  <div className="col" style={{ alignItems: "center", gap: 2 }}>
+                    <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
+                    <span onClick={() => removeSet(ei, si)} className="tap" style={{ cursor: "pointer", color: "#523030" }}><X size={11} /></span>
+                  </div>
+                  <div className="row g8" style={{ alignItems: "center" }}>
+                    <button onClick={() => setRunKey(runKey === `${ei}-${si}` ? null : `${ei}-${si}`)}
+                      className={`check-btn cham-s tap ${runKey === `${ei}-${si}` ? "check-on" : ""}`}
+                      style={{ width: 34, height: 34 }} disabled={s.done}>
+                      {runKey === `${ei}-${si}` ? <Pause size={13} /> : <Play size={13} />}
+                    </button>
+                    <span className={`f-hud ${runKey === `${ei}-${si}` ? "t-amber" : "t-bright"}`} style={{ fontSize: 17, fontWeight: 700 }}>
+                      {fmt(s.elapsed)}
+                    </span>
+                  </div>
+                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist}
+                    placeholder="—" onChange={(e) => updateSet(ei, si, "dist", e.target.value)}
+                    style={{ textAlign: "center", padding: "8px 4px" }} />
+                  <button onClick={() => toggleSet(ei, si)} className={`check-btn cham-s tap ${s.done ? "check-on" : ""}`}>
+                    <Check size={15} strokeWidth={3} />
+                  </button>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="set-grid micro" style={{ marginBottom: 4, padding: "0 4px" }}>
+                <span>SET</span><span>KG</span><span>REPS</span><span></span>
+              </div>
+              {ex.sets.map((s, si) => (
+                <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
+                  <div className="col" style={{ alignItems: "center", gap: 2 }}>
+                    <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
+                    <span onClick={() => removeSet(ei, si)} className="tap" style={{ cursor: "pointer", color: "#523030" }}><X size={11} /></span>
+                  </div>
+                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
+                    onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
+                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r}
+                    onChange={(e) => updateSet(ei, si, "r", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
+                  <button onClick={() => toggleSet(ei, si)} className={`check-btn cham-s tap ${s.done ? "check-on" : ""}`}>
+                    <Check size={15} strokeWidth={3} />
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
           <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>+ SERIE</button>
         </Panel>
       ))}
@@ -759,36 +1134,107 @@ function WorkoutLog({ routine, prs, setPrs, addXp, fireToast, update, exit }) {
   );
 }
 
-/* ---------------- Routine Builder ---------------- */
-function RoutineBuilder({ onClose, onSave }) {
-  const [name, setName] = useState("");
+/* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ---------------- */
+function RoutineEditor({ initial, onClose, onSave }) {
+  const [draft, setDraft] = useState(() => initial
+    ? JSON.parse(JSON.stringify(initial))
+    : { id: Date.now(), name: "", exercises: [] });
   const [q, setQ] = useState("");
-  const [selected, setSelected] = useState([]);
-  const toggle = (ex, group) => setSelected((s) =>
-    s.find((e) => e.name === ex) ? s.filter((e) => e.name !== ex)
-      : [...s, { name: ex, group, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }]);
+  const [info, setInfo] = useState(null);
+
+  const upd = (fn) => setDraft((d) => fn(d));
+  const hasEx = (name) => draft.exercises.some((e) => e.name === name);
+
+  const toggleEx = (name, group) => upd((d) => hasEx(name)
+    ? { ...d, exercises: d.exercises.filter((e) => e.name !== name) }
+    : {
+      ...d,
+      exercises: [...d.exercises, group === "Cardio"
+        ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
+        : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+    });
+
+  const updateSet = (ei, si, field, val) => upd((d) => ({
+    ...d,
+    exercises: d.exercises.map((e, i) => i !== ei ? e : {
+      ...e, sets: e.sets.map((s, j) => j !== si ? s : { ...s, [field]: val === "" ? "" : Number(val) }),
+    }),
+  }));
+
+  const removeSet = (ei, si) => upd((d) => ({
+    ...d,
+    exercises: d.exercises.map((e, i) => i !== ei ? e : { ...e, sets: e.sets.filter((_, j) => j !== si) })
+      .filter((e) => e.sets.length > 0),
+  }));
+
+  const addSet = (ei) => upd((d) => ({
+    ...d,
+    exercises: d.exercises.map((e, i) => i !== ei ? e : {
+      ...e,
+      sets: [...e.sets, e.mode === "time" ? { sec: 600, dist: "", elapsed: 0, done: false } : { ...e.sets[e.sets.length - 1], done: false }],
+    }),
+  }));
+
   return (
     <div className="fade-in stack" style={{ maxWidth: 640 }}>
+      {info && <ExerciseInfoModal name={info.name} group={info.group} onClose={() => setInfo(null)} />}
       <div className="row between">
         <Btn small onClick={onClose}>‹ Annulla</Btn>
-        <span className="hud-title">Nuova scheda</span>
-        <Btn small primary disabled={!name || !selected.length}
-          onClick={() => onSave({ id: Date.now(), name: name.toUpperCase(), exercises: selected })}>Salva</Btn>
+        <span className="hud-title">{initial ? "Modifica modello" : "Nuova scheda"}</span>
+        <Btn small primary disabled={!draft.name || !draft.exercises.length}
+          onClick={() => onSave({ ...draft, name: draft.name.toUpperCase() })}>Salva</Btn>
       </div>
-      <input className="hud-input cham-s" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome scheda (es. LEG DAY)" />
-      {selected.length > 0 && (
-        <Panel accent style={{ padding: 12 }}>
-          <div className="hud-label" style={{ marginBottom: 6 }}>Selezionati · {selected.length}</div>
-          <div className="row wrap g6">
-            {selected.map((e) => (
-              <button key={e.name} onClick={() => toggle(e.name, e.group)} className="tap cham-s row g4"
-                style={{ cursor: "pointer", fontSize: 12, padding: "5px 10px", background: "#0c2a3d", border: "1px solid #57c8f2", color: "#9be8ff" }}>
-                {e.name} <X size={11} />
-              </button>
-            ))}
+      <input className="hud-input cham-s" value={draft.name}
+        onChange={(e) => upd((d) => ({ ...d, name: e.target.value }))} placeholder="Nome scheda (es. LEG DAY)" />
+
+      {/* Esercizi nel modello: serie modificabili ed eliminabili, note sotto il titolo */}
+      {draft.exercises.map((ex, ei) => (
+        <Panel key={ex.name} accent style={{ padding: 12 }}>
+          <div className="row between g8" style={{ marginBottom: 4 }}>
+            <div className="row g6">
+              <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</span>
+              <span className="micro t-cyan" style={{ alignSelf: "center" }}>{(ex.group || "").toUpperCase()}</span>
+              <span onClick={() => setInfo({ name: ex.name, group: ex.group })} className="tap"
+                style={{ cursor: "pointer", color: "#3f637c" }}><Info size={13} /></span>
+            </div>
+            <span onClick={() => toggleEx(ex.name, ex.group)} className="tap" style={{ cursor: "pointer", color: "#6e3028" }}><Trash2 size={14} /></span>
           </div>
+          <input className="hud-input cham-s" value={ex.note || ""}
+            onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, note: e.target.value }) }))}
+            placeholder="Note esercizio..." style={{ fontSize: 12, padding: "6px 8px", marginBottom: 8, color: "#8fb2c9" }} />
+          {ex.sets.map((s, si) => (
+            <div key={si} className="row g8" style={{ marginBottom: 5, alignItems: "center" }}>
+              <span className="f-hud t-faint" style={{ fontSize: 11, width: 18, textAlign: "center" }}>{si + 1}</span>
+              {ex.mode === "time" ? (
+                <>
+                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec ? Math.round(s.sec / 60) : ""}
+                    onChange={(e) => updateSet(ei, si, "sec", e.target.value === "" ? "" : Number(e.target.value) * 60)}
+                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                  <span className="micro">MIN</span>
+                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist}
+                    onChange={(e) => updateSet(ei, si, "dist", e.target.value)} placeholder="—"
+                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                  <span className="micro">KM</span>
+                </>
+              ) : (
+                <>
+                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
+                    onChange={(e) => updateSet(ei, si, "w", e.target.value)}
+                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                  <span className="micro">KG</span>
+                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r}
+                    onChange={(e) => updateSet(ei, si, "r", e.target.value)}
+                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                  <span className="micro">REPS</span>
+                </>
+              )}
+              <span onClick={() => removeSet(ei, si)} className="tap" style={{ cursor: "pointer", color: "#523030", marginLeft: "auto" }}><X size={13} /></span>
+            </div>
+          ))}
+          <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>+ SERIE</button>
         </Panel>
-      )}
+      ))}
+
       <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtra esercizi..." />
       {Object.entries(EXERCISE_DB).map(([group, list]) => {
         const shown = list.filter((e) => e.toLowerCase().includes(q.toLowerCase()));
@@ -797,16 +1243,13 @@ function RoutineBuilder({ onClose, onSave }) {
           <Panel key={group} style={{ padding: 12 }}>
             <div className="f-hud t-cyan" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".25em", marginBottom: 8 }}>{group.toUpperCase()}</div>
             <div className="row wrap g6">
-              {shown.map((ex) => {
-                const on = selected.find((e) => e.name === ex);
-                return (
-                  <button key={ex} onClick={() => toggle(ex, group)}
-                    className={`tap cham-s chip ${on ? "chip-on" : ""}`}
-                    style={{ cursor: "pointer", fontSize: 12, letterSpacing: ".02em", padding: "6px 12px", fontFamily: "'Rajdhani',sans-serif", textTransform: "none" }}>
-                    {ex}
-                  </button>
-                );
-              })}
+              {shown.map((ex) => (
+                <button key={ex} onClick={() => toggleEx(ex, group)}
+                  className={`tap cham-s chip ${hasEx(ex) ? "chip-on" : ""}`}
+                  style={{ cursor: "pointer", fontSize: 12, letterSpacing: ".02em", padding: "6px 12px", fontFamily: "'Rajdhani',sans-serif", textTransform: "none" }}>
+                  {ex}
+                </button>
+              ))}
             </div>
           </Panel>
         );
@@ -866,11 +1309,18 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
       const routine = {
         id: Date.now(),
         name: (parsed.name || "SCHEDA PT").toUpperCase(),
-        exercises: (parsed.exercises || []).map((e) => ({
-          name: e.name,
-          group: GROUPS.includes(e.group) ? e.group : findGroup(e.name),
-          sets: (e.sets || []).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 10, done: false })),
-        })).filter((e) => e.sets.length),
+        exercises: (parsed.exercises || []).map((e) => {
+          const m = matchToDb(e.name); // mapping 1:1 col database; l'eccesso del titolo va in nota
+          const group = GROUPS.includes(e.group) ? e.group : findGroup(m.name);
+          if (group === "Cardio") return {
+            name: m.name, group, mode: "time", note: m.note,
+            sets: (e.sets || [{}]).map(() => ({ sec: 600, dist: "", elapsed: 0, done: false })),
+          };
+          return {
+            name: m.name, group, note: m.note,
+            sets: (e.sets || []).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 10, done: false })),
+          };
+        }).filter((e) => e.sets.length),
       };
       if (!routine.exercises.length) throw new Error("Nessun esercizio riconosciuto nel documento");
       setResult(routine);
