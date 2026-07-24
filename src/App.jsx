@@ -24,44 +24,10 @@ const findGroup = (name) => {
   return "Altro";
 };
 
-const MOCK_HISTORY = [
-  { date: "22 LUG", name: "PUSH DAY", volume: 6840, sets: 14, duration: "58 min", pr: true },
-  { date: "20 LUG", name: "LEG DAY", volume: 9120, sets: 16, duration: "1h 05m", pr: false },
-  { date: "18 LUG", name: "PULL DAY", volume: 5460, sets: 12, duration: "52 min", pr: false },
-  { date: "16 LUG", name: "PUSH DAY", volume: 6510, sets: 14, duration: "55 min", pr: false },
-];
+const MOCK_HISTORY = []; // lo storico si popola completando i workout
 
-const DEFAULT_ROUTINES = [
-    {
-      id: 1, name: "PUSH DAY",
-      exercises: [
-        { name: "Panca Piana Bilanciere", group: "Petto", sets: [{ w: 80, r: 8, done: false }, { w: 80, r: 8, done: false }, { w: 85, r: 6, done: false }] },
-        { name: "Military Press", group: "Spalle", sets: [{ w: 45, r: 10, done: false }, { w: 45, r: 8, done: false }] },
-        { name: "Pushdown Tricipiti", group: "Tricipiti", sets: [{ w: 25, r: 12, done: false }, { w: 25, r: 12, done: false }] },
-      ],
-    },
-    {
-      id: 2, name: "PULL DAY",
-      exercises: [
-        { name: "Trazioni", group: "Dorso", sets: [{ w: 0, r: 8, done: false }, { w: 0, r: 8, done: false }, { w: 0, r: 6, done: false }] },
-        { name: "Rematore Bilanciere", group: "Dorso", sets: [{ w: 60, r: 10, done: false }, { w: 60, r: 10, done: false }] },
-        { name: "Curl Bilanciere", group: "Bicipiti", sets: [{ w: 30, r: 12, done: false }, { w: 30, r: 10, done: false }] },
-      ],
-    },
-    {
-      id: 3, name: "LEG DAY",
-      exercises: [
-        { name: "Squat Bilanciere", group: "Gambe", sets: [{ w: 100, r: 6, done: false }, { w: 100, r: 6, done: false }, { w: 105, r: 5, done: false }, { w: 105, r: 5, done: false }] },
-        { name: "Leg Press", group: "Gambe", sets: [{ w: 180, r: 10, done: false }, { w: 180, r: 10, done: false }, { w: 200, r: 8, done: false }] },
-        { name: "Leg Curl Sdraiato", group: "Gambe", sets: [{ w: 40, r: 12, done: false }, { w: 40, r: 12, done: false }] },
-        { name: "Calf Raise in Piedi", group: "Gambe", sets: [{ w: 60, r: 15, done: false }, { w: 60, r: 15, done: false }] },
-      ],
-    },
-];
-const DEFAULT_PRS = {
-    "Panca Piana Bilanciere": 82.5, "Squat Bilanciere": 110, "Military Press": 47.5,
-    "Stacco da Terra": 140, "Rematore Bilanciere": 70, "Leg Press": 200,
-};
+const DEFAULT_ROUTINES = [];
+const DEFAULT_PRS = {};
 
 const LEVEL_TITLES = ["RECRUIT", "PRIVATE", "SERGEANT", "SPARTAN", "MASTER CHIEF"];
 const xpForLevel = (lvl) => 100 + (lvl - 1) * 60;
@@ -267,9 +233,9 @@ function HudToast({ toast }) {
 /* ================================== APP ================================== */
 export default function App() {
   const [tab, setTab] = useState("training");
-  const [xp, setXp] = useState(140);
-  const [level, setLevel] = useState(12);
-  const [streak] = useState(7);
+  const [xp, setXp] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [streak] = useState(0);
   const [toast, setToast] = useState(null);
   const tRef = useRef(null);
 
@@ -277,8 +243,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [hydrated, setHydrated] = useState(false);
   const [body, setBody] = useState({
-    peso: 78, altezza: 178, eta: 26, sesso: "M", bf: 15,
-    collo: 38, petto: 102, vita: 82, braccio: 36, coscia: 58,
+    peso: "", altezza: "", eta: "", sesso: "M", bf: "",
+    collo: "", petto: "", vita: "", braccio: "", coscia: "",
   });
   const [nutri, setNutri] = useState(null);
   const [routines, setRoutines] = useState(DEFAULT_ROUTINES);
@@ -364,6 +330,16 @@ export default function App() {
     );
   }
 
+  if (!body.onboarded) {
+    return (
+      <div className="hud-root">
+        <style>{CSS}</style>
+        <HudToast toast={toast} />
+        <OnboardingWizard body={body} setBody={setBody} username={user.username} fireToast={fireToast} />
+      </div>
+    );
+  }
+
   return (
     <div className="hud-root">
       <style>{CSS}</style>
@@ -417,12 +393,13 @@ export default function App() {
         <main className="main-area">
           {tab === "training" && <Training addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} />}
           {tab === "nutrition" && (
-            <NutritionTab body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} />
+            <NutritionTab body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
           {tab === "profile" && (
             <ProfileTab user={user} body={body} setBody={setBody}
               fireToast={fireToast} onLogout={async () => { await supabase.auth.signOut(); setTab("training"); }}
-              onUserUpdate={setUser} level={level} rank={rank} streak={streak} />
+              onUserUpdate={setUser} level={level} rank={rank} streak={streak}
+              onRedoSetup={() => setBody((b) => ({ ...b, onboarded: false }))} />
           )}
         </main>
       </div>
@@ -475,6 +452,13 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
           <Btn small onClick={() => setView("builder")}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> Nuova</Btn>
         </div>
 
+        {routines.length === 0 && (
+          <Panel>
+            <div className="tiny t-faint" style={{ textAlign: "center", padding: "12px 0" }}>
+              Nessuna scheda. Creane una, importala da un documento PT o usa il generatore AI.
+            </div>
+          </Panel>
+        )}
         {routines.map((r) => (
           <button key={r.id} onClick={() => setActiveId(r.id)} className="tap" style={{ width: "100%", cursor: "pointer" }}>
             <Panel hover>
@@ -519,6 +503,11 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
       <div className="col stack">
         <Panel>
           <div className="hud-label" style={{ marginBottom: 8 }}>▸ Mission log — ultimi allenamenti</div>
+          {MOCK_HISTORY.length === 0 && (
+            <div className="tiny t-faint" style={{ padding: "8px 0" }}>
+              Nessun allenamento registrato. Completa il primo workout per iniziare il log.
+            </div>
+          )}
           {MOCK_HISTORY.map((h, i) => (
             <div key={i} className="divider-row g12">
               <div className="micro" style={{ width: 46, flexShrink: 0 }}>{h.date}</div>
@@ -541,6 +530,11 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
           <div className="hud-label row g6" style={{ marginBottom: 8 }}>
             <Trophy size={13} color="#ffd76a" /> Personal records
           </div>
+          {Object.keys(prs).length === 0 && (
+            <div className="tiny t-faint" style={{ padding: "6px 0" }}>
+              Nessun record. Completa serie con carichi crescenti per registrare i PR.
+            </div>
+          )}
           {Object.entries(prs).map(([k, v]) => (
             <div key={k} className="divider-row">
               <span style={{ fontSize: 14 }}>{k}</span>
@@ -1140,7 +1134,7 @@ const BodyField = ({ draft, setD, label, k, unit, step }) => (
 );
 
 /* ================================ PROFILE ================================ */
-function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak }) {
+function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, onRedoSetup }) {
   const [draft, setDraft] = useState(body);
   const [username, setUsername] = useState(user.username);
   const [oldPw, setOldPw] = useState("");
@@ -1186,7 +1180,10 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
               <div className="tiny t-faint">{user.email}</div>
             </div>
           </div>
-          <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} /> Esci</Btn>
+          <div className="row g8 wrap">
+            <Btn small onClick={onRedoSetup}>◈ Rifai setup profilo</Btn>
+            <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} /> Esci</Btn>
+          </div>
         </Panel>
 
         <Panel>
@@ -1266,7 +1263,8 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
    Proteine 2.0-2.2 g/kg · Grassi 0.9 g/kg · Carboidrati = kcal rimanenti */
 const calcTargets = (body, days, goal) => {
   const bmr = 10 * body.peso + 6.25 * body.altezza - 5 * body.eta + (body.sesso === "M" ? 5 : -161);
-  const tdee = bmr * (1.3 + 0.05 * days);
+  const actBase = body.attivita === "Sedentaria" ? 1.22 : body.attivita === "Attiva" ? 1.5 : 1.36;
+  const tdee = bmr * (actBase + 0.035 * days);
   const mult = goal === "Massa" ? 1.10 : goal === "Definizione" ? 0.82 : 1.0;
   const kcal = Math.round((tdee * mult) / 10) * 10;
   const p = Math.round(body.peso * (goal === "Definizione" ? 2.2 : 2.0));
@@ -1316,9 +1314,9 @@ function MacroBar({ label, grams, kcalPerG, totalKcal, color }) {
   );
 }
 
-function NutritionTab({ body, nutri, setNutri, fireToast }) {
-  const [goal, setGoal] = useState(nutri ? nutri.goal : "Massa");
-  const [days, setDays] = useState(nutri ? nutri.days : 3);
+function NutritionTab({ body, nutri, setNutri, fireToast, goProfile }) {
+  const [goal, setGoal] = useState(nutri ? nutri.goal : (body.obiettivo || "Massa"));
+  const [days, setDays] = useState(nutri ? nutri.days : (body.giorniAllenamento || 3));
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
@@ -1362,6 +1360,25 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
     setEditing(false);
     fireToast({ title: "◈ TARGET AGGIORNATI", sub: `${t.kcal} kcal` });
   };
+
+  /* ---- Dati corporei mancanti: blocca la generazione ---- */
+  const missingData = !body.peso || !body.altezza || !body.eta;
+  if (!nutri && missingData) return (
+    <div className="fade-in stack" style={{ maxWidth: 560 }}>
+      <h2 className="hud-title">▸ Piano nutrizionale</h2>
+      <Panel accent style={{ textAlign: "center", padding: 32 }}>
+        <Ruler size={26} color="#ffd76a" style={{ margin: "0 auto 12px" }} />
+        <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>DATI CORPOREI MANCANTI</div>
+        <div className="tiny t-dim" style={{ marginTop: 8, lineHeight: 1.6 }}>
+          Per calcolare il fabbisogno servono almeno <span className="t-cyan">peso, altezza ed età</span>.
+          Inseriscili nel profilo, poi torna qui.
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <Btn primary onClick={goProfile}>Vai al profilo ›</Btn>
+        </div>
+      </Panel>
+    </div>
+  );
 
   /* ---- Nessun piano: schermata di generazione ---- */
   if (!nutri) return (
@@ -1461,6 +1478,169 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           </Panel>
         ))}
         <div className="micro">Il piano è indicativo: consulta un professionista per esigenze specifiche.</div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================ ONBOARDING ================================ */
+/* Primo accesso: raccolta dati base + stile di vita (come le app fitness) */
+const ACTIVITY_OPTS = [
+  { id: "Sedentaria", desc: "Lavoro da scrivania, poco movimento" },
+  { id: "Moderata", desc: "In piedi o in movimento parte del giorno" },
+  { id: "Attiva", desc: "Lavoro fisico o molto movimento quotidiano" },
+];
+
+const ObNumF = ({ d, set, label, k, unit, ph }) => (
+  <div>
+    <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>{label} {unit && <span className="t-faint">({unit})</span>}</div>
+    <input className="hud-input cham-s" type="number" inputMode="decimal" placeholder={ph}
+      value={d[k]} onChange={(e) => set(k, e.target.value)} style={{ textAlign: "center" }} />
+  </div>
+);
+
+function OnboardingWizard({ body, setBody, username, fireToast }) {
+  const [step, setStep] = useState(1);
+  const [d, setD] = useState({
+    sesso: body.sesso || "M", eta: body.eta || "", altezza: body.altezza || "",
+    peso: body.peso || "", bf: body.bf || "",
+    attivita: body.attivita || "Moderata",
+    giorniAllenamento: body.giorniAllenamento || 3,
+    esperienza: body.esperienza || "Principiante",
+    obiettivo: body.obiettivo || "Massa",
+  });
+  const set = (k, v) => setD((x) => ({ ...x, [k]: v }));
+  const [err, setErr] = useState(null);
+
+  const next = () => {
+    setErr(null);
+    if (step === 1) {
+      if (!d.eta || !d.altezza || !d.peso) return setErr("Compila età, altezza e peso");
+      if (d.eta < 14 || d.eta > 100) return setErr("Età non valida");
+      if (d.altezza < 120 || d.altezza > 230) return setErr("Altezza non valida (cm)");
+      if (d.peso < 30 || d.peso > 250) return setErr("Peso non valido (kg)");
+    }
+    setStep(step + 1);
+  };
+
+  const finish = () => {
+    setBody((b) => ({
+      ...b,
+      sesso: d.sesso, eta: Number(d.eta), altezza: Number(d.altezza),
+      peso: Number(d.peso), bf: d.bf === "" ? "" : Number(d.bf),
+      attivita: d.attivita, giorniAllenamento: d.giorniAllenamento,
+      esperienza: d.esperienza, obiettivo: d.obiettivo,
+      onboarded: true,
+    }));
+    fireToast({ title: "◈ PROFILO CONFIGURATO", sub: "Benvenuto a bordo, " + username });
+  };
+
+  const Chips = ({ k, options }) => (
+    <div className="row wrap g6">
+      {options.map((o) => (
+        <button key={o} onClick={() => set(k, o)}
+          className={"tap cham-s chip " + (d[k] === o ? "chip-on" : "")}
+          style={{ cursor: "pointer", fontSize: 12, padding: "7px 14px", fontFamily: "'Rajdhani',sans-serif", textTransform: "none", letterSpacing: ".02em" }}>
+          {o}
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="auth-wrap">
+      <div className="auth-box fade-in" style={{ maxWidth: 440 }}>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <div className="f-hud t-cyan" style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".25em" }}>SETUP PROFILO</div>
+          <div className="row center g6" style={{ marginTop: 10 }}>
+            {[1, 2, 3].map((s) => (
+              <div key={s} className="seg" style={{ width: 40, flex: "none",
+                background: step >= s ? "linear-gradient(180deg,#9be8ff,#3fa9d9)" : "#0e2233",
+                boxShadow: step >= s ? "0 0 6px rgba(87,200,242,.6)" : "none" }} />
+            ))}
+          </div>
+          <div className="micro" style={{ marginTop: 6 }}>PASSO {step} DI 3</div>
+        </div>
+
+        <div className="panel panel-accent cham stack" style={{ padding: 24 }}>
+          {step === 1 && (
+            <>
+              <div className="hud-title" style={{ fontSize: 12 }}>Dati base</div>
+              <div>
+                <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>Sesso</div>
+                <div className="row g6">
+                  {["M", "F"].map((s) => (
+                    <button key={s} onClick={() => set("sesso", s)}
+                      className={"tap cham-s chip " + (d.sesso === s ? "chip-on" : "")}
+                      style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "9px 0", fontSize: 13 }}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="field-grid">
+                <ObNumF d={d} set={set} label="Età" k="eta" unit="anni" ph="es. 25" />
+                <ObNumF d={d} set={set} label="Altezza" k="altezza" unit="cm" ph="es. 178" />
+                <ObNumF d={d} set={set} label="Peso" k="peso" unit="kg" ph="es. 75" />
+                <ObNumF d={d} set={set} label="Massa grassa" k="bf" unit="% · opzionale" ph="es. 15" />
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <div className="hud-title" style={{ fontSize: 12 }}>Stile di vita</div>
+              <div>
+                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>Attività quotidiana (fuori palestra)</div>
+                <div className="stack-s">
+                  {ACTIVITY_OPTS.map((o) => (
+                    <button key={o.id} onClick={() => set("attivita", o.id)}
+                      className={"tap cham-s " + (d.attivita === o.id ? "" : "")}
+                      style={{ cursor: "pointer", width: "100%", padding: "10px 12px", textAlign: "left",
+                        border: "1px solid " + (d.attivita === o.id ? "#57c8f2" : "#1b3a52"),
+                        background: d.attivita === o.id ? "#0c2a3d" : "#060f18" }}>
+                      <div className={d.attivita === o.id ? "t-cyan" : "t-bright"} style={{ fontSize: 14, fontWeight: 700 }}>{o.id}</div>
+                      <div className="tiny t-faint">{o.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>Allenamenti a settimana · <span className="t-cyan">{d.giorniAllenamento}</span></div>
+                <input type="range" min="1" max="7" value={d.giorniAllenamento}
+                  onChange={(e) => set("giorniAllenamento", Number(e.target.value))} />
+              </div>
+              <div>
+                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>Esperienza in palestra</div>
+                <Chips k="esperienza" options={["Principiante", "Intermedio", "Avanzato"]} />
+              </div>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <div className="hud-title" style={{ fontSize: 12 }}>Obiettivo</div>
+              <Chips k="obiettivo" options={["Massa", "Mantenimento", "Definizione"]} />
+              <div className="cham-s stack-s" style={{ padding: "12px 14px", background: "#060f18", border: "1px solid #0e2233" }}>
+                <div className="hud-label" style={{ fontSize: 9 }}>Riepilogo</div>
+                <div className="tiny t-dim" style={{ lineHeight: 1.7 }}>
+                  {d.sesso === "M" ? "Uomo" : "Donna"} · {d.eta} anni · {d.altezza} cm · {d.peso} kg{d.bf ? " · " + d.bf + "% BF" : ""}<br />
+                  Attività {d.attivita.toLowerCase()} · {d.giorniAllenamento} allenamenti/sett · {d.esperienza}<br />
+                  Obiettivo: <span className="t-cyan">{d.obiettivo}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {err && <div className="tiny t-red">⚠ {err}</div>}
+
+          <div className="row g8">
+            {step > 1 && <Btn onClick={() => setStep(step - 1)} style={{ flex: 1 }}>‹ Indietro</Btn>}
+            {step < 3
+              ? <Btn primary onClick={next} style={{ flex: 2 }}>Avanti ›</Btn>
+              : <Btn primary onClick={finish} style={{ flex: 2 }}>◈ Inizia</Btn>}
+          </div>
+        </div>
       </div>
     </div>
   );
