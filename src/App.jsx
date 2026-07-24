@@ -333,6 +333,8 @@ export default function App() {
     { id: "profile", label: "Profilo", icon: User },
   ];
 
+  const ip = useInstallPrompt();
+
   if (!user) {
     return (
       <div className="hud-root">
@@ -342,8 +344,6 @@ export default function App() {
       </div>
     );
   }
-
-  const ip = useInstallPrompt();
 
   if (!body.onboarded) {
     return (
