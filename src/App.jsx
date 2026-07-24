@@ -36,7 +36,7 @@ const xpForLevel = (lvl) => 100 + (lvl - 1) * 60;
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap');
 
-:root{
+:root{color-scheme:dark;
   --bg:#04090f; --panel:#081420; --panel2:#0a1a2a; --line:#1b3a52; --line2:#2f6786;
   --cyan:#57c8f2; --cyan-hi:#9be8ff; --bright:#e6f6ff; --text:#cfe8f5;
   --dim:#7fa8bf; --faint:#3f637c; --amber:#ffd76a; --green:#2fbf71; --red:#ff8f7a;
@@ -86,6 +86,16 @@ const CSS = `
   font-family:'Rajdhani',sans-serif;font-weight:600}
 .hud-input:focus{border-color:var(--cyan);box-shadow:0 0 0 1px rgba(87,200,242,.25)}
 .hud-input::placeholder{color:var(--faint);-webkit-text-fill-color:var(--faint)}
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active{
+  -webkit-box-shadow:0 0 0 1000px #050d15 inset !important;
+  box-shadow:0 0 0 1000px #050d15 inset !important;
+  -webkit-text-fill-color:var(--bright) !important;
+  caret-color:var(--cyan);
+  transition:background-color 99999s ease-in-out 0s}
+input,textarea,select{background-color:#050d15;color:var(--bright)}
 input[type=number]{appearance:textfield;-moz-appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
@@ -181,7 +191,10 @@ button.btn{text-align:center}
 @media(min-width:480px){.hide-sm{display:inline}}
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:10}
 .auth-box{width:100%;max-width:400px}
-.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
+.field-grid>div{display:flex;flex-direction:column;justify-content:flex-end}
+.field-grid .hud-label{min-height:24px;display:flex;align-items:flex-end;gap:3px}
+.field-grid .hud-input{height:42px}
 @media(max-width:400px){.field-grid{grid-template-columns:1fr}}
 .link-btn{cursor:pointer;color:var(--faint);font-size:12px;letter-spacing:.05em}
 .link-btn:hover{color:var(--cyan-hi)}
