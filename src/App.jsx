@@ -343,6 +343,8 @@ export default function App() {
     );
   }
 
+  const ip = useInstallPrompt();
+
   if (!body.onboarded) {
     return (
       <div className="hud-root">
@@ -357,6 +359,8 @@ export default function App() {
     <div className="hud-root">
       <style>{CSS}</style>
       <HudToast toast={toast} />
+
+      <InstallBanner ip={ip} />
 
       {/* TOP HUD BAR */}
       <header className="hud-header">
@@ -1677,6 +1681,66 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
               ? <Btn primary onClick={next} style={{ flex: 2 }}>Avanti ›</Btn>
               : <Btn primary onClick={finish} style={{ flex: 2 }}>◈ Inizia</Btn>}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================ INSTALL PWA ================================ */
+/* Chrome/Android non mostra più il prompt automatico in modo affidabile:
+   va catturato l'evento beforeinstallprompt e offerto un pulsante custom.
+   Su iOS il prompt non esiste proprio: si mostrano le istruzioni manuali. */
+function useInstallPrompt() {
+  const [deferred, setDeferred] = useState(null);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem("gq_install_dismissed") === "1"; } catch { return false; }
+  });
+  const standalone =
+    typeof window !== "undefined" &&
+    (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true);
+  const isIOS = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  useEffect(() => {
+    const h = (e) => { e.preventDefault(); setDeferred(e); };
+    window.addEventListener("beforeinstallprompt", h);
+    return () => window.removeEventListener("beforeinstallprompt", h);
+  }, []);
+
+  const dismiss = () => {
+    setDismissed(true);
+    try { localStorage.setItem("gq_install_dismissed", "1"); } catch {}
+  };
+  const install = async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice;
+    setDeferred(null);
+  };
+  return { canInstall: !!deferred, isIOS, standalone, dismissed, dismiss, install };
+}
+
+function InstallBanner({ ip }) {
+  if (ip.standalone || ip.dismissed) return null;
+  if (!ip.canInstall && !ip.isIOS) return null;
+  return (
+    <div className="cham-s" style={{
+      position: "fixed", bottom: 74, left: 12, right: 12, zIndex: 90,
+      background: "#0c2a3d", border: "1px solid #57c8f2", padding: "10px 14px",
+      boxShadow: "0 4px 24px rgba(0,0,0,.6), 0 0 12px rgba(87,200,242,.25)",
+    }}>
+      <div className="row between g12">
+        <div className="grow">
+          <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".12em" }}>◈ INSTALLA GYMQUEST</div>
+          <div className="tiny t-dim" style={{ marginTop: 2, lineHeight: 1.5 }}>
+            {ip.canInstall
+              ? "Aggiungila alla schermata home come app"
+              : "Su iPhone: tocca Condividi (□↑) poi \u201CAggiungi alla schermata Home\u201D"}
+          </div>
+        </div>
+        <div className="row g8" style={{ flexShrink: 0, alignItems: "center" }}>
+          {ip.canInstall && <Btn small primary onClick={ip.install}>Installa</Btn>}
+          <span onClick={ip.dismiss} className="tap t-faint" style={{ cursor: "pointer", fontSize: 16, padding: 4 }}>✕</span>
         </div>
       </div>
     </div>
