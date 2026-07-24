@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
   Dumbbell, Flame, Timer, Plus, Check, ChevronRight, Play, Square,
@@ -191,6 +192,7 @@ button.btn{text-align:center}
 .float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c2a3d;border:1px solid #57c8f2;cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
 .float-timer{position:fixed;left:50%;transform:translateX(-50%);bottom:86px;z-index:96;background:#071523;border:1px solid #ffd76a;box-shadow:0 0 24px rgba(255,215,106,.22);padding:12px 16px;min-width:270px}
 .set-grid-t{display:grid;grid-template-columns:32px 1fr 64px 48px;gap:8px;align-items:center}
+.icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer}
 
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .toast-in{animation:ti .35s cubic-bezier(.34,1.4,.64,1)}
@@ -644,10 +646,10 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
                   </div>
                 ) : (
                   <>
-                    <div className="row g8">
-                      <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap" title="Modifica modello"
+                    <div className="row g12" style={{ paddingRight: 2 }}>
+                      <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title="Modifica modello"
                         style={{ cursor: "pointer", color: "#3f637c" }}><Pencil size={15} /></span>
-                      <span onClick={() => setConfirmDel(r.id)} className="tap" title="Elimina"
+                      <span onClick={() => setConfirmDel(r.id)} className="tap icon-tap" title="Elimina"
                         style={{ cursor: "pointer", color: "#3f637c" }}><Trash2 size={15} /></span>
                     </div>
                     <Btn small primary disabled={!!session} onClick={() => startSession(r)}
@@ -764,7 +766,7 @@ function ExerciseLibrary() {
                 {list.map((e) => (
                   <div key={e} className="row between" style={{ fontSize: 14, padding: "5px 0", borderBottom: "1px solid #0a1826" }}>
                     <span>{e}</span>
-                    <span onClick={() => setInfo({ name: e, group: g })} className="tap" style={{ cursor: "pointer", color: "#3f637c" }}>
+                    <span onClick={() => setInfo({ name: e, group: g })} className="tap icon-tap" style={{ color: "#3f637c" }}>
                       <Info size={13} />
                     </span>
                   </div>
@@ -780,13 +782,91 @@ function ExerciseLibrary() {
 
 /* ---------------- Modale info esercizio (anteprima + esecuzione) ---------------- */
 /* Le immagini/GIF si aggiungono in EXERCISE_MEDIA: { "Nome Esercizio": "https://..." } */
-const EXERCISE_MEDIA = {};
+const EXERCISE_MEDIA = {
+  "Ab Wheel": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Ab_Roller/0.jpg",
+  "Affondi Bulgari": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One_Leg_Barbell_Squat/0.jpg",
+  "Affondi Manubri": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/0.jpg",
+  "Alzate Frontali": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Dumbbell_Raise/0.jpg",
+  "Alzate Laterali": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg",
+  "Alzate Laterali ai Cavi": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/0.jpg",
+  "Alzate Posteriori": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Bent-Over_Rear_Delt_Raise/0.jpg",
+  "Arnold Press": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Arnold_Dumbbell_Press/0.jpg",
+  "Calf Raise Seduto": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Calf_Raise/0.jpg",
+  "Calf Raise in Piedi": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Calf_Raises/0.jpg",
+  "Camminata Veloce": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Walking_Treadmill/0.jpg",
+  "Chest Press": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Bench_Press/0.jpg",
+  "Corsa": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Running_Treadmill/0.jpg",
+  "Croci Manubri": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Flyes/0.jpg",
+  "Croci ai Cavi": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crossover/0.jpg",
+  "Crunch": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Crunches/0.jpg",
+  "Crunch ai Cavi": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crunch/0.jpg",
+  "Curl Bilanciere": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/0.jpg",
+  "Curl Concentrato": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Concentration_Curls/0.jpg",
+  "Curl Manubri Alternato": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Alternate_Bicep_Curl/0.jpg",
+  "Curl Panca Scott": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/0.jpg",
+  "Curl ai Cavi": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Biceps_Cable_Curl/0.jpg",
+  "Cyclette": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bicycling_Stationary/0.jpg",
+  "Dip alle Parallele": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Chest_Version/0.jpg",
+  "Dip tra Panche": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bench_Dips/0.jpg",
+  "Ellittica": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Elliptical_Trainer/0.jpg",
+  "Estensioni Sopra la Testa": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Dumbbell_Triceps_Extension/0.jpg",
+  "Face Pull": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Face_Pull/0.jpg",
+  "French Press": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Triceps_Press/0.jpg",
+  "Front Squat": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Barbell_Squat/0.jpg",
+  "Hack Squat": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hack_Squat/0.jpg",
+  "Hammer Curl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hammer_Curls/0.jpg",
+  "Hanging Leg Raise": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hanging_Leg_Raise/0.jpg",
+  "Hip Thrust": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Hip_Thrust/0.jpg",
+  "Hyperextension": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hyperextensions_Back_Extensions/0.jpg",
+  "Kickback Manubrio": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Tricep_Dumbbell_Kickback/0.jpg",
+  "Lat Machine Avanti": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Wide-Grip_Lat_Pulldown/0.jpg",
+  "Lat Machine Presa Stretta": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Front_Lat_Pulldown/0.jpg",
+  "Leg Curl Sdraiato": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Leg_Curls/0.jpg",
+  "Leg Curl Seduto": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Leg_Curl/0.jpg",
+  "Leg Extension": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Extensions/0.jpg",
+  "Leg Press": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Press/0.jpg",
+  "Leg Raise": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Flat_Bench_Lying_Leg_Raise/0.jpg",
+  "Military Press": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Military_Press/0.jpg",
+  "Panca Declinata": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Decline_Barbell_Bench_Press/0.jpg",
+  "Panca Inclinata Bilanciere": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Incline_Bench_Press_-_Medium_Grip/0.jpg",
+  "Panca Inclinata Manubri": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg",
+  "Panca Piana Bilanciere": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press_-_Medium_Grip/0.jpg",
+  "Panca Piana Manubri": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bench_Press/0.jpg",
+  "Panca Presa Stretta": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Barbell_Bench_Press/0.jpg",
+  "Pectoral Machine": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Butterfly/0.jpg",
+  "Plank": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Plank/0.jpg",
+  "Pull-Down Braccia Tese": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Straight-Arm_Pulldown/0.jpg",
+  "Pulley Basso": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Cable_Rows/0.jpg",
+  "Push-Up": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pushups/0.jpg",
+  "Pushdown Corda": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown_-_Rope_Attachment/0.jpg",
+  "Pushdown Tricipiti": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Pushdown/0.jpg",
+  "Rematore Bilanciere": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Barbell_Row/0.jpg",
+  "Rematore Manubrio": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Dumbbell_Row/0.jpg",
+  "Rematore T-Bar": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/T-Bar_Row_with_Handle/0.jpg",
+  "Russian Twist": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Russian_Twist/0.jpg",
+  "Salto della Corda": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rope_Jumping/0.jpg",
+  "Shoulder Press Manubri": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shoulder_Press/0.jpg",
+  "Shrug Bilanciere": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Shrug/0.jpg",
+  "Side Plank": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Bridge/0.jpg",
+  "Spider Curl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Spider_Curl/0.jpg",
+  "Squat Bilanciere": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Squat/0.jpg",
+  "Stacco Rumeno": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Romanian_Deadlift/0.jpg",
+  "Stacco da Terra": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Deadlift/0.jpg",
+  "Stepper": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Stairmaster/0.jpg",
+  "Tapis Roulant": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Running_Treadmill/0.jpg",
+  "Trazioni": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pullups/0.jpg",
+  "Trazioni Presa Inversa": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Chin-Up/0.jpg",
+  "Vogatore": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rowing_Stationary/0.jpg",
+};
+const Overlay = ({ children }) => createPortal(children, document.body);
+
 const GROUP_ICONS = { Petto: "▣", Dorso: "◈", Gambe: "▼", Spalle: "▲", Bicipiti: "◐", Tricipiti: "◑", Cardio: "♥", Core: "◆", Altro: "◇" };
 
 function ExerciseInfoModal({ name, group, onClose }) {
   const media = EXERCISE_MEDIA[name];
   const desc = EXERCISE_INFO[name] || INFO_FALLBACK[group] || INFO_FALLBACK.Altro;
   return (
+    <Overlay>
     <div className="modal-back" onClick={onClose}>
       <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ marginBottom: 12 }}>
@@ -794,14 +874,14 @@ function ExerciseInfoModal({ name, group, onClose }) {
             <div className="t-bright" style={{ fontSize: 17, fontWeight: 700 }}>{name}</div>
             <div className="micro t-cyan">{(group || "").toUpperCase()}</div>
           </div>
-          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: 4 }}>✕</span>
+          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
         <div className="cham-s" style={{
-          height: 160, marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center",
+          height: 210, marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center",
           background: "#04101b", border: "1px solid #0e2233", overflow: "hidden",
         }}>
           {media
-            ? <img src={media} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ? <img src={media} alt={name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", background: "#eef2f5" }} />
             : <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 44, color: "#1b3a52", lineHeight: 1 }}>{GROUP_ICONS[group] || "◇"}</div>
                 <div className="micro" style={{ marginTop: 8 }}>ANTEPRIMA NON DISPONIBILE</div>
@@ -811,6 +891,7 @@ function ExerciseInfoModal({ name, group, onClose }) {
         <div className="t-dim" style={{ fontSize: 14, lineHeight: 1.7 }}>{desc}</div>
       </div>
     </div>
+    </Overlay>
   );
 }
 
@@ -833,7 +914,7 @@ function FloatingTimer() {
   const bump = (d) => { const n = Math.max(15, dur + d); setDur(n); setLeft(n); setRunning(false); };
 
   return (
-    <>
+    <Overlay>
       <button onClick={() => setOpen(!open)} className="float-timer-btn cham-s tap" title="Timer di recupero">
         <Timer size={20} color={running && left > 0 ? "#ffd76a" : "#57c8f2"} className={running && left > 0 ? "blink" : ""} />
       </button>
@@ -861,7 +942,7 @@ function FloatingTimer() {
           </div>
         </div>
       )}
-    </>
+    </Overlay>
   );
 }
 
@@ -986,6 +1067,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
 
       {/* Conferma uscita: la sessione resta attiva */}
       {confirmExit && (
+        <Overlay>
         <div className="modal-back" onClick={() => setConfirmExit(false)}>
           <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
             <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", marginBottom: 8 }}>SESSIONE ANCORA ATTIVA</div>
@@ -999,10 +1081,12 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
             </div>
           </div>
         </div>
+        </Overlay>
       )}
 
       {/* Riepilogo finale + salvataggio nel modello */}
       {finishing && (
+        <Overlay>
         <div className="modal-back">
           <div className="modal-box cham fade-in">
             <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 15, marginBottom: 4 }}>◈ MISSION COMPLETE</div>
@@ -1032,6 +1116,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
             </div>
           </div>
         </div>
+        </Overlay>
       )}
 
       <div className="row between g8">
@@ -1065,8 +1150,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
             <div className="grow">
               <div className="row g6">
                 <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{ex.name}</span>
-                <span onClick={() => setInfo({ name: ex.name, group: ex.group })} className="tap"
-                  style={{ cursor: "pointer", color: "#3f637c" }}><Info size={14} /></span>
+                <span onClick={() => setInfo({ name: ex.name, group: ex.group })} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={14} /></span>
               </div>
               <div className="micro">{(ex.group || "").toUpperCase()}{ex.mode !== "time" && ` · PR ${prs[ex.name] || "—"} KG`}</div>
             </div>
@@ -1082,9 +1166,9 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
               </div>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid-t cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-                  <div className="col" style={{ alignItems: "center", gap: 2 }}>
+                  <div className="col" style={{ alignItems: "center", gap: 5 }}>
                     <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
-                    <span onClick={() => removeSet(ei, si)} className="tap" style={{ cursor: "pointer", color: "#523030" }}><X size={11} /></span>
+                    <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#523030" }}><X size={11} /></span>
                   </div>
                   <div className="row g8" style={{ alignItems: "center" }}>
                     <button onClick={() => setRunKey(runKey === `${ei}-${si}` ? null : `${ei}-${si}`)}
@@ -1112,9 +1196,9 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
               </div>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-                  <div className="col" style={{ alignItems: "center", gap: 2 }}>
+                  <div className="col" style={{ alignItems: "center", gap: 5 }}>
                     <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
-                    <span onClick={() => removeSet(ei, si)} className="tap" style={{ cursor: "pointer", color: "#523030" }}><X size={11} /></span>
+                    <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#523030" }}><X size={11} /></span>
                   </div>
                   <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
                     onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
@@ -1194,8 +1278,7 @@ function RoutineEditor({ initial, onClose, onSave }) {
             <div className="row g6">
               <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</span>
               <span className="micro t-cyan" style={{ alignSelf: "center" }}>{(ex.group || "").toUpperCase()}</span>
-              <span onClick={() => setInfo({ name: ex.name, group: ex.group })} className="tap"
-                style={{ cursor: "pointer", color: "#3f637c" }}><Info size={13} /></span>
+              <span onClick={() => setInfo({ name: ex.name, group: ex.group })} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={13} /></span>
             </div>
             <span onClick={() => toggleEx(ex.name, ex.group)} className="tap" style={{ cursor: "pointer", color: "#6e3028" }}><Trash2 size={14} /></span>
           </div>
@@ -1228,7 +1311,7 @@ function RoutineEditor({ initial, onClose, onSave }) {
                   <span className="micro">REPS</span>
                 </>
               )}
-              <span onClick={() => removeSet(ei, si)} className="tap" style={{ cursor: "pointer", color: "#523030", marginLeft: "auto" }}><X size={13} /></span>
+              <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#523030", marginLeft: "auto" }}><X size={13} /></span>
             </div>
           ))}
           <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>+ SERIE</button>
