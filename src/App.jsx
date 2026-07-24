@@ -83,6 +83,7 @@ const INFO_FALLBACK = {
 
 /* ---------------- Mapping import → database esercizi ---------------- */
 /* Cerca la corrispondenza migliore col DB; il testo in eccesso del titolo finisce nelle note */
+const ALL_EXERCISES = Object.values(EXERCISE_DB).flat();
 const normalizeEx = (s) => s.toLowerCase().replace(/[^a-zà-ù0-9 ]/gi, " ").replace(/\s+/g, " ").trim();
 const matchToDb = (title) => {
   const t = normalizeEx(title);
@@ -190,8 +191,8 @@ button.btn{text-align:center}
 .modal-back{position:fixed;inset:0;background:rgba(2,6,10,.82);backdrop-filter:blur(3px);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-box{width:100%;max-width:430px;background:#071523;border:1px solid #57c8f2;box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto}
 .float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c2a3d;border:1px solid #57c8f2;cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
-.float-timer{position:fixed;left:50%;transform:translateX(-50%);bottom:86px;z-index:96;background:#071523;border:1px solid #ffd76a;box-shadow:0 0 24px rgba(255,215,106,.22);padding:12px 16px;min-width:270px}
-.set-grid-t{display:grid;grid-template-columns:32px 1fr 64px 48px;gap:8px;align-items:center}
+.float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:#071523;border:1px solid #ffd76a;box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;max-width:340px;box-sizing:border-box}
+.set-grid-t{display:grid;grid-template-columns:42px 1fr 64px 48px;gap:10px;align-items:center}
 .icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer}
 
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -254,7 +255,7 @@ button.btn{text-align:center}
 .grow{flex:1;min-width:0}
 .wrap{flex-wrap:wrap}
 
-.set-grid{display:grid;grid-template-columns:32px 1fr 1fr 48px;gap:8px;align-items:center}
+.set-grid{display:grid;grid-template-columns:42px 1fr 1fr 48px;gap:10px;align-items:center}
 .divider-row{display:flex;justify-content:space-between;align-items:center;
   padding:7px 0;border-bottom:1px solid #0e2233}
 .divider-row:last-child{border-bottom:none}
@@ -537,6 +538,7 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
+  const [report, setReport] = useState(null);
 
   const deleteRoutine = (id) => {
     setRoutines((rs) => rs.filter((r) => r.id !== id));
@@ -585,29 +587,28 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
 
   return (
     <div className="fade-in two-col">
+      {report && <WorkoutReport rec={report} onClose={() => setReport(null)} />}
       {/* LEFT: routines */}
       <div className="col stack">
 
         {/* Sessione in corso: banner di ripresa */}
         {session && (
           <Panel accent style={{ borderColor: "#ffd76a" }}>
-            <div className="row between g12">
-              <div className="grow">
-                <div className="f-hud t-amber blink" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 12 }}>● SESSIONE IN CORSO</div>
-                <div className="t-bright" style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{session.name}</div>
-                <div className="tiny t-faint">avviata alle {new Date(session.startedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</div>
-              </div>
-              <div className="col" style={{ gap: 6, alignItems: "flex-end" }}>
-                <Btn small primary onClick={() => setView("session")}>Riprendi ▶</Btn>
-                {confirmAbandon ? (
-                  <span className="row g8">
-                    <span onClick={abandonSession} className="tap tiny t-red" style={{ cursor: "pointer", fontWeight: 700 }}>CONFERMA</span>
-                    <span onClick={() => setConfirmAbandon(false)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>no</span>
-                  </span>
-                ) : (
-                  <span onClick={() => setConfirmAbandon(true)} className="tap micro t-faint" style={{ cursor: "pointer" }}>abbandona</span>
-                )}
-              </div>
+            <div className="f-hud t-amber blink" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 12 }}>● SESSIONE IN CORSO</div>
+            <div className="t-bright" style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{session.name}</div>
+            <div className="tiny t-faint" style={{ marginTop: 2 }}>avviata alle {new Date(session.startedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</div>
+            <div className="row g8" style={{ marginTop: 14 }}>
+              {confirmAbandon ? (
+                <>
+                  <Btn onClick={abandonSession} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>Conferma abbandono</Btn>
+                  <Btn onClick={() => setConfirmAbandon(false)} style={{ flex: 1 }}>Annulla</Btn>
+                </>
+              ) : (
+                <>
+                  <Btn primary onClick={() => setView("session")} style={{ flex: 2 }}>Riprendi ▶</Btn>
+                  <Btn onClick={() => setConfirmAbandon(true)} style={{ flex: 1 }}>Abbandona</Btn>
+                </>
+              )}
             </div>
           </Panel>
         )}
@@ -626,7 +627,7 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
         )}
         {routines.map((r) => (
           <Panel key={r.id} hover>
-            <div className="row between g12">
+            <div>
               <div className="grow">
                 <div className="f-hud t-bright" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 15 }}>{r.name}</div>
                 <div className="tiny t-dim" style={{ marginTop: 2 }}>
@@ -638,27 +639,28 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
                   ))}
                 </div>
               </div>
-              <div className="col" style={{ gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
-                {confirmDel === r.id ? (
-                  <div className="row g8">
-                    <span onClick={() => deleteRoutine(r.id)} className="tap tiny t-red" style={{ cursor: "pointer", fontWeight: 700 }}>ELIMINA</span>
-                    <span onClick={() => setConfirmDel(null)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>annulla</span>
+            </div>
+            <div className="row between" style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #0e2233" }}>
+              {confirmDel === r.id ? (
+                <div className="row g8" style={{ width: "100%" }}>
+                  <Btn small onClick={() => deleteRoutine(r.id)} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>Elimina scheda</Btn>
+                  <Btn small onClick={() => setConfirmDel(null)} style={{ flex: 1 }}>Annulla</Btn>
+                </div>
+              ) : (
+                <>
+                  <div className="row" style={{ gap: 18 }}>
+                    <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title="Modifica modello"
+                      style={{ color: "#5d87a3" }}><Pencil size={17} /></span>
+                    <span onClick={() => setConfirmDel(r.id)} className="tap icon-tap" title="Elimina"
+                      style={{ color: "#5d87a3" }}><Trash2 size={17} /></span>
                   </div>
-                ) : (
-                  <>
-                    <div className="row g12" style={{ paddingRight: 2 }}>
-                      <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title="Modifica modello"
-                        style={{ cursor: "pointer", color: "#3f637c" }}><Pencil size={15} /></span>
-                      <span onClick={() => setConfirmDel(r.id)} className="tap icon-tap" title="Elimina"
-                        style={{ cursor: "pointer", color: "#3f637c" }}><Trash2 size={15} /></span>
-                    </div>
-                    <Btn small primary disabled={!!session} onClick={() => startSession(r)}
-                      title={session ? "Chiudi prima la sessione attiva" : ""}>
-                      <Play size={11} style={{ display: "inline", verticalAlign: -1 }} /> Inizia
-                    </Btn>
-                  </>
-                )}
-              </div>
+                  <Btn small primary disabled={!!session} onClick={() => startSession(r)}
+                    style={{ padding: "9px 22px" }}
+                    title={session ? "Chiudi prima la sessione attiva" : ""}>
+                    <Play size={11} style={{ display: "inline", verticalAlign: -1 }} /> Inizia
+                  </Btn>
+                </>
+              )}
             </div>
           </Panel>
         ))}
@@ -692,7 +694,8 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
             </div>
           )}
           {(history || []).slice(0, 8).map((h, i) => (
-            <div key={i} className="divider-row g12">
+            <button key={i} onClick={() => setReport(h)} className="tap divider-row g12"
+              style={{ width: "100%", cursor: "pointer", textAlign: "left" }}>
               <div className="micro" style={{ width: 46, flexShrink: 0 }}>{h.date}</div>
               <div className="grow">
                 <div className="row g6 t-bright" style={{ fontSize: 14 }}>
@@ -700,10 +703,13 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
                 </div>
                 <div className="tiny t-faint">{h.sets} serie · {h.duration}</div>
               </div>
-              <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 13 }}>
-                {h.volume.toLocaleString()} <span className="t-faint" style={{ fontWeight: 500 }}>kg</span>
+              <div className="row g6" style={{ alignItems: "center" }}>
+                <span className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 13 }}>
+                  {h.volume.toLocaleString()} <span className="t-faint" style={{ fontWeight: 500 }}>kg</span>
+                </span>
+                <ChevronRight size={13} color="#3f637c" />
               </div>
-            </div>
+            </button>
           ))}
         </Panel>
 
@@ -730,6 +736,83 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
   );
 }
 
+
+/* ---------------- Report allenamento (dallo storico) ---------------- */
+function WorkoutReport({ rec, onClose }) {
+  const fmt = (sec) => `${Math.floor((sec || 0) / 60)}:${String((sec || 0) % 60).padStart(2, "0")}`;
+  const bestOf = (ex) => {
+    if (ex.mode === "time") return null;
+    let best = -1, idx = -1;
+    ex.sets.forEach((s, i) => { const v = (s.w || 0) * (s.r || 0); if (s.done && v > best) { best = v; idx = i; } });
+    return idx;
+  };
+  return (
+    <Overlay>
+    <div className="modal-back" onClick={onClose}>
+      <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="row between" style={{ marginBottom: 2 }}>
+          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>◈ MISSION REPORT</div>
+          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
+        </div>
+        <div className="t-bright" style={{ fontSize: 16, fontWeight: 700 }}>{rec.name}</div>
+        <div className="tiny t-faint" style={{ marginBottom: 14 }}>{rec.date} · {rec.duration}</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+          {[
+            ["VOLUME", `${(rec.volume || 0).toLocaleString()} kg`, "t-cyan"],
+            ["SERIE", rec.sets, "t-bright"],
+            ["CARDIO", rec.cardio ? `${rec.cardio} min` : "—", "t-cyan"],
+            ["RECORD", rec.pr > 0 ? `🏆 ${rec.pr}` : "—", "t-amber"],
+          ].map(([l, v, c]) => (
+            <div key={l} className="cham-s" style={{ padding: "10px 12px", background: "#04101b", border: "1px solid #0e2233" }}>
+              <div className="micro">{l}</div>
+              <div className={`f-hud ${c}`} style={{ fontWeight: 700, fontSize: 17 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {(rec.exercises || []).length > 0 ? (
+          <>
+            <div className="hud-label" style={{ marginBottom: 8 }}>▸ Dettaglio esercizi</div>
+            <div className="stack-s">
+              {rec.exercises.map((ex, i) => {
+                const bi = bestOf(ex);
+                return (
+                  <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "#060f18", border: "1px solid #0e2233" }}>
+                    <div className="row between">
+                      <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</span>
+                      <span className="micro t-cyan">{(ex.group || "").toUpperCase()}</span>
+                    </div>
+                    {ex.note && <div className="tiny" style={{ color: "#8fb2c9", marginTop: 2 }}>{ex.note}</div>}
+                    <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>
+                      {ex.sets.map((s, si) => (
+                        <span key={si} className="cham-s tiny" style={{
+                          padding: "4px 9px",
+                          border: `1px solid ${si === bi ? "#ffd76a" : s.done ? "#1b4a63" : "#14202e"}`,
+                          color: si === bi ? "#ffd76a" : s.done ? "#c9e8f7" : "#3f637c",
+                          background: s.done ? "#0a2333" : "#050d15",
+                          textDecoration: s.done ? "none" : "line-through",
+                        }}>
+                          {ex.mode === "time" ? `${fmt(s.elapsed)}${s.dist ? ` · ${s.dist}km` : ""}` : `${s.w || 0}kg × ${s.r || 0}`}
+                          {si === bi && " ★"}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="micro t-faint" style={{ marginTop: 10, textAlign: "center" }}>★ MIGLIOR SERIE · LE SERIE BARRATE NON SONO STATE COMPLETATE</div>
+          </>
+        ) : (
+          <div className="tiny t-faint">Nessun dettaglio disponibile per questo allenamento (registrato con una versione precedente).</div>
+        )}
+      </div>
+    </div>
+    </Overlay>
+  );
+}
+
 /* ---------------- Exercise Library ---------------- */
 function ExerciseLibrary() {
   const [q, setQ] = useState("");
@@ -746,7 +829,7 @@ function ExerciseLibrary() {
   }, [q]);
   return (
     <Panel>
-      {info && <ExerciseInfoModal name={info.name} group={info.group} onClose={() => setInfo(null)} />}
+      {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       <div className="hud-label" style={{ marginBottom: 8 }}>▸ Libreria esercizi</div>
       <div style={{ position: "relative", marginBottom: 12 }}>
         <Search size={14} color="#3f637c" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
@@ -862,9 +945,9 @@ const Overlay = ({ children }) => createPortal(children, document.body);
 
 const GROUP_ICONS = { Petto: "▣", Dorso: "◈", Gambe: "▼", Spalle: "▲", Bicipiti: "◐", Tricipiti: "◑", Cardio: "♥", Core: "◆", Altro: "◇" };
 
-function ExerciseInfoModal({ name, group, onClose }) {
-  const media = EXERCISE_MEDIA[name];
-  const desc = EXERCISE_INFO[name] || INFO_FALLBACK[group] || INFO_FALLBACK.Altro;
+function ExerciseInfoModal({ name, group, ex, onClose }) {
+  const media = (ex && ex.img) || EXERCISE_MEDIA[name];
+  const desc = (ex && ex.desc) || EXERCISE_INFO[name] || INFO_FALLBACK[group] || INFO_FALLBACK.Altro;
   return (
     <Overlay>
     <div className="modal-back" onClick={onClose}>
@@ -1052,6 +1135,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
       volume,
       cardio: Math.round(cardioSec / 60),
       pr: sessionPrCount,
+      exercises: session.exercises, // dettaglio completo per il report
     }, ...(h || [])].slice(0, 30));
     addXp(60);
     fireToast({ title: "◈ MISSION COMPLETE", sub: `+60 XP · ${durMin} MIN` });
@@ -1062,7 +1146,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
 
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
-      {info && <ExerciseInfoModal name={info.name} group={info.group} onClose={() => setInfo(null)} />}
+      {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       <FloatingTimer />
 
       {/* Conferma uscita: la sessione resta attiva */}
@@ -1150,7 +1234,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
             <div className="grow">
               <div className="row g6">
                 <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{ex.name}</span>
-                <span onClick={() => setInfo({ name: ex.name, group: ex.group })} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={14} /></span>
+                <span onClick={() => setInfo(ex)} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={14} /></span>
               </div>
               <div className="micro">{(ex.group || "").toUpperCase()}{ex.mode !== "time" && ` · PR ${prs[ex.name] || "—"} KG`}</div>
             </div>
@@ -1168,7 +1252,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
                 <div key={si} className={`set-grid-t cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
                   <div className="col" style={{ alignItems: "center", gap: 5 }}>
                     <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
-                    <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#523030" }}><X size={11} /></span>
+                    <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={13} /></span>
                   </div>
                   <div className="row g8" style={{ alignItems: "center" }}>
                     <button onClick={() => setRunKey(runKey === `${ei}-${si}` ? null : `${ei}-${si}`)}
@@ -1198,7 +1282,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
                 <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
                   <div className="col" style={{ alignItems: "center", gap: 5 }}>
                     <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
-                    <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#523030" }}><X size={11} /></span>
+                    <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={13} /></span>
                   </div>
                   <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
                     onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
@@ -1261,7 +1345,7 @@ function RoutineEditor({ initial, onClose, onSave }) {
 
   return (
     <div className="fade-in stack" style={{ maxWidth: 640 }}>
-      {info && <ExerciseInfoModal name={info.name} group={info.group} onClose={() => setInfo(null)} />}
+      {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       <div className="row between">
         <Btn small onClick={onClose}>‹ Annulla</Btn>
         <span className="hud-title">{initial ? "Modifica modello" : "Nuova scheda"}</span>
@@ -1278,7 +1362,7 @@ function RoutineEditor({ initial, onClose, onSave }) {
             <div className="row g6">
               <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</span>
               <span className="micro t-cyan" style={{ alignSelf: "center" }}>{(ex.group || "").toUpperCase()}</span>
-              <span onClick={() => setInfo({ name: ex.name, group: ex.group })} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={13} /></span>
+              <span onClick={() => setInfo(ex)} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={13} /></span>
             </div>
             <span onClick={() => toggleEx(ex.name, ex.group)} className="tap" style={{ cursor: "pointer", color: "#6e3028" }}><Trash2 size={14} /></span>
           </div>
@@ -1344,6 +1428,7 @@ function RoutineEditor({ initial, onClose, onSave }) {
 /* ---------------- PT Document Import (AI) ---------------- */
 function DocImport({ onClose, onSave }) {
   const [file, setFile] = useState(null);
+  const [drag, setDrag] = useState(false);
   const [pasted, setPasted] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1375,8 +1460,11 @@ function DocImport({ onClose, onSave }) {
       content.push({
         type: "text",
         text: `Sei un assistente per un'app di fitness. Il documento/testo sopra è una scheda di allenamento scritta da un personal trainer (formato libero).
-Interpretala e convertila in JSON. Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra.
-Schema: {"name": string (nome scheda breve maiuscolo), "exercises": [{"name": string (nome esercizio in italiano), "group": string (uno tra: ${GROUPS.join(", ")}, oppure "Altro"), "sets": [{"w": number (kg, 0 se corpo libero o non indicato), "r": number (ripetizioni, stima se è un range es. "8-10" -> 9)}]}]}
+DATABASE ESERCIZI DELL'APP: ${ALL_EXERCISES.join(" | ")}
+REGOLA FONDAMENTALE: riconduci OGNI esercizio del documento al nome PIÙ VICINO nel database, e sposta in "note" tutti i dettagli in eccesso (angolo, presa, tempo, recupero, tecnica). Esempi: "Panca piana a 30 gradi presa larga" -> name "Panca Inclinata Bilanciere", note "30°, presa larga"; "Squat fermo 2 secondi in buca" -> name "Squat Bilanciere", note "fermo 2s in buca". Imposta "matched": true.
+SOLO se non esiste NESSUNA corrispondenza ragionevole nel database, mantieni il nome originale con "matched": false.
+Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra.
+Schema: {"name": string (nome scheda breve maiuscolo), "exercises": [{"name": string, "matched": boolean, "note": string (dettagli extra, "" se nessuno), "group": string (uno tra: ${GROUPS.join(", ")}, oppure "Altro"), "sets": [{"w": number (kg, 0 se corpo libero o non indicato), "r": number (ripetizioni, stima se è un range es. "8-10" -> 9)}]}]}
 Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contiene più giorni, unisci nel nome il giorno 1 e includi solo gli esercizi del giorno 1.`,
       });
 
@@ -1393,14 +1481,27 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
         id: Date.now(),
         name: (parsed.name || "SCHEDA PT").toUpperCase(),
         exercises: (parsed.exercises || []).map((e) => {
-          const m = matchToDb(e.name); // mapping 1:1 col database; l'eccesso del titolo va in nota
-          const group = GROUPS.includes(e.group) ? e.group : findGroup(m.name);
+          /* 1° livello: mapping fatto dall'AI col database; 2° livello: matcher testuale; altrimenti esercizio nuovo */
+          let name = e.name, note = e.note || "";
+          let matched = e.matched !== false && ALL_EXERCISES.includes(e.name);
+          if (!matched) {
+            const m = matchToDb(e.name);
+            if (ALL_EXERCISES.includes(m.name)) {
+              name = m.name;
+              note = [m.note, note].filter(Boolean).join(" · ");
+              matched = true;
+            }
+          }
+          const group = GROUPS.includes(e.group) ? e.group : findGroup(name);
+          const base = matched
+            ? { name, group, note }
+            : { name, group, note, isCustom: true, desc: "", img: "" }; // nuovo: descrizione e immagine editabili
           if (group === "Cardio") return {
-            name: m.name, group, mode: "time", note: m.note,
+            ...base, mode: "time",
             sets: (e.sets || [{}]).map(() => ({ sec: 600, dist: "", elapsed: 0, done: false })),
           };
           return {
-            name: m.name, group, note: m.note,
+            ...base,
             sets: (e.sets || []).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 10, done: false })),
           };
         }).filter((e) => e.sets.length),
@@ -1426,8 +1527,19 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
           <Panel accent>
             <input ref={inputRef} type="file" accept=".pdf,image/*,.txt,.md,.csv" style={{ display: "none" }}
               onChange={(e) => setFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)} />
-            <button onClick={() => inputRef.current && inputRef.current.click()} className="tap cham"
-              style={{ width: "100%", padding: "32px 16px", cursor: "pointer", border: "1px dashed #2f6786", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <button onClick={() => inputRef.current && inputRef.current.click()}
+              onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={(e) => {
+                e.preventDefault(); setDrag(false);
+                const f = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (f) setFile(f);
+              }}
+              className="tap cham"
+              style={{ width: "100%", padding: "32px 16px", cursor: "pointer",
+                border: `1px dashed ${drag ? "#57c8f2" : "#2f6786"}`,
+                background: drag ? "#0c2a3d" : "transparent", transition: "background .15s,border-color .15s",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
               {file ? (
                 <>
                   <FileText size={24} color="#9be8ff" />
@@ -1438,7 +1550,7 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
                 <>
                   <Upload size={24} color="#57c8f2" />
                   <span className="f-hud t-cyan" style={{ fontSize: 12, letterSpacing: ".2em" }}>CARICA DOCUMENTO</span>
-                  <span className="tiny t-dim">PDF · Foto della scheda · File di testo</span>
+                  <span className="tiny t-dim">Trascina qui il file, oppure tocca — PDF · Foto · Testo</span>
                 </>
               )}
             </button>
@@ -1462,15 +1574,36 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
         <>
           <Panel accent>
             <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", marginBottom: 12 }}>{result.name}</div>
-            {result.exercises.map((e, i) => (
-              <div key={i} className="divider-row">
-                <div>
-                  <span className="t-bright" style={{ fontSize: 14 }}>{e.name}</span>
-                  <span className="micro" style={{ marginLeft: 8 }}>{e.group.toUpperCase()}</span>
+            {result.exercises.map((e, i) => {
+              const updEx = (field, val) => setResult((r) => ({
+                ...r, exercises: r.exercises.map((x, j) => j !== i ? x : { ...x, [field]: val }),
+              }));
+              return (
+                <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid #0a1826" }}>
+                  <div className="row between g8">
+                    <div className="grow">
+                      <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{e.name}</span>
+                      <span className="micro" style={{ marginLeft: 8 }}>{e.group.toUpperCase()}</span>
+                      {e.isCustom && <span className="micro cham-s" style={{ marginLeft: 8, padding: "2px 7px", border: "1px solid #ffd76a", color: "#ffd76a" }}>NUOVO</span>}
+                    </div>
+                    <span className="tiny t-dim" style={{ flexShrink: 0 }}>
+                      {e.mode === "time" ? `${e.sets.length} × tempo` : `${e.sets.length} × ${e.sets[0].r}${e.sets[0].w ? ` @ ${e.sets[0].w}kg` : ""}`}
+                    </span>
+                  </div>
+                  <input className="hud-input cham-s" value={e.note || ""} onChange={(ev) => updEx("note", ev.target.value)}
+                    placeholder="Note esercizio..." style={{ fontSize: 12, padding: "6px 8px", marginTop: 6, color: "#8fb2c9" }} />
+                  {e.isCustom && (
+                    <div className="stack-s fade-in" style={{ marginTop: 6, paddingLeft: 10, borderLeft: "2px solid #ffd76a" }}>
+                      <div className="micro t-amber">ESERCIZIO NON IN LIBRERIA — PERSONALIZZALO</div>
+                      <textarea className="hud-input cham-s" value={e.desc} onChange={(ev) => updEx("desc", ev.target.value)} rows={2}
+                        placeholder="Descrizione esecuzione (mostrata nel pop-up info)..." style={{ fontSize: 12, padding: "6px 8px", resize: "none" }} />
+                      <input className="hud-input cham-s" value={e.img} onChange={(ev) => updEx("img", ev.target.value)}
+                        placeholder="URL immagine/GIF (opzionale)..." style={{ fontSize: 12, padding: "6px 8px" }} />
+                    </div>
+                  )}
                 </div>
-                <span className="tiny t-dim">{e.sets.length} × {e.sets[0].r}{e.sets[0].w ? ` @ ${e.sets[0].w}kg` : ""}</span>
-              </div>
-            ))}
+              );
+            })}
           </Panel>
           <div className="row g8">
             <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>↻ Riprova</Btn>
