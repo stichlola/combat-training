@@ -427,6 +427,13 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
   const [view, setView] = useState("home");
   const [activeId, setActiveId] = useState(null);
 
+  const [confirmDel, setConfirmDel] = useState(null);
+  const deleteRoutine = (id) => {
+    setRoutines((rs) => rs.filter((r) => r.id !== id));
+    setConfirmDel(null);
+    fireToast({ title: "◈ SCHEDA ELIMINATA" });
+  };
+
   const saveRoutine = (r, msg) => {
     setRoutines((rs) => [...rs, r]);
     setView("home");
@@ -474,7 +481,24 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs }) {
                     ))}
                   </div>
                 </div>
-                <Play size={18} color="#57c8f2" />
+                <div className="row g8" style={{ flexShrink: 0 }}>
+                  {confirmDel === r.id ? (
+                    <>
+                      <span onClick={(e) => { e.stopPropagation(); deleteRoutine(r.id); }}
+                        className="tap tiny t-red" style={{ cursor: "pointer", fontWeight: 700 }}>ELIMINA</span>
+                      <span onClick={(e) => { e.stopPropagation(); setConfirmDel(null); }}
+                        className="tap tiny t-faint" style={{ cursor: "pointer" }}>annulla</span>
+                    </>
+                  ) : (
+                    <>
+                      <span onClick={(e) => { e.stopPropagation(); setConfirmDel(r.id); }}
+                        className="tap" style={{ cursor: "pointer", color: "#3f637c" }}>
+                        <Trash2 size={15} />
+                      </span>
+                      <Play size={18} color="#57c8f2" />
+                    </>
+                  )}
+                </div>
               </div>
             </Panel>
           </button>
