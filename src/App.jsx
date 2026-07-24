@@ -853,7 +853,7 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
       const response = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, messages: [{ role: "user", content }] }),
+        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1000, messages: [{ role: "user", content }] }),
       });
       const data = await response.json();
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
@@ -1367,7 +1367,7 @@ function NutritionTab({ body, nutri, setNutri, fireToast, goProfile }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6", max_tokens: 1000,
+          model: "claude-haiku-4-5-20251001", max_tokens: 1000,
           messages: [{
             role: "user",
             content: `Genera un piano alimentare giornaliero per palestra. Target: ${targets.kcal} kcal, ${targets.p}g proteine, ${targets.c}g carboidrati, ${targets.f}g grassi. Utente: ${body.sesso === "M" ? "uomo" : "donna"}, ${body.peso}kg, obiettivo ${goal.toLowerCase()}, si allena ${days} volte a settimana.
