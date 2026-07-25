@@ -2154,8 +2154,10 @@ function MachineScan({ premium, variant, currentNames, onAdd, fireToast }) {
         { type: "text", text: `Questa è la foto di un macchinario o attrezzo da palestra. Riconoscilo e scegli ESATTAMENTE uno di questi nomi: ${Object.keys(MACHINE_DB).join(" | ")}.
 Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto dalla lista, oppure null se non riconoscibile), "guess": string (breve descrizione di cosa vedi, in italiano)}` },
       ];
-      const data = await aiCall({ model: "claude-sonnet-4-6", max_tokens: 300, messages: [{ role: "user", content }] }, "scan");
-      if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error("Limite settimanale scan raggiunto — usa i crediti"); }
+      const data = await aiCall({ model: "claude-sonnet-5", max_tokens: 300, messages: [{ role: "user", content }] }, "scan");
+      if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error(tr("Limite settimanale scan raggiunto")); }
+      if (data.error === "premium_required") { if (premium) premium.open(); throw new Error("Premium"); }
+      if (data.error) throw new Error(typeof data.error === "string" ? data.error : (data.error.message || "Errore API"));
       if (data.error) throw new Error(data.error === "premium_required" ? "Funzione riservata a Premium" : data.error);
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
       const m = text.match(/\{[\s\S]*\}/); // estrai il JSON anche se il modello aggiunge testo attorno
