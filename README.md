@@ -187,3 +187,7 @@ Con `PAYPAL_ENV=sandbox` usa i conti di test di developer.paypal.com (sezione Sa
 
 I limiti si azzerano ogni settimana e sono verificati **server-side** (`api/ai.js` + tabella `usage`, scrivibile solo dalla service role). Oltre il limite si consumano i **crediti extra** (1 credito = 1 generazione, qualsiasi tipo), acquistabili una tantum: 30 crediti a 3€, 100 a 8€ (`api/paypal.js`, prodotto verificato dal `custom_id` nella risposta PayPal). Esegui la sezione USAGE di `supabase/schema.sql`.
 Stima costi API per utente premium al massimo dei limiti: ~0,60-0,80 €/settimana nel caso peggiore, tipicamente molto meno — coperto dai 20€/anno per uso normale, e i pacchetti coprono i power user.
+
+## Licenza
+
+Software proprietario — © 2026 Davide Candotto / Code & Craft Solutions. Tutti i diritti riservati. Vedi il file `LICENSE` per i termini completi. Nessuna parte di questo codice può essere copiata, distribuita o riutilizzata senza autorizzazione scritta.
