@@ -332,6 +332,103 @@ function HudToast({ toast }) {
 }
 
 /* ================================== APP ================================== */
+
+/* ================================ BOOT SCREEN ================================ */
+/* Splash in stile Halo: copre il check della sessione (niente flash del login) */
+const BASE_FACTS = [
+  "Il muscolo cresce durante il recupero, non durante l'allenamento: dormi 7-9 ore.",
+  "Aumentare il carico anche solo di 1-2 kg a settimana è progressione reale.",
+  "La fase eccentrica (discesa lenta) genera più adattamento muscolare di quella concentrica.",
+  "2 g di proteine per kg di peso corporeo sono il riferimento per chi si allena coi pesi.",
+  "Il riscaldamento ideale replica l'esercizio che stai per fare, a carico ridotto.",
+  "I DOMS non misurano l'efficacia dell'allenamento: sono solo micro-danno da stimoli nuovi.",
+  "La forza è anche neurale: le prime settimane migliori perché il cervello impara, non perché il muscolo cresce.",
+  "Bere il 2% del peso corporeo in meno d'acqua riduce già la performance.",
+  "Il range di movimento completo costruisce più muscolo dei mezzi movimenti col doppio del peso.",
+  "Recuperi 2-3 min tra le serie pesanti aumentano forza e volume totale sollevato.",
+  "La creatina monoidrato è l'integratore più studiato ed efficace: 3-5 g al giorno, sempre.",
+  "Allenarsi a cedimento a ogni serie non serve: fermati a 1-3 ripetizioni dal limite.",
+  "Il grasso non si trasforma in muscolo: sono tessuti diversi, si perde uno e si costruisce l'altro.",
+  "La costanza batte l'intensità: 3 allenamenti a settimana per anni valgono più di 6 per un mese.",
+  "Camminare 8-10 mila passi al giorno migliora il recupero e brucia più di quanto pensi.",
+  "Il core lavora in quasi ogni esercizio in piedi: squat e stacco sono anche esercizi per l'addome.",
+  "Dopo le 18 il corpo è mediamente più forte del 5-10% rispetto al mattino presto.",
+  "La caffeina 30-60 minuti prima migliora forza e resistenza: 3-6 mg per kg di peso.",
+  "Cambiare scheda ogni settimana impedisce la progressione: tieni gli stessi esercizi 6-10 settimane.",
+  "Il pump post-allenamento è sangue nei muscoli, non crescita: sparisce in un paio d'ore.",
+  "Le donne non diventano 'grosse' coi pesi: hanno 10-15 volte meno testosterone.",
+  "Un chilo di muscolo consuma più calorie a riposo di un chilo di grasso: la massa è un investimento.",
+  "L'ultimo pasto pre-workout ideale è 2-3 ore prima: carboidrati + proteine, pochi grassi.",
+  "Il sovrallenamento vero è raro: quasi sempre è sotto-recupero (sonno, cibo, stress).",
+  "Registrare i propri allenamenti aumenta i progressi: ciò che misuri, migliora.",
+];
+
+function BootScreen({ progress, fact }) {
+  return (
+    <div className="hud-root" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div className="fade-in" style={{ width: "min(420px, 86vw)", textAlign: "center" }}>
+        <Dumbbell size={34} color="#57c8f2" style={{ margin: "0 auto 10px", filter: "drop-shadow(0 0 8px rgba(87,200,242,.6))" }} />
+        <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".35em" }}>GYMQUEST</div>
+        <div className="micro" style={{ marginTop: 4, marginBottom: 26 }}>INIZIALIZZAZIONE SISTEMA</div>
+
+        {/* barra segmentata stile scudo */}
+        <div className="row g6" style={{ justifyContent: "center" }}>
+          {Array.from({ length: 14 }).map((_, i) => (
+            <div key={i} className="seg" style={{
+              width: 22, flex: "none",
+              background: progress * 14 > i ? "linear-gradient(180deg,#9be8ff,#3fa9d9)" : "#0e2233",
+              boxShadow: progress * 14 > i ? "0 0 6px rgba(87,200,242,.6)" : "none",
+              transition: "background .2s",
+            }} />
+          ))}
+        </div>
+        <div className="micro t-cyan" style={{ marginTop: 8 }}>{Math.round(progress * 100)}%</div>
+
+        <div className="tiny t-dim" style={{ marginTop: 30, minHeight: 40, lineHeight: 1.6, padding: "0 10px" }}>
+          <span className="t-amber f-hud" style={{ fontSize: 9, letterSpacing: ".25em" }}>INTEL ▸ </span>
+          {fact}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Fun fact mensili: rigenerati con l'AI (Haiku) una volta al mese e cachati in locale */
+function useBootFacts() {
+  const [facts, setFacts] = useState(BASE_FACTS);
+  useEffect(() => {
+    const key = "gq_facts_" + new Date().toISOString().slice(0, 7); // es. gq_facts_2026-07
+    try {
+      const cached = localStorage.getItem(key);
+      if (cached) { setFacts(JSON.parse(cached)); return; }
+    } catch {}
+    (async () => {
+      try {
+        const res = await fetch("/api/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 1200,
+            messages: [{
+              role: "user",
+              content: `Genera 25 "fun fact" brevi e utili sull'allenamento in palestra, nutrizione sportiva e recupero, in italiano. Ognuno massimo 130 caratteri, basato su evidenze, tono diretto. Rispondi SOLO con un array JSON di stringhe, senza markdown né testo extra.`,
+            }],
+          }),
+        });
+        const data = await res.json();
+        const txt = (data.content || []).map((c) => c.text || "").join("");
+        const arr = JSON.parse(txt.replace(/```json|```/g, "").trim());
+        if (Array.isArray(arr) && arr.length >= 10) {
+          setFacts(arr);
+          try { localStorage.setItem(key, JSON.stringify(arr)); } catch {}
+        }
+      } catch {} /* offline o errore: restano i fact di base */
+    })();
+  }, []);
+  return facts;
+}
+
 export default function App() {
   const [tab, setTab] = useState("training");
   const [xp, setXp] = useState(0);
@@ -343,6 +440,11 @@ export default function App() {
   /* --- auth & persistenza via Supabase --- */
   const [user, setUser] = useState(null);
   const [hydrated, setHydrated] = useState(false);
+  const [booting, setBooting] = useState(true);      // splash finché il check sessione non è concluso
+  const [bootProg, setBootProg] = useState(0);
+  const authDone = useRef(false);
+  const bootFacts = useBootFacts();
+  const [factIdx] = useState(() => Math.floor(Math.random() * 1000));
   const [body, setBody] = useState({
     peso: "", altezza: "", eta: "", sesso: "M", bf: "",
     collo: "", petto: "", vita: "", braccio: "", coscia: "",
@@ -375,14 +477,30 @@ export default function App() {
       });
       setHydrated(true);
     };
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) hydrate(session.user);
-    });
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) await hydrate(session.user);
+      authDone.current = true; // splash: può chiudersi (utente ripristinato o assente)
+    }).catch(() => { authDone.current = true; });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) hydrate(session.user);
       else { setUser(null); setHydrated(false); }
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  /* Splash: progress bar che si completa quando la sessione è verificata */
+  useEffect(() => {
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      setBootProg((p) => {
+        const elapsed = Date.now() - t0;
+        const target = authDone.current || elapsed > 4000 ? 1 : Math.min(0.86, elapsed / 1400);
+        const n = Math.min(target, p + 0.06);
+        if (n >= 1) { clearInterval(iv); setTimeout(() => setBooting(false), 260); }
+        return n;
+      });
+    }, 50);
+    return () => clearInterval(iv);
   }, []);
 
   /* Autosave con debounce: ogni modifica viene scritta su Supabase */
@@ -427,6 +545,15 @@ export default function App() {
   ];
 
   const ip = useInstallPrompt();
+
+  if (booting) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <BootScreen progress={bootProg} fact={bootFacts[factIdx % bootFacts.length]} />
+      </>
+    );
+  }
 
   if (!user) {
     return (
