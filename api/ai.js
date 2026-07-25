@@ -4,8 +4,9 @@
 // non abbonati, alto per gli abbonati; oltre il limite si consumano crediti extra.
 import { getUserFromToken, isPremium, consumeUsage } from "./_premium.js";
 
+/* Tutte e tre sono funzioni premium: i non abbonati hanno 1 prova a settimana
+   ciascuna, poi il limite li porta allo store (abbonamento o crediti). */
 const LIMITED = ["import", "nutrition", "scan"];
-const PREMIUM_ONLY = ["nutrition", "scan"];
 
 export default async function handler(req, res) {
   // TUTTO dentro try/catch: un errore nei controlli non deve mai produrre
@@ -21,8 +22,6 @@ export default async function handler(req, res) {
       const user = await getUserFromToken(jwt);
       if (!user) return res.status(401).json({ error: "Non autenticato" });
       const prem = await isPremium(user.id);
-      if (PREMIUM_ONLY.includes(feature) && !prem)
-        return res.status(402).json({ error: "premium_required" });
       const use = await consumeUsage(user.id, feature, prem);
       if (!use.allowed) return res.status(429).json({ error: use.reason });
     }

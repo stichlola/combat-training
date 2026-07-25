@@ -17,6 +17,11 @@ const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en"
 const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
+  "1 credito = 1 generazione": "1 credit = 1 generation",
+  "PIANO GRATUITO: 1 GENERAZIONE A SETTIMANA PER FUNZIONE": "FREE PLAN: 1 GENERATION PER WEEK PER FEATURE",
+  "📄 Import scheda PT": "📄 PT routine import",
+  "Converti la scheda del tuo trainer in allenamento": "Turn your trainer's routine into a workout",
+  "Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi": "PT routine import, AI nutrition and machine scan with generous weekly limits",
   "Chiudi": "Close",
   "Allenamenti/settimana ·": "Workouts/week ·",
   "(import/nutrizione 1 · scan 3)": "(import/nutrition 1 · scan 3)",
@@ -193,8 +198,8 @@ const EN_UI = {
   "◈ GYMQUEST PREMIUM": "◈ GYMQUEST PREMIUM",
   "SBLOCCA LE FUNZIONI AI AVANZATE": "UNLOCK ADVANCED AI FEATURES",
   "◆ Premium — 12 mesi": "◆ Premium — 12 months",
-  "Sblocca nutrizione AI e scan macchinari, con limiti settimanali alti su tutto":
-    "Unlocks AI nutrition and machine scan, with high weekly limits on everything",
+  "Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi":
+    "PT routine import, AI nutrition and machine scan with generous weekly limits",
   "Pacchetto 30 crediti": "30 credits pack",
   "Pacchetto 100 crediti": "100 credits pack",
   "Una tantum · generazioni extra oltre il limite settimanale":
@@ -1234,17 +1239,18 @@ function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
 
         {usage && (
           <div className="cham-s micro" style={{ margin: "12px 0", padding: "8px 10px", background: "#04101b", border: "1px solid #0e2233", lineHeight: 1.8 }}>
-            QUESTA SETTIMANA — IMPORT PT: {usage.used.import}/{usage.limits.import}
-            {usage.premium && <> · NUTRIZIONE: {usage.used.nutrition}/{usage.limits.nutrition} · SCAN: {usage.used.scan}/{usage.limits.scan}</>}
+            {tr("QUESTA SETTIMANA")} — {tr("IMPORT PT")}: {usage.used.import}/{usage.limits.import}
+            {" · "}{tr("NUTRIZIONE")}: {usage.used.nutrition}/{usage.limits.nutrition}
+            {" · "}{tr("SCAN")}: {usage.used.scan}/{usage.limits.scan}
             <br />{tr("CREDITI EXTRA:")} <span className="t-amber">{usage.credits}</span>
-            <span className="t-faint"> (import/nutrizione 1 · scan 3)</span>
+            <span className="t-faint"> ({tr("1 credito = 1 generazione")})</span>
           </div>
         )}
 
         <div className="stack-s" style={{ margin: "12px 0 16px" }}>
           {!premium.is && (
             <Card id="premium" gold title={tr("◆ Premium — 12 mesi")} price="20€"
-              lines="Sblocca nutrizione AI e scan macchinari, con limiti settimanali alti su tutto" />
+              lines="Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi" />
           )}
           <Card id="pack30" title={tr("Pacchetto 30 crediti")} price="3€"
             lines="Una tantum · generazioni extra oltre il limite settimanale" />
@@ -2178,11 +2184,11 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
   };
 
   const trigger = variant === "float" ? (
-    <button onClick={() => premium && !premium.is ? premium.open() : camRef.current && camRef.current.click()} className="float-cam-btn cham-s tap" title={tr("Scansiona macchinario")}>
+    <button onClick={() => camRef.current && camRef.current.click()} className="float-cam-btn cham-s tap" title={tr("Scansiona macchinario")}>
       {busy ? <Loader2 size={20} color="#ffd76a" className="spin" /> : <Camera size={20} color="#57c8f2" />}
     </button>
   ) : (
-    <Btn small onClick={() => premium && !premium.is ? premium.open() : camRef.current && camRef.current.click()} style={{ flexShrink: 0 }}>
+    <Btn small onClick={() => camRef.current && camRef.current.click()} style={{ flexShrink: 0 }}>
       {busy ? <Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2 }} /> : <Camera size={13} style={{ display: "inline", verticalAlign: -2 }} />} Scan macchinario
     </Btn>
   );
@@ -3004,7 +3010,7 @@ function AIWorkout({ premium, onClose, onSave }) {
           </div>
           <div><div className="hud-label" style={{ marginBottom: 6 }}>{tr("Attrezzatura")}</div>
             <Opt options={["Palestra completa", "Manubri", "Corpo libero"]} value={equip} set={setEquip} /></div>
-          <Btn primary full disabled={loading} onClick={() => premium && !premium.is ? premium.open() : generate()}>
+          <Btn primary full disabled={loading} onClick={generate}>
             {loading ? "Generazione..." : "Genera scheda"}
           </Btn>
         </Panel>
@@ -3276,9 +3282,9 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
           {!usage && !usageErr && <div className="tiny t-faint">{tr("Caricamento utilizzo…")}</div>}
           {usageErr && <div className="tiny t-red">⚠ Impossibile caricare l'utilizzo: {usageErr}</div>}
           {usage && [
-            ["Import scheda PT", "import"],
-            ["Piano nutrizionale", "nutrition"],
-            ["Scan macchinari", "scan"],
+            [tr("Import scheda PT"), "import"],
+            [tr("Piano nutrizionale"), "nutrition"],
+            [tr("Scan macchinari"), "scan"],
           ].map(([label, k]) => {
             const lim = usage.limits[k], used = usage.used[k];
             return (
@@ -3527,7 +3533,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           <div className="hud-label" style={{ marginBottom: 6 }}>Allenamenti/settimana · <span className="t-cyan">{days}</span></div>
           <input type="range" min="2" max="6" value={days} onChange={(e) => setDays(Number(e.target.value))} />
         </div>
-        <Btn primary full disabled={loading} onClick={() => premium && !premium.is ? premium.open() : generate()}>
+        <Btn primary full disabled={loading} onClick={generate}>
           {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Generazione...")}</span> : "◈ Genera piano AI"}
         </Btn>
       </Panel>
@@ -3579,7 +3585,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           </div>
         </Panel>
 
-        <Btn full onClick={() => premium && !premium.is ? premium.open() : generate()} disabled={loading}>
+        <Btn full onClick={generate} disabled={loading}>
           {loading ? "Rigenerazione..." : "↻ Rigenera pasti (stessi target)"}
         </Btn>
       </div>

@@ -42,8 +42,10 @@ export async function grantPremium(userId, orderId) {
 }
 
 /* ---------------- Limiti settimanali + crediti extra ---------------- */
+/* Free: una sola prova a settimana per funzione (assaggio che porta all'abbonamento).
+   Premium: limiti ampi. Oltre il limite si usano i crediti extra acquistabili. */
 export const WEEKLY_LIMITS = {
-  free:    { import: 3,  nutrition: 0,  scan: 0 },
+  free:    { import: 1,  nutrition: 1,  scan: 1 },
   premium: { import: 20, nutrition: 25, scan: 40 },
 };
 const wk = () => {
