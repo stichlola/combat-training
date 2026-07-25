@@ -5,7 +5,7 @@ import {
   Dumbbell, Flame, Timer, Plus, Check, ChevronRight, Play, Square,
   Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search,
   User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save,
-  Pencil, Info, Pause, Camera
+  Pencil, Info, Pause, Camera, Medal
 } from "lucide-react";
 
 /* ====================== EXERCISE LIBRARY (pre-loaded) ====================== */
@@ -433,22 +433,303 @@ function useBootFacts() {
 }
 
 
-/* ================================ PREMIUM GATE ================================ */
-function PremiumGate({ onClose, onUnlocked, fireToast }) {
+
+/* ================================ STORE (premium + crediti) ================================ */
+
+/* ================================ QUEST SYSTEM ================================ */
+/* Sfide giornaliere e settimanali in stile Halo Reach: pool locale, rotazione
+   automatica con seed sulla data, XP extra al completamento. */
+const QUEST_METRICS = ["workouts", "sets", "volume", "cardio", "pr"];
+const QUEST_POOL_DAILY = [
+  { text: "Fuoco di Copertura: completa 1 allenamento oggi", metric: "workouts", target: 1, xp: 40 },
+  { text: "Grilletto Facile: completa 15 serie oggi", metric: "sets", target: 15, xp: 45 },
+  { text: "Colpo su Colpo: completa 20 serie oggi", metric: "sets", target: 20, xp: 60 },
+  { text: "Ordigno Pesante: solleva 3.000 kg di volume oggi", metric: "volume", target: 3000, xp: 50 },
+  { text: "Demolizione: solleva 5.000 kg di volume oggi", metric: "volume", target: 5000, xp: 70 },
+  { text: "Supremazia: solleva 8.000 kg di volume oggi", metric: "volume", target: 8000, xp: 90 },
+  { text: "Corridoio di Fuga: 10 minuti di cardio oggi", metric: "cardio", target: 10, xp: 40 },
+  { text: "Marcia Forzata: 20 minuti di cardio oggi", metric: "cardio", target: 20, xp: 60 },
+  { text: "Oltre il Limite: registra 1 nuovo record oggi", metric: "pr", target: 1, xp: 80 },
+  { text: "Ricognizione Rapida: completa 10 serie oggi", metric: "sets", target: 10, xp: 30 },
+  { text: "Assalto Frontale: completa 25 serie oggi", metric: "sets", target: 25, xp: 75 },
+  { text: "Carico Bellico: solleva 1.500 kg di volume oggi", metric: "volume", target: 1500, xp: 30 },
+  { text: "Sprint Finale: 15 minuti di cardio oggi", metric: "cardio", target: 15, xp: 50 },
+  { text: "Doppio Turno: completa 2 allenamenti oggi", metric: "workouts", target: 2, xp: 100 },
+];
+const QUEST_POOL_WEEKLY = [
+  { text: "Operazione Settimanale: completa 3 allenamenti", metric: "workouts", target: 3, xp: 120 },
+  { text: "Campagna Estesa: completa 4 allenamenti", metric: "workouts", target: 4, xp: 160 },
+  { text: "Guerra Totale: completa 5 allenamenti", metric: "workouts", target: 5, xp: 220 },
+  { text: "Arsenale Completo: completa 60 serie", metric: "sets", target: 60, xp: 140 },
+  { text: "Fuoco Sostenuto: completa 80 serie", metric: "sets", target: 80, xp: 180 },
+  { text: "Tonnellata Spartana: solleva 15.000 kg di volume", metric: "volume", target: 15000, xp: 150 },
+  { text: "Titano d'Acciaio: solleva 25.000 kg di volume", metric: "volume", target: 25000, xp: 220 },
+  { text: "Maratona del Soldato: 60 minuti di cardio", metric: "cardio", target: 60, xp: 150 },
+  { text: "Resistenza Estrema: 90 minuti di cardio", metric: "cardio", target: 90, xp: 200 },
+  { text: "Cacciatore di Record: registra 2 nuovi PR", metric: "pr", target: 2, xp: 180 },
+  { text: "LASO Settimanale: 4 allenamenti e 50 serie", metric: "sets", target: 50, xp: 160 },
+];
+
+/* selezione deterministica: stesso giorno/settimana = stesse quest per tutti */
+const seededPick = (pool, seedStr, n) => {
+  let h = 0;
+  for (let i = 0; i < seedStr.length; i++) h = (h * 31 + seedStr.charCodeAt(i)) >>> 0;
+  const arr = [...pool];
+  for (let i = arr.length - 1; i > 0; i--) {
+    h = (h * 1103515245 + 12345) >>> 0;
+    const j = h % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, n);
+};
+const dayKey = () => new Date().toISOString().slice(0, 10);
+const weekKey = () => {
+  const d = new Date();
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const wk = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${wk}`;
+};
+const freshQuests = (dailyPool, weeklyPool) => ({
+  dayKey: dayKey(),
+  weekKey: weekKey(),
+  daily: seededPick(dailyPool, "d" + dayKey(), 3).map((q) => ({ ...q, prog: 0, done: false })),
+  weekly: seededPick(weeklyPool, "w" + weekKey(), 3).map((q) => ({ ...q, prog: 0, done: false })),
+});
+
+/* ---------------- Achievements (fissi) ---------------- */
+const ACHIEVEMENTS = [
+  { id: "first", name: "Il Primo Passo", desc: "Completa il tuo primo allenamento", tier: "easy", check: (s) => s.workouts >= 1 },
+  { id: "w10", name: "Recluta Promossa", desc: "Completa 10 allenamenti", tier: "easy", check: (s) => s.workouts >= 10 },
+  { id: "w50", name: "Veterano del Ferro", desc: "Completa 50 allenamenti", tier: "hard", check: (s) => s.workouts >= 50 },
+  { id: "w100", name: "Spartan-117", desc: "Completa 100 allenamenti", tier: "hard", check: (s) => s.workouts >= 100 },
+  { id: "s100", name: "Grilletto Consumato", desc: "Completa 100 serie totali", tier: "easy", check: (s) => s.setsDone >= 100 },
+  { id: "s1000", name: "Mitragliere", desc: "Completa 1.000 serie totali", tier: "hard", check: (s) => s.setsDone >= 1000 },
+  { id: "v10k", name: "Diecimila", desc: "Solleva 10.000 kg di volume totale", tier: "easy", check: (s) => s.volume >= 10000 },
+  { id: "v100k", name: "Centomila", desc: "Solleva 100.000 kg di volume totale", tier: "hard", check: (s) => s.volume >= 100000 },
+  { id: "v500k", name: "Mjolnir", desc: "Solleva 500.000 kg di volume totale", tier: "hard", check: (s) => s.volume >= 500000 },
+  { id: "c60", name: "Fiato da Marine", desc: "60 minuti di cardio totali", tier: "easy", check: (s) => s.cardioMin >= 60 },
+  { id: "c600", name: "Maratoneta ODST", desc: "600 minuti di cardio totali", tier: "hard", check: (s) => s.cardioMin >= 600 },
+  { id: "pr1", name: "Nuovo Massimale", desc: "Registra il tuo primo PR", tier: "easy", check: (s, prs) => Object.keys(prs || {}).length >= 1 },
+  { id: "bench100", name: "Club dei 100", desc: "PR di 100 kg su Panca Piana Bilanciere", tier: "hard", check: (s, prs) => (prs?.["Panca Piana Bilanciere"] || 0) >= 100 },
+  { id: "q10", name: "Cacciatore di Taglie", desc: "Completa 10 quest", tier: "easy", check: (s) => s.questsDone >= 10 },
+  { id: "q50", name: "Leggenda delle Sfide", desc: "Completa 50 quest", tier: "hard", check: (s) => s.questsDone >= 50 },
+  { id: "lv10", name: "Ufficiale di Grado", desc: "Raggiungi il livello 10", tier: "easy", check: (s, prs, lvl) => lvl >= 10 },
+  { id: "lv25", name: "Hyper Lethal", desc: "Raggiungi il livello 25", tier: "hard", check: (s, prs, lvl) => lvl >= 25 },
+];
+const EMPTY_STATS = { workouts: 0, setsDone: 0, volume: 0, cardioMin: 0, questsDone: 0 };
+
+/* ---------------- Barra di avanzamento quest ---------------- */
+function QBar({ pct, done, animate }) {
+  return (
+    <div className="cham-s" style={{ height: 7, background: "#0e2233", overflow: "hidden" }}>
+      <div style={{
+        height: "100%",
+        width: `${Math.min(100, pct * 100)}%`,
+        background: done ? "linear-gradient(90deg,#ffd76a,#ffb84d)" : "linear-gradient(90deg,#3fa9d9,#9be8ff)",
+        boxShadow: done ? "0 0 8px rgba(255,215,106,.6)" : "0 0 6px rgba(87,200,242,.4)",
+        transition: animate ? "width 1.1s cubic-bezier(.2,.8,.2,1)" : "none",
+      }} />
+    </div>
+  );
+}
+
+/* ---------------- Popup Quest + Achievements ---------------- */
+function QuestModal({ quests, stats, prs, level, streak, onClose }) {
+  const [tab, setTab] = useState("daily");
+  const midnight = new Date(); midnight.setHours(24, 0, 0, 0);
+  const hLeft = Math.max(0, Math.round((midnight - new Date()) / 3600000));
+  const achieved = ACHIEVEMENTS.filter((a) => a.check(stats, prs, level));
+  const list = tab === "daily" ? quests.daily : quests.weekly;
+  return (
+    <Overlay>
+    <div className="modal-back" onClick={onClose}>
+      <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="row between">
+          <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>◈ SFIDE</div>
+          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
+        </div>
+        <div className="row g6 tiny t-faint" style={{ marginTop: 2, marginBottom: 14, alignItems: "center" }}>
+          <Flame size={12} color="#ffd76a" /> STREAK {streak} GIORNI
+        </div>
+
+        <div className="row g6" style={{ marginBottom: 14 }}>
+          {[["daily", "GIORNALIERE"], ["weekly", "SETTIMANALI"], ["ach", "MEDAGLIE"]].map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k)} className={`tap cham-s chip ${tab === k ? "chip-on" : ""}`}
+              style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "8px 0", fontSize: 10 }}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {tab !== "ach" && (
+          <>
+            <div className="micro t-faint" style={{ marginBottom: 10 }}>
+              {tab === "daily" ? `SI RINNOVANO TRA ~${hLeft}H` : "SI RINNOVANO OGNI SETTIMANA"}
+            </div>
+            <div className="stack-s">
+              {list.map((q, i) => (
+                <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "#060f18", border: `1px solid ${q.done ? "#ffd76a" : "#0e2233"}` }}>
+                  <div className="row between g8">
+                    <span className={q.done ? "t-amber" : "t-bright"} style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4 }}>
+                      {q.done && "✓ "}{q.text}
+                    </span>
+                    <span className="f-hud t-amber" style={{ fontSize: 12, fontWeight: 700, flexShrink: 0 }}>+{q.xp} XP</span>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <QBar pct={q.prog / q.target} done={q.done} />
+                  </div>
+                  <div className="micro t-faint" style={{ marginTop: 4, textAlign: "right" }}>
+                    {q.metric === "volume" ? `${q.prog.toLocaleString()} / ${q.target.toLocaleString()} KG`
+                      : q.metric === "cardio" ? `${q.prog} / ${q.target} MIN`
+                      : `${q.prog} / ${q.target}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {tab === "ach" && (
+          <>
+            <div className="micro t-faint" style={{ marginBottom: 10 }}>{achieved.length} / {ACHIEVEMENTS.length} SBLOCCATE</div>
+            <div className="stack-s">
+              {ACHIEVEMENTS.map((a) => {
+                const ok = achieved.includes(a);
+                return (
+                  <div key={a.id} className="cham-s row g12" style={{
+                    padding: "10px 12px", background: "#060f18", alignItems: "center",
+                    border: `1px solid ${ok ? "#ffd76a" : "#0e2233"}`, opacity: ok ? 1 : 0.55,
+                  }}>
+                    <Medal size={20} color={ok ? "#ffd76a" : "#2a4a63"} style={{ flexShrink: 0 }} />
+                    <div className="grow">
+                      <div className={ok ? "t-amber" : "t-dim"} style={{ fontSize: 13, fontWeight: 700 }}>{a.name}</div>
+                      <div className="tiny t-faint">{a.desc}</div>
+                    </div>
+                    <span className="micro cham-s" style={{
+                      padding: "2px 7px", flexShrink: 0,
+                      border: `1px solid ${a.tier === "hard" ? "#c05a8e" : "#2a5f7d"}`,
+                      color: a.tier === "hard" ? "#e58ab5" : "#6fb3d4",
+                    }}>{a.tier === "hard" ? "DIFFICILE" : "FACILE"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+    </Overlay>
+  );
+}
+
+/* ---------------- Schermata risultati post-allenamento (stile Halo Reach) ---------------- */
+function ResultsScreen({ results, onClose }) {
+  const [go, setGo] = useState(false);            // avvia le animazioni delle barre
+  const [shownXp, setShownXp] = useState(results.xpBefore);
+  const [shownLvl, setShownLvl] = useState(results.levelBefore);
+  const [flash, setFlash] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setGo(true), 350);
+    /* barra XP: conteggio animato con rollover di livello, come il post-partita di Reach */
+    let xp = results.xpBefore, lvl = results.levelBefore, gain = results.xpGain;
+    const step = Math.max(2, Math.round(gain / 60));
+    const iv = setInterval(() => {
+      if (gain <= 0) { clearInterval(iv); return; }
+      const add = Math.min(step, gain);
+      xp += add; gain -= add;
+      while (xp >= xpForLevel(lvl)) { xp -= xpForLevel(lvl); lvl++; setFlash(true); setTimeout(() => setFlash(false), 900); }
+      setShownXp(xp); setShownLvl(lvl);
+    }, 30);
+    return () => { clearTimeout(t); clearInterval(iv); };
+  }, []);
+
+  const need = xpForLevel(shownLvl);
+  return (
+    <Overlay>
+    <div className="modal-back">
+      <div className="modal-box cham fade-in">
+        <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".25em", fontSize: 15, textAlign: "center" }}>◈ RAPPORTO MISSIONE</div>
+        <div className="micro t-faint" style={{ textAlign: "center", marginBottom: 18 }}>{results.name}</div>
+
+        {/* XP animato */}
+        <div className="cham-s" style={{ padding: "12px 14px", background: "#04101b", border: `1px solid ${flash ? "#ffd76a" : "#1b3a52"}`, marginBottom: 16, transition: "border-color .3s" }}>
+          <div className="row between" style={{ marginBottom: 6 }}>
+            <span className={`f-hud ${flash ? "t-amber" : "t-cyan"}`} style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
+              {flash ? "▲ RANK UP!" : `LV.${shownLvl}`}
+            </span>
+            <span className="micro">{shownXp}/{need} XP <span className="t-amber">+{results.xpGain}</span></span>
+          </div>
+          <div className="row g6">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="seg" style={{
+                flex: 1,
+                background: (shownXp / need) * 12 > i ? "linear-gradient(180deg,#9be8ff,#3fa9d9)" : "#0e2233",
+                boxShadow: (shownXp / need) * 12 > i ? "0 0 6px rgba(87,200,242,.6)" : "none",
+              }} />
+            ))}
+          </div>
+        </div>
+
+        {/* progresso quest animato */}
+        <div className="hud-label" style={{ marginBottom: 8 }}>▸ Avanzamento sfide</div>
+        <div className="stack-s" style={{ marginBottom: 16 }}>
+          {results.quests.map((q, i) => (
+            <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "#060f18", border: `1px solid ${q.completedNow ? "#ffd76a" : "#0e2233"}` }}>
+              <div className="row between g8">
+                <span className={q.done ? "t-amber" : "t-bright"} style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.35 }}>
+                  {q.completedNow && "◈ "}{q.text}
+                </span>
+                {q.completedNow && <span className="f-hud t-amber blink" style={{ fontSize: 11, fontWeight: 700, flexShrink: 0 }}>+{q.xp} XP</span>}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <QBar pct={(go ? q.after : q.before) / q.target} done={q.done} animate />
+              </div>
+              <div className="micro t-faint" style={{ marginTop: 4, textAlign: "right" }}>
+                {q.metric === "volume" ? `${(go ? q.after : q.before).toLocaleString()} / ${q.target.toLocaleString()} KG`
+                  : `${go ? q.after : q.before} / ${q.target}${q.metric === "cardio" ? " MIN" : ""}`}
+              </div>
+            </div>
+          ))}
+          {results.quests.length === 0 && <div className="tiny t-faint">Nessuna sfida attiva oggi.</div>}
+        </div>
+
+        <Btn primary full onClick={onClose}>Continua ›</Btn>
+      </div>
+    </div>
+    </Overlay>
+  );
+}
+
+function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
   const [err, setErr] = useState(null);
+  const [usage, setUsage] = useState(null);
+  const [product, setProduct] = useState(premium.is ? "pack30" : "premium");
   const ppRef = useRef(null);
   const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 
   useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const r = await fetch("/api/usage", { headers: { Authorization: `Bearer ${session?.access_token || ""}` } });
+        if (r.ok) setUsage(await r.json());
+      } catch {}
+    })();
+  }, []);
+
+  /* i bottoni PayPal vengono ri-renderizzati quando cambia il prodotto scelto */
+  useEffect(() => {
     if (!clientId) return;
     const render = () => {
-      if (!window.paypal || !ppRef.current || ppRef.current.childElementCount) return;
+      if (!window.paypal || !ppRef.current) return;
+      ppRef.current.innerHTML = "";
       window.paypal.Buttons({
         style: { layout: "horizontal", color: "blue", height: 42, tagline: false },
         createOrder: async () => {
           const r = await fetch("/api/paypal", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "create" }),
+            body: JSON.stringify({ action: "create", product }),
           });
           const d = await r.json();
           if (!d.id) throw new Error(d.error || "Errore creazione ordine");
@@ -464,7 +745,11 @@ function PremiumGate({ onClose, onUnlocked, fireToast }) {
           const d = await r.json();
           if (d.premium_until) {
             fireToast({ title: "◈ PREMIUM ATTIVO", sub: "Benvenuto tra gli Spartan" });
-            onUnlocked(d.premium_until);
+            onUnlocked(d.premium_until); onClose();
+          } else if (d.credits != null) {
+            fireToast({ title: "◈ CREDITI AGGIUNTI", sub: `Saldo: ${d.credits} crediti` });
+            if (onCredits) onCredits(d.credits);
+            setUsage((u) => u ? { ...u, credits: d.credits } : u);
           } else setErr(d.error || "Pagamento non confermato");
         },
         onError: () => setErr("Errore PayPal, riprova."),
@@ -476,32 +761,51 @@ function PremiumGate({ onClose, onUnlocked, fireToast }) {
     s.onload = render;
     s.onerror = () => setErr("Impossibile caricare PayPal");
     document.body.appendChild(s);
-  }, [clientId]);
+  }, [clientId, product]);
+
+  const Card = ({ id, title, price, lines, gold }) => (
+    <button onClick={() => setProduct(id)} className="tap cham-s" style={{
+      width: "100%", textAlign: "left", cursor: "pointer", padding: "12px 14px",
+      background: product === id ? "#0c2a3d" : "#060f18",
+      border: `1px solid ${product === id ? (gold ? "#ffd76a" : "#57c8f2") : "#0e2233"}`,
+    }}>
+      <div className="row between">
+        <span className={gold ? "t-amber" : "t-cyan"} style={{ fontSize: 14, fontWeight: 700 }}>{title}</span>
+        <span className="f-hud t-bright" style={{ fontSize: 16, fontWeight: 700 }}>{price}</span>
+      </div>
+      <div className="tiny t-dim" style={{ marginTop: 3, lineHeight: 1.5 }}>{lines}</div>
+    </button>
+  );
 
   return (
     <Overlay>
     <div className="modal-back" onClick={onClose}>
       <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="row between">
-          <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>◈ GYMQUEST PREMIUM</div>
+          <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>◈ STORE</div>
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
-        <div style={{ textAlign: "center", margin: "16px 0 4px" }}>
-          <span className="f-hud t-bright" style={{ fontSize: 34, fontWeight: 700 }}>20€</span>
-          <span className="tiny t-faint"> / anno</span>
+
+        {usage && (
+          <div className="cham-s micro" style={{ margin: "12px 0", padding: "8px 10px", background: "#04101b", border: "1px solid #0e2233", lineHeight: 1.8 }}>
+            QUESTA SETTIMANA — IMPORT PT: {usage.used.import}/{usage.limits.import}
+            {usage.premium && <> · NUTRIZIONE: {usage.used.nutrition}/{usage.limits.nutrition} · SCAN: {usage.used.scan}/{usage.limits.scan}</>}
+            <br />CREDITI EXTRA: <span className="t-amber">{usage.credits}</span>
+            <span className="t-faint"> (import/nutrizione 1 · scan 3)</span>
+          </div>
+        )}
+
+        <div className="stack-s" style={{ margin: "12px 0 16px" }}>
+          {!premium.is && (
+            <Card id="premium" gold title="◆ Premium — 12 mesi" price="20€"
+              lines="Sblocca nutrizione AI e scan macchinari, con limiti settimanali alti su tutto" />
+          )}
+          <Card id="pack30" title="Pacchetto 30 crediti" price="3€"
+            lines="Una tantum · generazioni extra oltre il limite settimanale" />
+          <Card id="pack100" title="Pacchetto 100 crediti" price="8€"
+            lines="Una tantum · il più conveniente per chi genera tanto" />
         </div>
-        <div className="micro" style={{ textAlign: "center", marginBottom: 16 }}>SBLOCCA LE FUNZIONI AI AVANZATE</div>
-        <div className="stack-s" style={{ marginBottom: 18 }}>
-          {[
-            ["♥ Piano nutrizionale AI", "Pasti generati sui tuoi target, rigenerabili quando vuoi"],
-            ["📷 Scan macchinari", "Fotografa un macchinario: riconoscimento + esercizi possibili"],
-          ].map(([t, d]) => (
-            <div key={t} className="cham-s" style={{ padding: "10px 12px", background: "#04101b", border: "1px solid #1b3a52" }}>
-              <div className="t-cyan" style={{ fontSize: 14, fontWeight: 700 }}>{t}</div>
-              <div className="tiny t-dim">{d}</div>
-            </div>
-          ))}
-        </div>
+
         {clientId ? (
           <div ref={ppRef} style={{ minHeight: 46 }} />
         ) : (
@@ -509,7 +813,7 @@ function PremiumGate({ onClose, onUnlocked, fireToast }) {
         )}
         {err && <div className="tiny t-red" style={{ marginTop: 8, textAlign: "center" }}>⚠ {err}</div>}
         <div className="micro t-faint" style={{ marginTop: 12, textAlign: "center", lineHeight: 1.6 }}>
-          PAGAMENTO SICURO VIA PAYPAL · ATTIVAZIONE IMMEDIATA · 12 MESI, NESSUN RINNOVO AUTOMATICO
+          PAGAMENTI SICURI PAYPAL · I CREDITI NON SCADONO · I LIMITI SETTIMANALI SI AZZERANO OGNI LUNEDÌ
         </div>
       </div>
     </div>
@@ -543,9 +847,90 @@ export default function App() {
   const [premiumUntil, setPremiumUntil] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
   const isPremium = !!premiumUntil && new Date(premiumUntil) > new Date();
-  const premium = { is: isPremium, open: () => setGateOpen(true) };
+  const premium = { is: isPremium, until: premiumUntil, open: () => setGateOpen(true) };
   const [session, setSession] = useState(null);   // sessione attiva: persiste su Supabase, si riprende al rientro
-  const [history, setHistory] = useState([]);     // mission log allenamenti completati
+  const [history, setHistory] = useState([]);
+  const [quests, setQuests] = useState(() => freshQuests(QUEST_POOL_DAILY, QUEST_POOL_WEEKLY));
+  const [stats, setStats] = useState(EMPTY_STATS);
+  const [questsOpen, setQuestsOpen] = useState(false);
+  const [questFlash, setQuestFlash] = useState(null);   // testo mostrato sotto la barra XP
+
+  /* rollover: nuove quest a mezzanotte / cambio settimana */
+  const rolledQuests = (q) => {
+    if (!q || q.dayKey !== dayKey() || q.weekKey !== weekKey()) {
+      const f = freshQuests(QUEST_POOL_DAILY, QUEST_POOL_WEEKLY);
+      return {
+        dayKey: f.dayKey, weekKey: f.weekKey,
+        daily: q && q.dayKey === dayKey() ? q.daily : f.daily,
+        weekly: q && q.weekKey === weekKey() ? q.weekly : f.weekly,
+      };
+    }
+    return q;
+  };
+  useEffect(() => { setQuests((q) => rolledQuests(q)); }, []);
+
+  /* pool quest rigenerato ogni mese con Haiku (globale per dispositivo, cache locale) */
+  useEffect(() => {
+    const key = "gq_qpool_" + new Date().toISOString().slice(0, 7);
+    try {
+      const c = localStorage.getItem(key);
+      if (c) {
+        const p = JSON.parse(c);
+        QUEST_POOL_DAILY.splice(0, QUEST_POOL_DAILY.length, ...p.daily);
+        QUEST_POOL_WEEKLY.splice(0, QUEST_POOL_WEEKLY.length, ...p.weekly);
+        return;
+      }
+    } catch {}
+    (async () => {
+      try {
+        const data = await aiCall({
+          model: "claude-haiku-4-5-20251001", max_tokens: 1600,
+          messages: [{ role: "user", content: `Genera quest per un'app fitness in stile Halo Reach (nomi militari/epici in italiano). Rispondi SOLO con JSON valido: {"daily":[14 oggetti],"weekly":[11 oggetti]}. Ogni oggetto: {"text": string (max 60 caratteri, include il numero target), "metric": uno tra "workouts"|"sets"|"volume"|"cardio"|"pr", "target": number (daily: workouts 1-2, sets 10-25, volume 1500-8000, cardio 10-20, pr 1; weekly: workouts 3-5, sets 50-90, volume 15000-30000, cardio 60-90, pr 2), "xp": number (30-100 daily, 120-220 weekly, proporzionato alla difficoltà)}` }],
+        });
+        const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
+        const m = text.match(/\{[\s\S]*\}/);
+        const p = JSON.parse(m ? m[0] : text);
+        const valid = (a) => Array.isArray(a) && a.length >= 8 && a.every((q) => q.text && QUEST_METRICS.includes(q.metric) && q.target > 0 && q.xp > 0);
+        if (valid(p.daily) && valid(p.weekly)) {
+          QUEST_POOL_DAILY.splice(0, QUEST_POOL_DAILY.length, ...p.daily);
+          QUEST_POOL_WEEKLY.splice(0, QUEST_POOL_WEEKLY.length, ...p.weekly);
+          try { localStorage.setItem(key, JSON.stringify(p)); } catch {}
+        }
+      } catch {} /* fallback: pool base */
+    })();
+  }, []);
+
+  /* applica i risultati di un allenamento alle quest: ritorna il resoconto per l'animazione */
+  const applyWorkoutToQuests = (delta) => {
+    let earned = 0, completed = 0;
+    const out = [];
+    setQuests((prev) => {
+      const q = rolledQuests(prev);
+      const upd = (list) => list.map((it) => {
+        const before = it.prog;
+        const after = Math.min(it.target, before + (delta[it.metric] || 0));
+        const doneNow = !it.done && after >= it.target;
+        if (doneNow) { earned += it.xp; completed += 1; }
+        out.push({ ...it, before, after, done: it.done || doneNow, completedNow: doneNow });
+        return { ...it, prog: after, done: it.done || doneNow };
+      });
+      return { ...q, daily: upd(q.daily), weekly: upd(q.weekly) };
+    });
+    setStats((s) => ({
+      workouts: s.workouts + (delta.workouts || 0),
+      setsDone: s.setsDone + (delta.sets || 0),
+      volume: s.volume + (delta.volume || 0),
+      cardioMin: s.cardioMin + (delta.cardio || 0),
+      questsDone: s.questsDone + completed,
+    }));
+    if (earned > 0) {
+      addXp(earned);
+      setQuestFlash(`◈ QUEST COMPLETATA${completed > 1 ? ` ×${completed}` : ""} · +${earned} XP`);
+      setTimeout(() => setQuestFlash(null), 5000);
+    }
+    return { quests: out, questXp: earned };
+  };
+     // mission log allenamenti completati
 
   /* Sessione: ascolta login/logout e idrata i dati utente dal DB */
   useEffect(() => {
@@ -559,6 +944,8 @@ export default function App() {
         if (data.prs) setPrs(data.prs);
         if (data.session) setSession(data.session);
         if (data.history) setHistory(data.history);
+        if (data.quests) setQuests(rolledQuests(data.quests));
+        if (data.stats) setStats({ ...EMPTY_STATS, ...data.stats });
         if (data.xp != null) setXp(data.xp);
         if (data.level != null) setLevel(data.level);
       }
@@ -606,11 +993,11 @@ export default function App() {
     saveRef2.current = setTimeout(() => {
       supabase.from("user_data").upsert({
         user_id: user.id, body, nutrition: nutri, routines, prs,
-        session, history,
+        session, history, quests, stats,
         xp, level, streak, updated_at: new Date().toISOString(),
       }).then(({ error }) => error && console.error("Save error:", error.message));
     }, 800);
-  }, [user, hydrated, body, nutri, routines, prs, session, history, xp, level]);
+  }, [user, hydrated, body, nutri, routines, prs, session, history, quests, stats, xp, level]);
 
   const fireToast = (t) => {
     setToast(t);
@@ -629,6 +1016,8 @@ export default function App() {
       return nxp;
     });
   };
+
+  useEffect(() => { window.__gqXpSnap = { xp, level }; }, [xp, level]);
 
   const need = xpForLevel(level);
   const rank = LEVEL_TITLES[Math.min(4, Math.floor(level / 6))];
@@ -676,8 +1065,9 @@ export default function App() {
       <HudToast toast={toast} />
 
       <InstallBanner ip={ip} />
-      {gateOpen && <PremiumGate fireToast={fireToast} onClose={() => setGateOpen(false)}
-        onUnlocked={(until) => { setPremiumUntil(until); setGateOpen(false); }} />}
+      {questsOpen && <QuestModal quests={quests} stats={stats} prs={prs} level={level} streak={streak} onClose={() => setQuestsOpen(false)} />}
+      {gateOpen && <StoreModal premium={premium} fireToast={fireToast} onClose={() => setGateOpen(false)}
+        onUnlocked={(until) => setPremiumUntil(until)} />}
 
       {/* TOP HUD BAR */}
       <header className="hud-header">
@@ -689,16 +1079,28 @@ export default function App() {
               <span className="micro">{xp}/{need} XP</span>
             </div>
             <ShieldBar pct={xp / need} />
+            {questFlash && (
+              <div className="f-hud t-amber blink" style={{ fontSize: 9, letterSpacing: ".2em", marginTop: 3, textAlign: "center" }}>
+                {questFlash}
+              </div>
+            )}
           </div>
           <div className="row g8" style={{ flexShrink: 0 }}>
-            <button onClick={() => setTab("profile")} className="tap row g6" style={{ cursor: "pointer", color: tab === "profile" ? "#9be8ff" : "#7fa8bf" }}>
-              <User size={15} />
+            <button onClick={() => setTab("profile")} className="tap row g6"
+              style={{ cursor: "pointer", color: isPremium ? "#ffd76a" : tab === "profile" ? "#9be8ff" : "#7fa8bf", position: "relative" }}>
+              <span style={{ position: "relative", display: "inline-flex" }}>
+                <User size={15} />
+                {isPremium && <span className="f-hud" style={{
+                  position: "absolute", top: -6, right: -7, fontSize: 8, fontWeight: 700,
+                  color: "#ffd76a", textShadow: "0 0 6px rgba(255,215,106,.8)" }}>P</span>}
+              </span>
               <span className="f-hud hide-sm" style={{ fontSize: 11, letterSpacing: ".1em" }}>{user.username}</span>
             </button>
-            <div className="streak-pill cham-s">
-              <Flame size={14} color="#ffd76a" />
-              <span className="f-hud t-amber" style={{ fontWeight: 700, fontSize: 14 }}>{streak}</span>
-            </div>
+            <button onClick={() => setQuestsOpen(true)} className="streak-pill cham-s tap" title="Sfide e medaglie"
+              style={{ cursor: "pointer", borderColor: "#8a6d1f", boxShadow: "0 0 10px rgba(255,215,106,.2)" }}>
+              <Medal size={14} color="#ffd76a" />
+              <span className="f-hud t-amber hide-sm" style={{ fontWeight: 700, fontSize: 11, letterSpacing: ".15em" }}>SFIDE</span>
+            </button>
           </div>
         </div>
       </header>
@@ -725,14 +1127,14 @@ export default function App() {
         </aside>
 
         <main className="main-area">
-          {tab === "training" && <Training premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
+          {tab === "training" && <Training onWorkoutDone={applyWorkoutToQuests} premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
           {tab === "profile" && (
             <ProfileTab user={user} body={body} setBody={setBody}
               fireToast={fireToast} onLogout={async () => { await supabase.auth.signOut(); setTab("training"); }}
-              onUserUpdate={setUser} level={level} rank={rank} streak={streak}
+              onUserUpdate={setUser} level={level} rank={rank} streak={streak} premium={premium}
               onRedoSetup={() => setBody((b) => ({ ...b, onboarded: false }))} />
           )}
         </main>
@@ -757,7 +1159,7 @@ export default function App() {
 }
 
 /* ================================ TRAINING ================================ */
-function Training({ premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
+function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
   const [view, setView] = useState("home");
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
@@ -796,7 +1198,7 @@ function Training({ premium, addXp, fireToast, routines, setRoutines, prs, setPr
   };
 
   if (view === "session" && session) {
-    return <SessionView premium={premium} session={session} setSession={setSession} prs={prs} setPrs={setPrs}
+    return <SessionView onWorkoutDone={onWorkoutDone} premium={premium} session={session} setSession={setSession} prs={prs} setPrs={setPrs}
       addXp={addXp} fireToast={fireToast}
       routines={routines} setRoutines={setRoutines} setHistory={setHistory}
       exitToHome={() => setView("home")} />;
@@ -807,7 +1209,8 @@ function Training({ premium, addXp, fireToast, routines, setRoutines, prs, setPr
       onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
   }
   if (view === "ai") return <AIWorkout onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ SCHEDA AI GENERATA")} />;
-  if (view === "import") return <DocImport onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ DOCUMENTO INTERPRETATO")} />;
+  /* nota: la conversione della scheda PT (import) resta gratuita per scelta */
+  if (view === "import") return <DocImport premium={premium} onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ DOCUMENTO INTERPRETATO")} />;
 
   return (
     <div className="fade-in two-col">
@@ -902,7 +1305,7 @@ function Training({ premium, addXp, fireToast, routines, setRoutines, prs, setPr
           </Panel>
         </button>
 
-        <button onClick={() => setView("ai")} className="tap row g6"
+        <button onClick={() => premium && !premium.is ? premium.open() : setView("ai")} className="tap row g6"
           style={{ cursor: "pointer", color: "#3f637c", fontFamily: "'Chakra Petch',sans-serif", fontSize: 11, letterSpacing: ".2em" }}>
           <Bot size={13} /> GENERATORE AI ›
         </button>
@@ -1221,6 +1624,28 @@ const aiCall = async (payload, feature) => {
   return r.json();
 };
 
+
+/* Ridimensiona la foto lato client prima dell'invio: le foto da smartphone
+   (5-12 MB) superano i limiti del serverless ed erano la causa dei fallimenti */
+const resizeImage = (file, maxSide = 1024) => new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      const dataUrl = c.toDataURL("image/jpeg", 0.85);
+      resolve({ b64: dataUrl.split(",")[1], type: "image/jpeg" });
+    } catch (e) { reject(e); }
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Immagine non leggibile")); };
+  img.src = url;
+});
+
 /* ================================ MACHINE SCAN ================================ */
 /* Mappa leggera macchinario -> esercizi (1 a N) sopra il database esistente:
    gli esercizi restano l'unità base (immagini, descrizioni, PR), i macchinari li indicizzano */
@@ -1267,20 +1692,18 @@ function MachineScan({ premium, variant, currentNames, onAdd, fireToast }) {
   const analyze = async (f) => {
     setBusy(true); setRes(null); setOpenEx(null);
     try {
-      const b64 = await new Promise((ok, ko) => {
-        const r = new FileReader();
-        r.onload = () => ok(r.result.split(",")[1]);
-        r.onerror = () => ko(new Error("Lettura foto fallita"));
-        r.readAsDataURL(f);
-      });
+      const { b64, type } = await resizeImage(f, 1024);
       const content = [
-        { type: "image", source: { type: "base64", media_type: f.type || "image/jpeg", data: b64 } },
+        { type: "image", source: { type: "base64", media_type: type, data: b64 } },
         { type: "text", text: `Questa è la foto di un macchinario o attrezzo da palestra. Riconoscilo e scegli ESATTAMENTE uno di questi nomi: ${Object.keys(MACHINE_DB).join(" | ")}.
 Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto dalla lista, oppure null se non riconoscibile), "guess": string (breve descrizione di cosa vedi, in italiano)}` },
       ];
-      const data = await aiCall({ model: "claude-haiku-4-5-20251001", max_tokens: 300, messages: [{ role: "user", content }] }, "scan");
+      const data = await aiCall({ model: "claude-sonnet-4-6", max_tokens: 300, messages: [{ role: "user", content }] }, "scan");
+      if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error("Limite settimanale scan raggiunto — usa i crediti"); }
+      if (data.error) throw new Error(data.error === "premium_required" ? "Funzione riservata a Premium" : data.error);
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-      const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+      const m = text.match(/\{[\s\S]*\}/); // estrai il JSON anche se il modello aggiunge testo attorno
+      const parsed = JSON.parse(m ? m[0] : text);
       if (parsed.machine && MACHINE_DB[parsed.machine]) {
         /* esercizi già nella scheda in cima e aperti; gli altri collassati sotto */
         const inWo = MACHINE_DB[parsed.machine].filter((e) => currentNames.includes(e));
@@ -1291,7 +1714,7 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
         setRes({ unknown: true, guess: parsed.guess || "" });
       }
     } catch (e) {
-      setRes({ error: true });
+      setRes({ error: e.message || "Errore sconosciuto" });
     }
     setBusy(false);
   };
@@ -1324,7 +1747,7 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
             )}
             {res && res.error && (
               <div style={{ textAlign: "center", padding: "16px 0" }}>
-                <div className="tiny t-red">⚠ Analisi fallita. Riprova con una foto più chiara.</div>
+                <div className="tiny t-red">⚠ Analisi fallita: {typeof res.error === "string" ? res.error : "riprova con una foto più chiara"}</div>
                 <Btn small onClick={() => setRes(null)} style={{ marginTop: 12 }}>Chiudi</Btn>
               </div>
             )}
@@ -1448,11 +1871,12 @@ function FloatingTimer() {
 }
 
 /* ---------------- Sessione di allenamento attiva ---------------- */
-function SessionView({ premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
+function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
   const [info, setInfo] = useState(null);
   const [confirmExit, setConfirmExit] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [sessionPrCount, setSessionPrCount] = useState(0);
+  const [results, setResults] = useState(null); // rapporto missione animato
   const [runKey, setRunKey] = useState(null); // cronometro attivo per esercizi a tempo: "ei-si"
 
   /* Cronometro cardio: incrementa elapsed della riga attiva */
@@ -1556,15 +1980,25 @@ function SessionView({ premium, session, setSession, prs, setPrs, addXp, fireToa
       exercises: session.exercises, // dettaglio completo per il report
     }, ...(h || [])].slice(0, 30));
     addXp(60);
-    fireToast({ title: "◈ MISSION COMPLETE", sub: `+60 XP · ${durMin} MIN` });
     setRunKey(null);
-    setSession(null);
-    exitToHome();
+    const bonusXp = 60; // i +10 a serie sono già stati accreditati in diretta
+    const qr = onWorkoutDone ? onWorkoutDone({
+      workouts: 1, sets: doneSets, volume, cardio: Math.round(cardioSec / 60), pr: sessionPrCount,
+    }) : { quests: [], questXp: 0 };
+    setFinishing(false);
+    setResults({
+      name: session.name,
+      quests: qr.quests,
+      xpGain: bonusXp + qr.questXp,
+      xpBefore: window.__gqXpSnap ? window.__gqXpSnap.xp : 0,
+      levelBefore: window.__gqXpSnap ? window.__gqXpSnap.level : 1,
+    });
   };
 
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
+      {results && <ResultsScreen results={results} onClose={() => { setSession(null); exitToHome(); }} />}
       <FloatingTimer />
       <MachineScan premium={premium} variant="float" fireToast={fireToast}
         currentNames={session.exercises.map((e) => e.name)}
@@ -1857,7 +2291,7 @@ function RoutineEditor({ premium, initial, onClose, onSave }) {
 }
 
 /* ---------------- PT Document Import (AI) ---------------- */
-function DocImport({ onClose, onSave }) {
+function DocImport({ premium, onClose, onSave }) {
   const [file, setFile] = useState(null);
   const [drag, setDrag] = useState(false);
   const [pasted, setPasted] = useState("");
@@ -1901,10 +2335,12 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
 
       const response = await fetch("/api/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await featHeaders("import"),
         body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1000, messages: [{ role: "user", content }] }),
       });
       const data = await response.json();
+      if (data.error === "limit_reached") throw new Error("LIMIT");
+      if (data.error) throw new Error(typeof data.error === "string" ? data.error : "Errore API");
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
       const clean = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
@@ -1940,7 +2376,10 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
       if (!routine.exercises.length) throw new Error("Nessun esercizio riconosciuto nel documento");
       setResult(routine);
     } catch (err) {
-      setError(err.message || "Interpretazione fallita. Riprova con un documento più leggibile.");
+      if (err.message === "LIMIT") {
+        setError("Limite settimanale di import raggiunto — acquista crediti o attendi lunedì.");
+        if (premium) premium.open();
+      } else setError(err.message || "Interpretazione fallita. Riprova con un documento più leggibile.");
     }
     setLoading(false);
   };
@@ -2272,7 +2711,7 @@ const BodyField = ({ draft, setD, label, k, unit, step }) => (
 );
 
 /* ================================ PROFILE ================================ */
-function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, onRedoSetup }) {
+function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup }) {
   const [draft, setDraft] = useState(body);
   const [username, setUsername] = useState(user.username);
   const [oldPw, setOldPw] = useState("");
@@ -2317,6 +2756,13 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
               <div className="micro">LV.{level} {rank} · STREAK {streak} GIORNI</div>
               <div className="tiny t-faint">{user.email}</div>
             </div>
+          </div>
+          <div className="tiny" style={{ margin: "6px 0 10px" }}>
+            {premium && premium.is ? (
+              <span className="t-amber">◆ ACCOUNT PREMIUM — attivo fino al {new Date(premium.until).toLocaleDateString("it-IT")}</span>
+            ) : (
+              <span className="t-faint">Account gratuito · <span onClick={() => premium && premium.open()} className="tap t-cyan" style={{ cursor: "pointer" }}>passa a Premium ›</span></span>
+            )}
           </div>
           <div className="row g8 wrap">
             <Btn small onClick={onRedoSetup}>◈ Rifai setup profilo</Btn>
@@ -2478,6 +2924,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
         }),
       });
       const data = await response.json();
+      if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error("Limite settimanale raggiunto"); }
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
       meals = JSON.parse(text.replace(/```json|```/g, "").trim());
     } catch (e) {

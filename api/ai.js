@@ -1,9 +1,11 @@
-// Proxy sicuro verso l'API Anthropic + gating premium server-side.
-// Le funzionalità "nutrition" e "scan" richiedono un account premium VERIFICATO
-// sul server: bypassare il controllo lato client non serve a nulla.
-import { getUserFromToken, isPremium } from "./_premium.js";
+// Proxy Anthropic + limiti d'uso verificati SERVER-SIDE.
+// "nutrition" e "scan": solo premium, con limite settimanale alto + crediti extra.
+// "import" (conversione scheda PT): libero ma con limite settimanale medio per i
+// non abbonati, alto per gli abbonati; oltre il limite si consumano crediti extra.
+import { getUserFromToken, isPremium, consumeUsage } from "./_premium.js";
 
-const PREMIUM_FEATURES = ["nutrition", "scan"];
+const LIMITED = ["import", "nutrition", "scan"];
+const PREMIUM_ONLY = ["nutrition", "scan"];
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -11,12 +13,16 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "ANTHROPIC_API_KEY non configurata su Vercel" });
 
   const feature = req.headers["x-gq-feature"] || "";
-  if (PREMIUM_FEATURES.includes(feature)) {
+  if (LIMITED.includes(feature)) {
     const jwt = (req.headers.authorization || "").replace("Bearer ", "");
     const user = await getUserFromToken(jwt);
     if (!user) return res.status(401).json({ error: "Non autenticato" });
-    if (!(await isPremium(user.id)))
+    const prem = await isPremium(user.id);
+    if (PREMIUM_ONLY.includes(feature) && !prem)
       return res.status(402).json({ error: "premium_required" });
+    const use = await consumeUsage(user.id, feature, prem);
+    if (!use.allowed)
+      return res.status(429).json({ error: use.reason });
   }
 
   try {

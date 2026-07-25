@@ -177,3 +177,13 @@ Funzioni gratuite: tutto tranne **piano nutrizionale AI** e **scan macchinari**,
 
 ### Test
 Con `PAYPAL_ENV=sandbox` usa i conti di test di developer.paypal.com (sezione Sandbox Accounts) per pagare senza soldi veri. Quando funziona, passa a `live`.
+
+### Limiti settimanali e crediti
+| Funzione | Gratuito | Premium |
+|---|---|---|
+| Import scheda PT (Haiku) | 3/settimana | 20/settimana |
+| Piano nutrizionale (Haiku) | — | 25/settimana |
+| Scan macchinari (Sonnet) | — | 40/settimana |
+
+I limiti si azzerano ogni settimana e sono verificati **server-side** (`api/ai.js` + tabella `usage`, scrivibile solo dalla service role). Oltre il limite si consumano i **crediti extra** (1 credito = 1 generazione, qualsiasi tipo), acquistabili una tantum: 30 crediti a 3€, 100 a 8€ (`api/paypal.js`, prodotto verificato dal `custom_id` nella risposta PayPal). Esegui la sezione USAGE di `supabase/schema.sql`.
+Stima costi API per utente premium al massimo dei limiti: ~0,60-0,80 €/settimana nel caso peggiore, tipicamente molto meno — coperto dai 20€/anno per uso normale, e i pacchetti coprono i power user.

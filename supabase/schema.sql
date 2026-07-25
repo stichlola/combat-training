@@ -49,3 +49,22 @@ alter table public.premium enable row level security;
 create policy "read own premium" on public.premium
   for select using (auth.uid() = user_id);
 -- NESSUNA policy di insert/update per gli utenti: è voluto.
+
+alter table public.user_data add column if not exists quests jsonb;
+alter table public.user_data add column if not exists stats jsonb;
+
+-- ============ USAGE (limiti settimanali + crediti) ============
+create table if not exists public.usage (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  week text,
+  import_n integer default 0,
+  nutrition_n integer default 0,
+  scan_n integer default 0,
+  credits integer default 0,
+  last_order_id text,
+  updated_at timestamptz default now()
+);
+alter table public.usage enable row level security;
+create policy "read own usage" on public.usage
+  for select using (auth.uid() = user_id);
+-- nessuna policy di scrittura per gli utenti: scrive solo il serverless.
