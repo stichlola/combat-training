@@ -5,7 +5,7 @@ import {
   Dumbbell, Flame, Timer, Plus, Check, ChevronRight, Play, Square,
   Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search,
   User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save,
-  Pencil, Info, Pause
+  Pencil, Info, Pause, Camera
 } from "lucide-react";
 
 /* ====================== EXERCISE LIBRARY (pre-loaded) ====================== */
@@ -190,6 +190,9 @@ button.btn{text-align:center}
 /* --- modali e overlay --- */
 .modal-back{position:fixed;inset:0;background:rgba(2,6,10,.82);backdrop-filter:blur(3px);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-box{width:100%;max-width:430px;background:#071523;border:1px solid #57c8f2;box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto}
+.float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c2a3d;border:1px solid #57c8f2;cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c2a3d;border:1px solid #57c8f2;cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
 .float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:#071523;border:1px solid #ffd76a;box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;max-width:340px;box-sizing:border-box}
 .set-grid-t{display:grid;grid-template-columns:42px 1fr 64px 48px;gap:10px;align-items:center}
@@ -429,6 +432,91 @@ function useBootFacts() {
   return facts;
 }
 
+
+/* ================================ PREMIUM GATE ================================ */
+function PremiumGate({ onClose, onUnlocked, fireToast }) {
+  const [err, setErr] = useState(null);
+  const ppRef = useRef(null);
+  const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+
+  useEffect(() => {
+    if (!clientId) return;
+    const render = () => {
+      if (!window.paypal || !ppRef.current || ppRef.current.childElementCount) return;
+      window.paypal.Buttons({
+        style: { layout: "horizontal", color: "blue", height: 42, tagline: false },
+        createOrder: async () => {
+          const r = await fetch("/api/paypal", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "create" }),
+          });
+          const d = await r.json();
+          if (!d.id) throw new Error(d.error || "Errore creazione ordine");
+          return d.id;
+        },
+        onApprove: async (data) => {
+          const { data: { session } } = await supabase.auth.getSession();
+          const r = await fetch("/api/paypal", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+            body: JSON.stringify({ action: "capture", orderID: data.orderID }),
+          });
+          const d = await r.json();
+          if (d.premium_until) {
+            fireToast({ title: "◈ PREMIUM ATTIVO", sub: "Benvenuto tra gli Spartan" });
+            onUnlocked(d.premium_until);
+          } else setErr(d.error || "Pagamento non confermato");
+        },
+        onError: () => setErr("Errore PayPal, riprova."),
+      }).render(ppRef.current);
+    };
+    if (window.paypal) { render(); return; }
+    const s = document.createElement("script");
+    s.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=EUR&intent=capture`;
+    s.onload = render;
+    s.onerror = () => setErr("Impossibile caricare PayPal");
+    document.body.appendChild(s);
+  }, [clientId]);
+
+  return (
+    <Overlay>
+    <div className="modal-back" onClick={onClose}>
+      <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="row between">
+          <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>◈ GYMQUEST PREMIUM</div>
+          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
+        </div>
+        <div style={{ textAlign: "center", margin: "16px 0 4px" }}>
+          <span className="f-hud t-bright" style={{ fontSize: 34, fontWeight: 700 }}>20€</span>
+          <span className="tiny t-faint"> / anno</span>
+        </div>
+        <div className="micro" style={{ textAlign: "center", marginBottom: 16 }}>SBLOCCA LE FUNZIONI AI AVANZATE</div>
+        <div className="stack-s" style={{ marginBottom: 18 }}>
+          {[
+            ["♥ Piano nutrizionale AI", "Pasti generati sui tuoi target, rigenerabili quando vuoi"],
+            ["📷 Scan macchinari", "Fotografa un macchinario: riconoscimento + esercizi possibili"],
+          ].map(([t, d]) => (
+            <div key={t} className="cham-s" style={{ padding: "10px 12px", background: "#04101b", border: "1px solid #1b3a52" }}>
+              <div className="t-cyan" style={{ fontSize: 14, fontWeight: 700 }}>{t}</div>
+              <div className="tiny t-dim">{d}</div>
+            </div>
+          ))}
+        </div>
+        {clientId ? (
+          <div ref={ppRef} style={{ minHeight: 46 }} />
+        ) : (
+          <div className="tiny t-red" style={{ textAlign: "center" }}>⚠ VITE_PAYPAL_CLIENT_ID non configurato</div>
+        )}
+        {err && <div className="tiny t-red" style={{ marginTop: 8, textAlign: "center" }}>⚠ {err}</div>}
+        <div className="micro t-faint" style={{ marginTop: 12, textAlign: "center", lineHeight: 1.6 }}>
+          PAGAMENTO SICURO VIA PAYPAL · ATTIVAZIONE IMMEDIATA · 12 MESI, NESSUN RINNOVO AUTOMATICO
+        </div>
+      </div>
+    </div>
+    </Overlay>
+  );
+}
+
 export default function App() {
   const [tab, setTab] = useState("training");
   const [xp, setXp] = useState(0);
@@ -452,6 +540,10 @@ export default function App() {
   const [nutri, setNutri] = useState(null);
   const [routines, setRoutines] = useState(DEFAULT_ROUTINES);
   const [prs, setPrs] = useState(DEFAULT_PRS);
+  const [premiumUntil, setPremiumUntil] = useState(null);
+  const [gateOpen, setGateOpen] = useState(false);
+  const isPremium = !!premiumUntil && new Date(premiumUntil) > new Date();
+  const premium = { is: isPremium, open: () => setGateOpen(true) };
   const [session, setSession] = useState(null);   // sessione attiva: persiste su Supabase, si riprende al rientro
   const [history, setHistory] = useState([]);     // mission log allenamenti completati
 
@@ -470,6 +562,9 @@ export default function App() {
         if (data.xp != null) setXp(data.xp);
         if (data.level != null) setLevel(data.level);
       }
+      const { data: prem } = await supabase.from("premium")
+        .select("premium_until").eq("user_id", authUser.id).maybeSingle();
+      if (prem) setPremiumUntil(prem.premium_until);
       setUser({
         id: authUser.id,
         email: authUser.email,
@@ -581,6 +676,8 @@ export default function App() {
       <HudToast toast={toast} />
 
       <InstallBanner ip={ip} />
+      {gateOpen && <PremiumGate fireToast={fireToast} onClose={() => setGateOpen(false)}
+        onUnlocked={(until) => { setPremiumUntil(until); setGateOpen(false); }} />}
 
       {/* TOP HUD BAR */}
       <header className="hud-header">
@@ -628,9 +725,9 @@ export default function App() {
         </aside>
 
         <main className="main-area">
-          {tab === "training" && <Training addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
+          {tab === "training" && <Training premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
-            <NutritionTab body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
+            <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
           {tab === "profile" && (
             <ProfileTab user={user} body={body} setBody={setBody}
@@ -660,7 +757,7 @@ export default function App() {
 }
 
 /* ================================ TRAINING ================================ */
-function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
+function Training({ premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
   const [view, setView] = useState("home");
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
@@ -699,14 +796,14 @@ function Training({ addXp, fireToast, routines, setRoutines, prs, setPrs, sessio
   };
 
   if (view === "session" && session) {
-    return <SessionView session={session} setSession={setSession} prs={prs} setPrs={setPrs}
+    return <SessionView premium={premium} session={session} setSession={setSession} prs={prs} setPrs={setPrs}
       addXp={addXp} fireToast={fireToast}
       routines={routines} setRoutines={setRoutines} setHistory={setHistory}
       exitToHome={() => setView("home")} />;
   }
   if (view === "builder") {
     const initial = editId != null ? routines.find((r) => r.id === editId) : null;
-    return <RoutineEditor initial={initial} onClose={() => { setView("home"); setEditId(null); }}
+    return <RoutineEditor premium={premium} initial={initial} onClose={() => { setView("home"); setEditId(null); }}
       onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
   }
   if (view === "ai") return <AIWorkout onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ SCHEDA AI GENERATA")} />;
@@ -1105,6 +1202,200 @@ function ExerciseInfoModal({ name, group, ex, onClose }) {
   );
 }
 
+
+/* chiamata AI via proxy serverless (la chiave resta sul server).
+   feature "nutrition"/"scan" allegano il JWT: il server verifica il premium */
+const featHeaders = async (feature) => {
+  const h = { "Content-Type": "application/json" };
+  if (feature) {
+    const { data: { session } } = await supabase.auth.getSession();
+    h["Authorization"] = `Bearer ${session?.access_token || ""}`;
+    h["x-gq-feature"] = feature;
+  }
+  return h;
+};
+const aiCall = async (payload, feature) => {
+  const r = await fetch("/api/ai", {
+    method: "POST", headers: await featHeaders(feature), body: JSON.stringify(payload),
+  });
+  return r.json();
+};
+
+/* ================================ MACHINE SCAN ================================ */
+/* Mappa leggera macchinario -> esercizi (1 a N) sopra il database esistente:
+   gli esercizi restano l'unità base (immagini, descrizioni, PR), i macchinari li indicizzano */
+const MACHINE_DB = {
+  "Panca Piana": ["Panca Piana Bilanciere", "Panca Piana Manubri", "Panca Presa Stretta", "Croci Manubri"],
+  "Panca Inclinata": ["Panca Inclinata Bilanciere", "Panca Inclinata Manubri"],
+  "Panca Declinata": ["Panca Declinata"],
+  "Power Rack / Rastrelliera Squat": ["Squat Bilanciere", "Front Squat", "Military Press", "Stacco da Terra", "Rematore Bilanciere", "Shrug Bilanciere"],
+  "Smith Machine (Multipower)": ["Squat Bilanciere", "Panca Piana Bilanciere", "Military Press", "Hip Thrust", "Calf Raise in Piedi"],
+  "Lat Machine": ["Lat Machine Avanti", "Lat Machine Presa Stretta", "Pull-Down Braccia Tese"],
+  "Pulley Basso": ["Pulley Basso"],
+  "Stazione ai Cavi": ["Croci ai Cavi", "Curl ai Cavi", "Pushdown Tricipiti", "Pushdown Corda", "Face Pull", "Crunch ai Cavi", "Alzate Laterali ai Cavi", "Pull-Down Braccia Tese"],
+  "Chest Press": ["Chest Press"],
+  "Pectoral Machine": ["Pectoral Machine"],
+  "Leg Press": ["Leg Press"],
+  "Hack Squat Machine": ["Hack Squat"],
+  "Leg Extension Machine": ["Leg Extension"],
+  "Leg Curl Machine": ["Leg Curl Sdraiato", "Leg Curl Seduto"],
+  "Calf Machine": ["Calf Raise in Piedi", "Calf Raise Seduto"],
+  "Shoulder Press Machine": ["Shoulder Press Manubri", "Military Press"],
+  "Panca Scott": ["Curl Panca Scott", "Spider Curl"],
+  "Parallele / Dip Station": ["Dip alle Parallele"],
+  "Sbarra Trazioni": ["Trazioni", "Trazioni Presa Inversa", "Hanging Leg Raise"],
+  "Panca Hyperextension": ["Hyperextension"],
+  "Rastrelliera Manubri": ["Panca Piana Manubri", "Croci Manubri", "Curl Manubri Alternato", "Hammer Curl", "Alzate Laterali", "Alzate Frontali", "Shoulder Press Manubri", "Affondi Manubri", "Rematore Manubrio", "Kickback Manubrio"],
+  "T-Bar Row": ["Rematore T-Bar"],
+  "Tapis Roulant": ["Tapis Roulant", "Corsa", "Camminata Veloce"],
+  "Cyclette": ["Cyclette"],
+  "Ellittica": ["Ellittica"],
+  "Vogatore": ["Vogatore"],
+  "Stepper / Stairmaster": ["Stepper"],
+};
+const findExGroup = (name) => {
+  for (const [g, list] of Object.entries(EXERCISE_DB)) if (list.includes(name)) return g;
+  return "Altro";
+};
+
+function MachineScan({ premium, variant, currentNames, onAdd, fireToast }) {
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState(null);   // { machine, exercises } | { unknown, guess } | { error }
+  const [openEx, setOpenEx] = useState(null);
+  const camRef = useRef(null);
+
+  const analyze = async (f) => {
+    setBusy(true); setRes(null); setOpenEx(null);
+    try {
+      const b64 = await new Promise((ok, ko) => {
+        const r = new FileReader();
+        r.onload = () => ok(r.result.split(",")[1]);
+        r.onerror = () => ko(new Error("Lettura foto fallita"));
+        r.readAsDataURL(f);
+      });
+      const content = [
+        { type: "image", source: { type: "base64", media_type: f.type || "image/jpeg", data: b64 } },
+        { type: "text", text: `Questa è la foto di un macchinario o attrezzo da palestra. Riconoscilo e scegli ESATTAMENTE uno di questi nomi: ${Object.keys(MACHINE_DB).join(" | ")}.
+Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto dalla lista, oppure null se non riconoscibile), "guess": string (breve descrizione di cosa vedi, in italiano)}` },
+      ];
+      const data = await aiCall({ model: "claude-haiku-4-5-20251001", max_tokens: 300, messages: [{ role: "user", content }] }, "scan");
+      const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+      const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+      if (parsed.machine && MACHINE_DB[parsed.machine]) {
+        /* esercizi già nella scheda in cima e aperti; gli altri collassati sotto */
+        const inWo = MACHINE_DB[parsed.machine].filter((e) => currentNames.includes(e));
+        const rest = MACHINE_DB[parsed.machine].filter((e) => !currentNames.includes(e));
+        setRes({ machine: parsed.machine, exercises: [...inWo, ...rest] });
+        setOpenEx(inWo[0] || null);
+      } else {
+        setRes({ unknown: true, guess: parsed.guess || "" });
+      }
+    } catch (e) {
+      setRes({ error: true });
+    }
+    setBusy(false);
+  };
+
+  const trigger = variant === "float" ? (
+    <button onClick={() => premium && !premium.is ? premium.open() : camRef.current && camRef.current.click()} className="float-cam-btn cham-s tap" title="Scansiona macchinario">
+      {busy ? <Loader2 size={20} color="#ffd76a" className="spin" /> : <Camera size={20} color="#57c8f2" />}
+    </button>
+  ) : (
+    <Btn small onClick={() => premium && !premium.is ? premium.open() : camRef.current && camRef.current.click()} style={{ flexShrink: 0 }}>
+      {busy ? <Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2 }} /> : <Camera size={13} style={{ display: "inline", verticalAlign: -2 }} />} Scan
+    </Btn>
+  );
+
+  return (
+    <>
+      <input ref={camRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+        onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) analyze(f); e.target.value = ""; }} />
+      {variant === "float" ? <Overlay>{trigger}</Overlay> : trigger}
+
+      {(res || busy) && (
+        <Overlay>
+        <div className="modal-back" onClick={() => !busy && setRes(null)}>
+          <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+            {busy && (
+              <div style={{ textAlign: "center", padding: "30px 0" }}>
+                <Loader2 size={26} color="#57c8f2" className="spin" style={{ margin: "0 auto 10px" }} />
+                <div className="f-hud t-cyan" style={{ letterSpacing: ".2em", fontSize: 12 }}>ANALISI MACCHINARIO...</div>
+              </div>
+            )}
+            {res && res.error && (
+              <div style={{ textAlign: "center", padding: "16px 0" }}>
+                <div className="tiny t-red">⚠ Analisi fallita. Riprova con una foto più chiara.</div>
+                <Btn small onClick={() => setRes(null)} style={{ marginTop: 12 }}>Chiudi</Btn>
+              </div>
+            )}
+            {res && res.unknown && (
+              <div style={{ textAlign: "center", padding: "10px 0" }}>
+                <div className="f-hud t-amber" style={{ letterSpacing: ".15em", fontSize: 13, fontWeight: 700 }}>MACCHINARIO NON RICONOSCIUTO</div>
+                {res.guess && <div className="tiny t-dim" style={{ marginTop: 8, lineHeight: 1.6 }}>Sembra: {res.guess}</div>}
+                <div className="tiny t-faint" style={{ marginTop: 6 }}>Prova a inquadrare il macchinario per intero, da davanti.</div>
+                <Btn small onClick={() => setRes(null)} style={{ marginTop: 12 }}>Chiudi</Btn>
+              </div>
+            )}
+            {res && res.machine && (
+              <>
+                <div className="row between" style={{ marginBottom: 2 }}>
+                  <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>◈ MACCHINARIO</div>
+                  <span onClick={() => setRes(null)} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
+                </div>
+                <div className="t-bright" style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{res.machine}</div>
+                <div className="tiny t-faint" style={{ marginBottom: 14 }}>{res.exercises.length} ESERCIZI POSSIBILI</div>
+
+                <div className="stack-s">
+                  {res.exercises.map((name) => {
+                    const g = findExGroup(name);
+                    const inWo = currentNames.includes(name);
+                    const open = openEx === name;
+                    return (
+                      <div key={name} className="cham-s" style={{ border: `1px solid ${inWo ? "#57c8f2" : "#0e2233"}`, background: "#060f18" }}>
+                        <button onClick={() => setOpenEx(open ? null : name)} className="tap row between"
+                          style={{ width: "100%", padding: "10px 12px", cursor: "pointer" }}>
+                          <span className="row g8">
+                            <span className="t-bright" style={{ fontSize: 14, fontWeight: 700, textAlign: "left" }}>{name}</span>
+                            {inWo && <span className="micro cham-s" style={{ padding: "2px 7px", border: "1px solid #57c8f2", color: "#57c8f2" }}>IN SCHEDA</span>}
+                          </span>
+                          <span className="row g8" style={{ alignItems: "center" }}>
+                            <span className="micro t-cyan">{g.toUpperCase()}</span>
+                            <span className="t-faint">{open ? "▾" : "▸"}</span>
+                          </span>
+                        </button>
+                        {open && (
+                          <div className="fade-in" style={{ padding: "0 12px 12px" }}>
+                            {EXERCISE_MEDIA[name] && (
+                              <div className="cham-s" style={{ height: 150, marginBottom: 10, background: "#eef2f5", overflow: "hidden" }}>
+                                <img src={EXERCISE_MEDIA[name]} alt={name} loading="lazy"
+                                  style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                              </div>
+                            )}
+                            <div className="tiny t-dim" style={{ lineHeight: 1.65 }}>
+                              {EXERCISE_INFO[name] || INFO_FALLBACK[g] || INFO_FALLBACK.Altro}
+                            </div>
+                            {!inWo && (
+                              <Btn small primary full style={{ marginTop: 10 }}
+                                onClick={() => { onAdd(name, g); fireToast({ title: "◈ ESERCIZIO AGGIUNTO", sub: name }); setRes(null); }}>
+                                ＋ Aggiungi all'allenamento
+                              </Btn>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        </Overlay>
+      )}
+    </>
+  );
+}
+
 /* ---------------- Timer interset in sovraimpressione ---------------- */
 /* Nascosto di default: si apre dal pulsante flottante, si chiude a piacere */
 function FloatingTimer() {
@@ -1157,7 +1448,7 @@ function FloatingTimer() {
 }
 
 /* ---------------- Sessione di allenamento attiva ---------------- */
-function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
+function SessionView({ premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
   const [info, setInfo] = useState(null);
   const [confirmExit, setConfirmExit] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -1275,6 +1566,14 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       <FloatingTimer />
+      <MachineScan premium={premium} variant="float" fireToast={fireToast}
+        currentNames={session.exercises.map((e) => e.name)}
+        onAdd={(name, group) => upd((s) => ({
+          ...s,
+          exercises: [...s.exercises, group === "Cardio"
+            ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
+            : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+        }))} />
 
       {/* Conferma uscita: la sessione resta attiva */}
       {confirmExit && (
@@ -1430,7 +1729,7 @@ function SessionView({ session, setSession, prs, setPrs, addXp, fireToast, routi
 }
 
 /* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ---------------- */
-function RoutineEditor({ initial, onClose, onSave }) {
+function RoutineEditor({ premium, initial, onClose, onSave }) {
   const [draft, setDraft] = useState(() => initial
     ? JSON.parse(JSON.stringify(initial))
     : { id: Date.now(), name: "", exercises: [] });
@@ -1529,7 +1828,12 @@ function RoutineEditor({ initial, onClose, onSave }) {
         </Panel>
       ))}
 
-      <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtra esercizi..." />
+      <div className="row g8">
+        <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtra esercizi..." style={{ flex: 1 }} />
+        <MachineScan premium={premium} variant="inline" fireToast={() => {}}
+          currentNames={draft.exercises.map((e) => e.name)}
+          onAdd={(name, group) => toggleEx(name, group)} />
+      </div>
       {Object.entries(EXERCISE_DB).map(([group, list]) => {
         const shown = list.filter((e) => e.toLowerCase().includes(q.toLowerCase()));
         if (!shown.length) return null;
@@ -1804,7 +2108,7 @@ function AIWorkout({ onClose, onSave }) {
           </div>
           <div><div className="hud-label" style={{ marginBottom: 6 }}>Attrezzatura</div>
             <Opt options={["Palestra completa", "Manubri", "Corpo libero"]} value={equip} set={setEquip} /></div>
-          <Btn primary full disabled={loading} onClick={generate}>
+          <Btn primary full disabled={loading} onClick={() => premium && !premium.is ? premium.open() : generate()}>
             {loading ? "Generazione..." : "Genera scheda"}
           </Btn>
         </Panel>
@@ -2148,7 +2452,7 @@ function MacroBar({ label, grams, kcalPerG, totalKcal, color }) {
   );
 }
 
-function NutritionTab({ body, nutri, setNutri, fireToast, goProfile }) {
+function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) {
   const [goal, setGoal] = useState(nutri ? nutri.goal : (body.obiettivo || "Massa"));
   const [days, setDays] = useState(nutri ? nutri.days : (body.giorniAllenamento || 3));
   const [loading, setLoading] = useState(false);
@@ -2162,7 +2466,7 @@ function NutritionTab({ body, nutri, setNutri, fireToast, goProfile }) {
     try {
       const response = await fetch("/api/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await featHeaders("nutrition"),
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001", max_tokens: 1000,
           messages: [{
@@ -2240,7 +2544,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           <div className="hud-label" style={{ marginBottom: 6 }}>Allenamenti/settimana · <span className="t-cyan">{days}</span></div>
           <input type="range" min="2" max="6" value={days} onChange={(e) => setDays(Number(e.target.value))} />
         </div>
-        <Btn primary full disabled={loading} onClick={generate}>
+        <Btn primary full disabled={loading} onClick={() => premium && !premium.is ? premium.open() : generate()}>
           {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> Generazione...</span> : "◈ Genera piano AI"}
         </Btn>
       </Panel>
@@ -2292,7 +2596,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           </div>
         </Panel>
 
-        <Btn full onClick={generate} disabled={loading}>
+        <Btn full onClick={() => premium && !premium.is ? premium.open() : generate()} disabled={loading}>
           {loading ? "Rigenerazione..." : "↻ Rigenera pasti (stessi target)"}
         </Btn>
       </div>

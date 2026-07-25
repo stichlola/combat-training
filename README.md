@@ -158,3 +158,22 @@ Per verificare: Chrome DevTools → **Lighthouse** → categoria PWA.
 - Grafici progressi (volume settimanale, peso corporeo nel tempo)
 - Streak reale calcolata dalle date dei workout completati
 - Condivisione schede tra PT e atleti (tabella `shared_routines`)
+
+## 💎 Premium (freemium)
+
+Funzioni gratuite: tutto tranne **piano nutrizionale AI** e **scan macchinari**, sbloccabili con 20€/anno (pagamento una tantum, 12 mesi, niente rinnovo automatico).
+
+### Setup PayPal
+1. Vai su **developer.paypal.com** → accedi col tuo account **Business** → My Apps & Credentials
+2. Crea una app **Live** (e una Sandbox per i test) → copia **Client ID** e **Secret**
+3. Su Vercel aggiungi le variabili: `VITE_PAYPAL_CLIENT_ID` (client id), `PAYPAL_CLIENT_ID`, `PAYPAL_SECRET`, `PAYPAL_ENV` (`sandbox` per testare, poi `live`)
+4. Aggiungi anche `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Project Settings → API → service_role). **La service key NON deve mai stare nel frontend**
+5. Esegui su Supabase (SQL Editor) la sezione PREMIUM in fondo a `supabase/schema.sql`
+
+### Perché è sicuro
+- La tabella `premium` è in **sola lettura** per il client (RLS senza policy di scrittura): nessuno può auto-assegnarsi il premium, nemmeno via API con la propria anon key
+- L'ordine PayPal viene **creato e catturato dal server** (`api/paypal.js`): il prezzo non passa mai dal client; il premium viene concesso solo se PayPal risponde COMPLETED con importo 20.00 EUR
+- Le funzioni premium sono **bloccate anche sul server** (`api/ai.js` verifica il JWT Supabase e lo stato premium prima di chiamare l'AI): aggirare l'interfaccia non serve a nulla
+
+### Test
+Con `PAYPAL_ENV=sandbox` usa i conti di test di developer.paypal.com (sezione Sandbox Accounts) per pagare senza soldi veri. Quando funziona, passa a `live`.
