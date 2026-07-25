@@ -8,6 +8,452 @@ import {
   Pencil, Info, Pause, Camera, Medal
 } from "lucide-react";
 
+/* ================================ I18N ================================ */
+/* Le stringhe italiane restano le chiavi canoniche (anche nel database:
+   nomi esercizi, PR, quest salvate); tr() traduce solo ciò che si vede. */
+let CURRENT_LANG = "it";
+const setLangGlobal = (l) => { CURRENT_LANG = l; };
+const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en", label: "English", flag: "🇬🇧" }];
+const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
+
+const EN_UI = {
+  "Chiudi": "Close",
+  "Allenamenti/settimana ·": "Workouts/week ·",
+  "(import/nutrizione 1 · scan 3)": "(import/nutrition 1 · scan 3)",
+  /* --- interfaccia --- */
+  "TRAINING HUD SYSTEM": "TRAINING HUD SYSTEM",
+  "INIZIALIZZAZIONE SISTEMA": "SYSTEM INITIALIZING",
+  "INTEL ▸": "INTEL ▸",
+  "Email": "Email", "Password": "Password", "Username": "Username",
+  "Conferma password": "Confirm password", "Nuova password": "New password",
+  "Minimo 6 caratteri": "Minimum 6 characters",
+  "Password dimenticata?": "Forgot password?",
+  "Crea account ›": "Create account ›",
+  "‹ Torna al login": "‹ Back to login",
+  "Ti abbiamo inviato un'email di conferma a": "We sent a confirmation email to",
+  ". Aprila per attivare l'account.": ". Open it to activate your account.",
+  "Se": "If", "è registrata, riceverai un link per reimpostare la password.": "is registered, you'll receive a password reset link.",
+  "◈ ACCESSO EFFETTUATO": "◈ SIGNED IN",
+
+  /* --- setup profilo --- */
+  "SETUP PROFILO": "PROFILE SETUP",
+  "PASSO": "STEP", "DI": "OF",
+  "Dati base": "Basic data", "Sesso": "Sex",
+  "Età": "Age", "Altezza": "Height", "Peso": "Weight", "Massa grassa": "Body fat",
+  "anni": "years", "cm": "cm", "kg": "kg", "% · opzionale": "% · optional",
+  "es. 25": "e.g. 25", "es. 178": "e.g. 178", "es. 75": "e.g. 75", "es. 15": "e.g. 15",
+  "Compila età, altezza e peso": "Fill in age, height and weight",
+  "Età non valida": "Invalid age",
+  "Altezza non valida (cm)": "Invalid height (cm)",
+  "Peso non valido (kg)": "Invalid weight (kg)",
+  "Stile di vita": "Lifestyle",
+  "Attività quotidiana (fuori palestra)": "Daily activity (outside the gym)",
+  "Sedentaria": "Sedentary", "Moderata": "Moderate", "Attiva": "Active",
+  "Lavoro da scrivania, poco movimento": "Desk job, little movement",
+  "In piedi o in movimento parte del giorno": "Standing or moving part of the day",
+  "Lavoro fisico o molto movimento quotidiano": "Physical job or lots of daily movement",
+  "Allenamenti a settimana ·": "Workouts per week ·",
+  "Esperienza in palestra": "Gym experience",
+  "Principiante": "Beginner", "Intermedio": "Intermediate", "Avanzato": "Advanced",
+  "Obiettivo": "Goal", "Massa": "Bulking", "Mantenimento": "Maintenance", "Definizione": "Cutting",
+  "Riepilogo": "Summary", "Uomo": "Man", "Donna": "Woman",
+  "Attività": "Activity", "allenamenti/sett": "workouts/week",
+  "Avanti ›": "Next ›", "‹ Indietro": "‹ Back", "◈ Inizia": "◈ Start",
+  "◈ PROFILO CONFIGURATO": "◈ PROFILE CONFIGURED",
+  "Benvenuto a bordo,": "Welcome aboard,",
+  "Lingua": "Language", "Scegli la lingua dell'app": "Choose the app language",
+  "Italiano": "Italian", "Inglese": "English",
+
+  /* --- training --- */
+  "▸ Schede attive": "▸ Active routines",
+  "Nuova": "New", "Modifica modello": "Edit template", "Elimina": "Delete",
+  "Elimina scheda": "Delete routine", "Annulla": "Cancel",
+  "Nessuna scheda. Creane una, importala da un documento PT o usa il generatore AI.":
+    "No routines yet. Create one, import a PT document or use the AI generator.",
+  "ESERCIZI": "EXERCISES", "SERIE": "SETS", "SET": "SET", "REPS": "REPS",
+  "+ SERIE": "+ SET", "KG": "KG", "KM": "KM", "MIN": "MIN", "TEMPO": "TIME",
+  "IMPORTA SCHEDA PT": "IMPORT PT ROUTINE",
+  "Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento":
+    "Upload a document (PDF, photo, text) — AI turns it into a workout",
+  "Generatore AI": "AI generator",
+  "▸ Mission log — ultimi allenamenti": "▸ Mission log — recent workouts",
+  "Nessun allenamento registrato. Completa il primo workout per iniziare il log.":
+    "No workouts recorded. Complete your first workout to start the log.",
+  "▸ Libreria esercizi": "▸ Exercise library",
+  "Cerca esercizio...": "Search exercise...",
+  "Personal records": "Personal records",
+  "Nessun record. Completa serie con carichi crescenti per registrare i PR.":
+    "No records yet. Complete sets with increasing loads to set PRs.",
+  "● SESSIONE IN CORSO": "● SESSION IN PROGRESS",
+  "avviata alle": "started at",
+  "Riprendi ▶": "Resume ▶", "Abbandona": "Discard", "Conferma abbandono": "Confirm discard",
+  "◈ SESSIONE ABBANDONATA": "◈ SESSION DISCARDED",
+  "Nessun record salvato": "No record saved",
+  "◈ SCHEDA ELIMINATA": "◈ ROUTINE DELETED",
+  "◈ SCHEDA SALVATA": "◈ ROUTINE SAVED",
+  "◈ MODELLO AGGIORNATO": "◈ TEMPLATE UPDATED",
+  "◈ SCHEDA AI GENERATA": "◈ AI ROUTINE GENERATED",
+  "◈ DOCUMENTO INTERPRETATO": "◈ DOCUMENT PARSED",
+  "Chiudi prima la sessione attiva": "Close the active session first",
+
+  /* --- sessione --- */
+  "‹ Esci": "‹ Exit", "Termina ✓": "Finish ✓", "Resta": "Stay", "Esci ›": "Exit ›",
+  "SESSIONE ANCORA ATTIVA": "SESSION STILL ACTIVE",
+  "VOLUME KG": "VOLUME KG", "DURATA": "DURATION", "VOLUME": "VOLUME",
+  "CARDIO": "CARDIO", "RECORD": "RECORD", "XP": "XP",
+  "Note esercizio...": "Exercise notes...",
+  "▲ NEW RECORD": "▲ NEW RECORD",
+  "◈ MISSION COMPLETE": "◈ MISSION COMPLETE",
+  "Sì, aggiorna il modello ✓": "Yes, update the template ✓",
+  "No, salva solo il record": "No, save the record only",
+  "‹ torna alla sessione": "‹ back to session",
+  "modello base": "base template",
+  "RECUPERO": "REST", "Avvia": "Start", "Pausa": "Pause", "↻ Reset": "↻ Reset",
+  "Timer di recupero": "Rest timer",
+  "▸ Esecuzione": "▸ How to perform",
+  "ANTEPRIMA NON DISPONIBILE": "PREVIEW NOT AVAILABLE",
+
+  /* --- editor --- */
+  "Nuova scheda": "New routine", "Salva": "Save", "‹ Annulla": "‹ Cancel",
+  "Nome scheda (es. LEG DAY)": "Routine name (e.g. LEG DAY)",
+  "Filtra esercizi...": "Filter exercises...",
+  "Scansiona macchinario": "Scan machine",
+
+  /* --- import --- */
+  "SCHEDA PT": "PT ROUTINE", "CARICA DOCUMENTO": "UPLOAD DOCUMENT",
+  "Trascina qui il file, oppure tocca — PDF · Foto · Testo":
+    "Drag your file here, or tap — PDF · Photo · Text",
+  "TOCCA PER SOSTITUIRE": "TAP TO REPLACE",
+  "— OPPURE —": "— OR —",
+  "Incolla qui il testo della scheda...\\nes. Panca piana 4x8 80kg\\nRematore 3x10 60kg":
+    "Paste your routine text here...\\ne.g. Bench press 4x8 80kg\\nBarbell row 3x10 60kg",
+  "◈ Interpreta con AI": "◈ Parse with AI",
+  "Analisi in corso...": "Analyzing...",
+  "NUOVO": "NEW",
+  "ESERCIZIO NON IN LIBRERIA — PERSONALIZZALO": "EXERCISE NOT IN LIBRARY — CUSTOMIZE IT",
+  "Descrizione esecuzione (mostrata nel pop-up info)...": "How to perform (shown in the info popup)...",
+  "URL immagine/GIF (opzionale)...": "Image/GIF URL (optional)...",
+  "Salva scheda ✓": "Save routine ✓", "↻ Riprova": "↻ Retry",
+  "LIMITE SETTIMANALE RAGGIUNTO": "WEEKLY LIMIT REACHED",
+  "Crediti / Premium ›": "Credits / Premium ›",
+
+  /* --- scan macchinari --- */
+  "ANALISI MACCHINARIO...": "ANALYZING MACHINE...",
+  "◈ MACCHINARIO": "◈ MACHINE",
+  "ESERCIZI POSSIBILI": "POSSIBLE EXERCISES",
+  "IN SCHEDA": "IN ROUTINE",
+  "＋ Aggiungi all'allenamento": "＋ Add to workout",
+  "◈ ESERCIZIO AGGIUNTO": "◈ EXERCISE ADDED",
+  "MACCHINARIO NON RICONOSCIUTO": "MACHINE NOT RECOGNIZED",
+  "Sembra:": "Looks like:",
+  "Prova a inquadrare il macchinario per intero, da davanti.":
+    "Try framing the whole machine, from the front.",
+  "Analisi fallita": "Analysis failed",
+  "Limite settimanale scan raggiunto": "Weekly scan limit reached",
+  "Aggiungi crediti ›": "Add credits ›",
+
+  /* --- nutrizione --- */
+  "▸ Piano nutrizionale": "▸ Nutrition plan",
+  "DATI CORPOREI MANCANTI": "BODY DATA MISSING",
+  "peso, altezza ed età": "weight, height and age",
+  "Vai al profilo ›": "Go to profile ›",
+  "◈ Genera piano AI": "◈ Generate AI plan",
+  "Generazione...": "Generating...",
+  "Giorni/settimana ·": "Days/week ·", "Attrezzatura": "Equipment",
+  "KCAL / GIORNO": "KCAL / DAY",
+  "Modifica target": "Edit targets", "Salva ✓": "Save ✓",
+  "↻ Rigenera": "↻ Regenerate", "↻ Nuovo": "↻ New",
+  "◈ PIANO GENERATO": "◈ PLAN GENERATED",
+  "◈ TARGET AGGIORNATI": "◈ TARGETS UPDATED",
+  "Il piano è indicativo: consulta un professionista per esigenze specifiche.":
+    "This plan is indicative: consult a professional for specific needs.",
+  "Colazione": "Breakfast", "Pranzo": "Lunch", "Cena": "Dinner",
+  "Spuntino pre-workout": "Pre-workout snack", "Post-workout": "Post-workout",
+  "Proteine": "Protein", "Carboidrati": "Carbs", "Grassi": "Fat",
+
+  /* --- profilo --- */
+  "▸ Impostazioni account": "▸ Account settings",
+  "Salva account": "Save account", "Esci": "Sign out",
+  "◈ Rifai setup profilo": "◈ Redo profile setup",
+  "◈ ACCOUNT AGGIORNATO": "◈ ACCOUNT UPDATED",
+  "◈ DATI SALVATI": "◈ DATA SAVED",
+  "Profilo corporeo aggiornato": "Body profile updated",
+  "dati corporei del profilo": "profile body data",
+  "Circonferenze (cm)": "Measurements (cm)",
+  "BMI calcolato": "Calculated BMI",
+  "SOTTOPESO": "UNDERWEIGHT", "NORMOPESO": "NORMAL", "SOVRAPPESO": "OVERWEIGHT", "OBESITÀ": "OBESE",
+  "Collo": "Neck", "Petto": "Chest", "Vita": "Waist", "Braccio": "Arm", "Coscia": "Thigh",
+  "Account gratuito ·": "Free account ·",
+  "passa a Premium ›": "upgrade to Premium ›",
+  "◆ ACCOUNT PREMIUM — attivo fino al": "◆ PREMIUM ACCOUNT — active until",
+  "Account Premium attivo": "Premium account active",
+
+  /* --- store / crediti --- */
+  "◈ STORE": "◈ STORE",
+  "◈ GYMQUEST PREMIUM": "◈ GYMQUEST PREMIUM",
+  "SBLOCCA LE FUNZIONI AI AVANZATE": "UNLOCK ADVANCED AI FEATURES",
+  "◆ Premium — 12 mesi": "◆ Premium — 12 months",
+  "Sblocca nutrizione AI e scan macchinari, con limiti settimanali alti su tutto":
+    "Unlocks AI nutrition and machine scan, with high weekly limits on everything",
+  "Pacchetto 30 crediti": "30 credits pack",
+  "Pacchetto 100 crediti": "100 credits pack",
+  "Una tantum · generazioni extra oltre il limite settimanale":
+    "One-off · extra generations beyond the weekly limit",
+  "Una tantum · il più conveniente per chi genera tanto":
+    "One-off · best value for heavy users",
+  "◈ PREMIUM ATTIVO": "◈ PREMIUM ACTIVE",
+  "Benvenuto tra gli Spartan": "Welcome among the Spartans",
+  "◈ CREDITI AGGIUNTI": "◈ CREDITS ADDED",
+  "Saldo:": "Balance:", "crediti": "credits",
+  "▸ Generazioni AI — questa settimana": "▸ AI generations — this week",
+  "CREDITI EXTRA:": "EXTRA CREDITS:", "CREDITI:": "CREDITS:",
+  "Caricamento utilizzo…": "Loading usage…",
+  "Import scheda PT": "PT routine import",
+  "Piano nutrizionale": "Nutrition plan",
+  "Scan macchinari": "Machine scan",
+  "I LIMITI SI AZZERANO OGNI SETTIMANA · OLTRE IL LIMITE SI USANO I CREDITI EXTRA":
+    "LIMITS RESET EVERY WEEK · BEYOND THE LIMIT EXTRA CREDITS ARE USED",
+  "QUESTA SETTIMANA": "THIS WEEK",
+  "NUTRIZIONE": "NUTRITION", "SCAN": "SCAN", "IMPORT PT": "PT IMPORT",
+  "PAGAMENTO SICURO VIA PAYPAL · ATTIVAZIONE IMMEDIATA · 12 MESI, NESSUN RINNOVO AUTOMATICO":
+    "SECURE PAYPAL PAYMENT · INSTANT ACTIVATION · 12 MONTHS, NO AUTO-RENEWAL",
+  "⚠ VITE_PAYPAL_CLIENT_ID non configurato": "⚠ VITE_PAYPAL_CLIENT_ID not configured",
+  "Errore PayPal, riprova.": "PayPal error, please try again.",
+  "Pagamento non confermato": "Payment not confirmed",
+
+  /* --- sfide / medaglie --- */
+  "◈ SFIDE": "◈ CHALLENGES", "SFIDE": "CHALLENGES", "Sfide e medaglie": "Challenges and medals",
+  "GIORNALIERE": "DAILY", "SETTIMANALI": "WEEKLY", "MEDAGLIE": "MEDALS",
+  "STREAK": "STREAK", "GIORNI": "DAYS",
+  "SI RINNOVANO OGNI SETTIMANA": "THEY RESET EVERY WEEK",
+  "SBLOCCATE": "UNLOCKED", "FACILE": "EASY", "DIFFICILE": "HARD",
+  "Nessuna sfida attiva oggi.": "No active challenges today.",
+  "◈ RAPPORTO MISSIONE": "◈ MISSION DEBRIEF",
+  "▸ Avanzamento sfide": "▸ Challenge progress",
+  "Continua ›": "Continue ›",
+  "▲ RANK UP!": "▲ RANK UP!",
+  "◈ QUEST COMPLETATA": "◈ CHALLENGE COMPLETE",
+  "◈ MISSION REPORT": "◈ MISSION REPORT",
+  "▸ Dettaglio esercizi": "▸ Exercise breakdown",
+  "★ MIGLIOR SERIE · LE SERIE BARRATE NON SONO STATE COMPLETATE":
+    "★ BEST SET · CROSSED-OUT SETS WERE NOT COMPLETED",
+  "Nessun dettaglio disponibile per questo allenamento (registrato con una versione precedente).":
+    "No details available for this workout (recorded with an earlier version).",
+
+  /* --- PWA --- */
+  "◈ INSTALLA GYMQUEST": "◈ INSTALL GYMQUEST",
+  "Aggiungila alla schermata home come app": "Add it to your home screen as an app",
+  "Installa": "Install",
+
+  /* --- gruppi muscolari --- */
+  "Dorso": "Back", "Gambe": "Legs", "Spalle": "Shoulders",
+  "Bicipiti": "Biceps", "Tricipiti": "Triceps", "Core": "Core", "Altro": "Other",
+  "PETTO": "CHEST", "DORSO": "BACK", "GAMBE": "LEGS", "SPALLE": "SHOULDERS",
+  "BICIPITI": "BICEPS", "TRICIPITI": "TRICEPS", "CARDIO ": "CARDIO ", "ALTRO": "OTHER",
+
+  /* --- nomi esercizi --- */
+  "Panca Piana Bilanciere": "Barbell Bench Press", "Panca Piana Manubri": "Dumbbell Bench Press",
+  "Panca Inclinata Bilanciere": "Incline Barbell Press", "Panca Inclinata Manubri": "Incline Dumbbell Press",
+  "Panca Declinata": "Decline Bench Press", "Chest Press": "Chest Press",
+  "Croci Manubri": "Dumbbell Flyes", "Croci ai Cavi": "Cable Crossover",
+  "Pectoral Machine": "Pec Deck", "Push-Up": "Push-Up", "Dip alle Parallele": "Parallel Bar Dips",
+  "Trazioni": "Pull-Ups", "Trazioni Presa Inversa": "Chin-Ups",
+  "Lat Machine Avanti": "Wide-Grip Lat Pulldown", "Lat Machine Presa Stretta": "Close-Grip Lat Pulldown",
+  "Rematore Bilanciere": "Barbell Row", "Rematore Manubrio": "One-Arm Dumbbell Row",
+  "Rematore T-Bar": "T-Bar Row", "Pulley Basso": "Seated Cable Row",
+  "Pull-Down Braccia Tese": "Straight-Arm Pulldown", "Hyperextension": "Back Extension",
+  "Stacco da Terra": "Deadlift", "Squat Bilanciere": "Barbell Squat", "Front Squat": "Front Squat",
+  "Leg Press": "Leg Press", "Hack Squat": "Hack Squat", "Affondi Manubri": "Dumbbell Lunges",
+  "Affondi Bulgari": "Bulgarian Split Squat", "Stacco Rumeno": "Romanian Deadlift",
+  "Leg Extension": "Leg Extension", "Leg Curl Sdraiato": "Lying Leg Curl",
+  "Leg Curl Seduto": "Seated Leg Curl", "Hip Thrust": "Hip Thrust",
+  "Calf Raise in Piedi": "Standing Calf Raise", "Calf Raise Seduto": "Seated Calf Raise",
+  "Military Press": "Military Press", "Shoulder Press Manubri": "Dumbbell Shoulder Press",
+  "Arnold Press": "Arnold Press", "Alzate Laterali": "Lateral Raises",
+  "Alzate Laterali ai Cavi": "Cable Lateral Raises", "Alzate Frontali": "Front Raises",
+  "Alzate Posteriori": "Rear Delt Raises", "Face Pull": "Face Pull", "Shrug Bilanciere": "Barbell Shrug",
+  "Curl Bilanciere": "Barbell Curl", "Curl Manubri Alternato": "Alternating Dumbbell Curl",
+  "Curl Panca Scott": "Preacher Curl", "Hammer Curl": "Hammer Curl", "Curl ai Cavi": "Cable Curl",
+  "Curl Concentrato": "Concentration Curl", "Spider Curl": "Spider Curl",
+  "Pushdown Tricipiti": "Triceps Pushdown", "Pushdown Corda": "Rope Pushdown",
+  "French Press": "Skull Crusher", "Estensioni Sopra la Testa": "Overhead Triceps Extension",
+  "Panca Presa Stretta": "Close-Grip Bench Press", "Dip tra Panche": "Bench Dips",
+  "Kickback Manubrio": "Dumbbell Kickback", "Plank": "Plank", "Crunch": "Crunch",
+  "Crunch ai Cavi": "Cable Crunch", "Russian Twist": "Russian Twist", "Leg Raise": "Leg Raise",
+  "Hanging Leg Raise": "Hanging Leg Raise", "Ab Wheel": "Ab Wheel", "Side Plank": "Side Plank",
+  "Corsa": "Running", "Camminata Veloce": "Brisk Walking", "Tapis Roulant": "Treadmill",
+  "Cyclette": "Stationary Bike", "Ellittica": "Elliptical", "Vogatore": "Rowing Machine",
+  "Salto della Corda": "Jump Rope", "Stepper": "Stair Stepper",
+
+  /* --- macchinari --- */
+  "Panca Piana": "Flat Bench", "Panca Inclinata": "Incline Bench",
+  "Power Rack / Rastrelliera Squat": "Power Rack / Squat Rack",
+  "Smith Machine (Multipower)": "Smith Machine",
+  "Lat Machine": "Lat Pulldown Machine", "Stazione ai Cavi": "Cable Station",
+  "Hack Squat Machine": "Hack Squat Machine", "Leg Extension Machine": "Leg Extension Machine",
+  "Leg Curl Machine": "Leg Curl Machine", "Calf Machine": "Calf Machine",
+  "Shoulder Press Machine": "Shoulder Press Machine", "Panca Scott": "Preacher Bench",
+  "Parallele / Dip Station": "Dip Station", "Sbarra Trazioni": "Pull-Up Bar",
+  "Panca Hyperextension": "Back Extension Bench", "Rastrelliera Manubri": "Dumbbell Rack",
+  "T-Bar Row": "T-Bar Row", "Stepper / Stairmaster": "Stair Stepper",
+};
+
+/* --- contenuti: quest, medaglie, fun fact, descrizioni esercizi --- */
+const EN_CONTENT = {
+  /* quest giornaliere */
+  "Fuoco di Copertura: completa 1 allenamento oggi": "Covering Fire: complete 1 workout today",
+  "Grilletto Facile: completa 15 serie oggi": "Trigger Happy: complete 15 sets today",
+  "Colpo su Colpo: completa 20 serie oggi": "Shot for Shot: complete 20 sets today",
+  "Ordigno Pesante: solleva 3.000 kg di volume oggi": "Heavy Ordnance: lift 3,000 kg of volume today",
+  "Demolizione: solleva 5.000 kg di volume oggi": "Demolition: lift 5,000 kg of volume today",
+  "Supremazia: solleva 8.000 kg di volume oggi": "Supremacy: lift 8,000 kg of volume today",
+  "Corridoio di Fuga: 10 minuti di cardio oggi": "Escape Route: 10 minutes of cardio today",
+  "Marcia Forzata: 20 minuti di cardio oggi": "Forced March: 20 minutes of cardio today",
+  "Oltre il Limite: registra 1 nuovo record oggi": "Beyond the Limit: set 1 new record today",
+  "Ricognizione Rapida: completa 10 serie oggi": "Quick Recon: complete 10 sets today",
+  "Assalto Frontale: completa 25 serie oggi": "Frontal Assault: complete 25 sets today",
+  "Carico Bellico: solleva 1.500 kg di volume oggi": "Combat Load: lift 1,500 kg of volume today",
+  "Sprint Finale: 15 minuti di cardio oggi": "Final Sprint: 15 minutes of cardio today",
+  "Doppio Turno: completa 2 allenamenti oggi": "Double Shift: complete 2 workouts today",
+  /* quest settimanali */
+  "Operazione Settimanale: completa 3 allenamenti": "Weekly Operation: complete 3 workouts",
+  "Campagna Estesa: completa 4 allenamenti": "Extended Campaign: complete 4 workouts",
+  "Guerra Totale: completa 5 allenamenti": "Total War: complete 5 workouts",
+  "Arsenale Completo: completa 60 serie": "Full Arsenal: complete 60 sets",
+  "Fuoco Sostenuto: completa 80 serie": "Sustained Fire: complete 80 sets",
+  "Tonnellata Spartana: solleva 15.000 kg di volume": "Spartan Tonnage: lift 15,000 kg of volume",
+  "Titano d'Acciaio: solleva 25.000 kg di volume": "Steel Titan: lift 25,000 kg of volume",
+  "Maratona del Soldato: 60 minuti di cardio": "Soldier's Marathon: 60 minutes of cardio",
+  "Resistenza Estrema: 90 minuti di cardio": "Extreme Endurance: 90 minutes of cardio",
+  "Cacciatore di Record: registra 2 nuovi PR": "Record Hunter: set 2 new PRs",
+  "LASO Settimanale: 4 allenamenti e 50 serie": "Weekly LASO: 4 workouts and 50 sets",
+
+  /* medaglie */
+  "Il Primo Passo": "The First Step", "Completa il tuo primo allenamento": "Complete your first workout",
+  "Recluta Promossa": "Promoted Recruit", "Completa 10 allenamenti": "Complete 10 workouts",
+  "Veterano del Ferro": "Iron Veteran", "Completa 50 allenamenti": "Complete 50 workouts",
+  "Spartan-117": "Spartan-117", "Completa 100 allenamenti": "Complete 100 workouts",
+  "Grilletto Consumato": "Worn Trigger", "Completa 100 serie totali": "Complete 100 total sets",
+  "Mitragliere": "Machine Gunner", "Completa 1.000 serie totali": "Complete 1,000 total sets",
+  "Diecimila": "Ten Thousand", "Solleva 10.000 kg di volume totale": "Lift 10,000 kg of total volume",
+  "Centomila": "Hundred Thousand", "Solleva 100.000 kg di volume totale": "Lift 100,000 kg of total volume",
+  "Mjolnir": "Mjolnir", "Solleva 500.000 kg di volume totale": "Lift 500,000 kg of total volume",
+  "Fiato da Marine": "Marine Lungs", "60 minuti di cardio totali": "60 total minutes of cardio",
+  "Maratoneta ODST": "ODST Marathoner", "600 minuti di cardio totali": "600 total minutes of cardio",
+  "Nuovo Massimale": "New Max", "Registra il tuo primo PR": "Set your first PR",
+  "Club dei 100": "The 100 Club", "PR di 100 kg su Panca Piana Bilanciere": "100 kg PR on Barbell Bench Press",
+  "Cacciatore di Taglie": "Bounty Hunter", "Completa 10 quest": "Complete 10 challenges",
+  "Leggenda delle Sfide": "Challenge Legend", "Completa 50 quest": "Complete 50 challenges",
+  "Ufficiale di Grado": "Ranking Officer", "Raggiungi il livello 10": "Reach level 10",
+  "Hyper Lethal": "Hyper Lethal", "Raggiungi il livello 25": "Reach level 25",
+
+  /* fun fact */
+  "Il muscolo cresce durante il recupero, non durante l'allenamento: dormi 7-9 ore.":
+    "Muscle grows during recovery, not during training: sleep 7-9 hours.",
+  "Aumentare il carico anche solo di 1-2 kg a settimana è progressione reale.":
+    "Adding even just 1-2 kg per week is real progression.",
+  "La fase eccentrica (discesa lenta) genera più adattamento muscolare di quella concentrica.":
+    "The eccentric phase (slow lowering) drives more muscle adaptation than the concentric one.",
+  "2 g di proteine per kg di peso corporeo sono il riferimento per chi si allena coi pesi.":
+    "2 g of protein per kg of bodyweight is the benchmark for lifters.",
+  "Il riscaldamento ideale replica l'esercizio che stai per fare, a carico ridotto.":
+    "The ideal warm-up mirrors the exercise you're about to do, with lighter loads.",
+  "I DOMS non misurano l'efficacia dell'allenamento: sono solo micro-danno da stimoli nuovi.":
+    "Soreness doesn't measure training quality: it's just micro-damage from novel stimuli.",
+  "La forza è anche neurale: le prime settimane migliori perché il cervello impara, non perché il muscolo cresce.":
+    "Strength is partly neural: early gains come from your brain learning, not muscle growth.",
+  "Bere il 2% del peso corporeo in meno d'acqua riduce già la performance.":
+    "Being just 2% of bodyweight dehydrated already hurts performance.",
+  "Il range di movimento completo costruisce più muscolo dei mezzi movimenti col doppio del peso.":
+    "Full range of motion builds more muscle than half reps with twice the weight.",
+  "Recuperi 2-3 min tra le serie pesanti aumentano forza e volume totale sollevato.":
+    "Resting 2-3 min between heavy sets increases strength and total volume lifted.",
+  "La creatina monoidrato è l'integratore più studiato ed efficace: 3-5 g al giorno, sempre.":
+    "Creatine monohydrate is the most studied, most effective supplement: 3-5 g daily, consistently.",
+  "Allenarsi a cedimento a ogni serie non serve: fermati a 1-3 ripetizioni dal limite.":
+    "Training to failure every set isn't needed: stop 1-3 reps short.",
+  "Il grasso non si trasforma in muscolo: sono tessuti diversi, si perde uno e si costruisce l'altro.":
+    "Fat doesn't turn into muscle: they're different tissues — you lose one and build the other.",
+  "La costanza batte l'intensità: 3 allenamenti a settimana per anni valgono più di 6 per un mese.":
+    "Consistency beats intensity: 3 workouts a week for years beat 6 a week for a month.",
+  "Camminare 8-10 mila passi al giorno migliora il recupero e brucia più di quanto pensi.":
+    "Walking 8-10 thousand steps a day improves recovery and burns more than you think.",
+  "Il core lavora in quasi ogni esercizio in piedi: squat e stacco sono anche esercizi per l'addome.":
+    "Your core works in almost every standing lift: squats and deadlifts are ab exercises too.",
+  "Dopo le 18 il corpo è mediamente più forte del 5-10% rispetto al mattino presto.":
+    "After 6pm the body is on average 5-10% stronger than in the early morning.",
+  "La caffeina 30-60 minuti prima migliora forza e resistenza: 3-6 mg per kg di peso.":
+    "Caffeine 30-60 minutes before improves strength and endurance: 3-6 mg per kg of bodyweight.",
+  "Cambiare scheda ogni settimana impedisce la progressione: tieni gli stessi esercizi 6-10 settimane.":
+    "Changing your routine weekly blocks progression: keep the same exercises for 6-10 weeks.",
+  "Il pump post-allenamento è sangue nei muscoli, non crescita: sparisce in un paio d'ore.":
+    "The post-workout pump is blood in the muscle, not growth: it fades within a couple of hours.",
+  "Le donne non diventano 'grosse' coi pesi: hanno 10-15 volte meno testosterone.":
+    "Women don't get 'bulky' from lifting: they have 10-15 times less testosterone.",
+  "Un chilo di muscolo consuma più calorie a riposo di un chilo di grasso: la massa è un investimento.":
+    "A kilo of muscle burns more calories at rest than a kilo of fat: muscle is an investment.",
+  "L'ultimo pasto pre-workout ideale è 2-3 ore prima: carboidrati + proteine, pochi grassi.":
+    "The ideal pre-workout meal is 2-3 hours before: carbs + protein, low fat.",
+  "Il sovrallenamento vero è raro: quasi sempre è sotto-recupero (sonno, cibo, stress).":
+    "True overtraining is rare: it's almost always under-recovery (sleep, food, stress).",
+  "Registrare i propri allenamenti aumenta i progressi: ciò che misuri, migliora.":
+    "Logging your workouts improves progress: what gets measured, improves.",
+};
+
+/* --- descrizioni esecuzione esercizi --- */
+const EN_DESC = {
+  "Sdraiati sulla panca con scapole addotte e piedi a terra. Impugna il bilanciere poco oltre le spalle, scendi controllato fino a sfiorare il petto e spingi verso l'alto senza bloccare i gomiti. Mantieni i glutei sulla panca.": "Lie on the bench with shoulder blades retracted and feet planted. Grip the bar just outside shoulder width, lower under control until it grazes your chest, then press up without locking the elbows. Keep your glutes on the bench.",
+  "Panca a 30-45°. Scendi con il bilanciere verso la parte alta del petto e spingi in verticale. Enfatizza la porzione clavicolare del pettorale.": "Bench at 30-45°. Lower the bar toward your upper chest and press vertically. Emphasizes the clavicular head of the pecs.",
+  "Regola il sedile con le maniglie all'altezza del petto. Spingi in avanti senza estendere completamente i gomiti e torna lento in apertura mantenendo tensione.": "Set the seat so the handles sit at chest height. Press forward without fully locking the elbows and return slowly, keeping tension.",
+  "Sdraiato, braccia semiflesse e fisse. Apri i manubri ad arco fino ad avvertire allungamento sul petto, poi richiudi come per abbracciare. Movimento ampio, carichi moderati.": "Lying down, arms slightly bent and fixed. Open the dumbbells in an arc until you feel a stretch across the chest, then close as if hugging. Wide movement, moderate loads.",
+  "Mani poco oltre le spalle, corpo in linea dalla testa ai talloni. Scendi con il petto verso terra tenendo i gomiti a ~45° e spingi su senza inarcare la schiena.": "Hands just outside shoulder width, body in a straight line from head to heels. Lower your chest toward the floor with elbows at ~45° and push up without arching your back.",
+  "Sospeso alle parallele, busto leggermente inclinato avanti per il petto. Scendi finché le spalle sono poco sotto i gomiti e risali spingendo. Fermati prima se avverti fastidio alle spalle.": "Suspended on the bars, torso leaning slightly forward for chest emphasis. Lower until your shoulders are just below your elbows, then press back up. Stop earlier if you feel shoulder discomfort.",
+  "Presa prona poco oltre le spalle. Parti da braccia distese, tira il petto verso la sbarra portando i gomiti in basso e indietro, scendi controllato senza slanci.": "Overhand grip just outside shoulder width. Start from a full hang, pull your chest toward the bar driving the elbows down and back, then lower under control with no swinging.",
+  "Impugna larga la sbarra, busto leggermente indietro. Tira verso l'alto del petto pensando a spingere i gomiti in basso, risali frenando il carico.": "Take a wide grip, torso leaning slightly back. Pull toward your upper chest thinking about driving the elbows down, then return resisting the load.",
+  "Busto inclinato ~45° con schiena neutra e core attivo. Tira il bilanciere verso l'ombelico tenendo i gomiti vicini al corpo, scendi controllato.": "Torso at ~45° with a neutral spine and braced core. Pull the bar toward your navel keeping the elbows close to your body, then lower under control.",
+  "Seduto, gambe semiflesse e schiena dritta. Tira la maniglia verso l'addome stringendo le scapole, torna avanti allungando senza incurvare la schiena.": "Seated, knees slightly bent and back straight. Pull the handle to your abdomen squeezing the shoulder blades, then return forward into a stretch without rounding your back.",
+  "Piedi sotto il bilanciere, schiena neutra, petto in fuori. Spingi il pavimento con le gambe e sali estendendo anche e ginocchia insieme, bilanciere aderente al corpo. Tecnica prima del carico.": "Feet under the bar, neutral spine, chest up. Push the floor away with your legs and rise extending hips and knees together, keeping the bar against your body. Technique before load.",
+  "Bilanciere sui trapezi, piedi poco oltre le spalle. Scendi spingendo le anche indietro e le ginocchia in linea con le punte fino a cosce parallele (o sotto), risali spingendo con tutto il piede.": "Bar on your traps, feet just outside shoulder width. Descend pushing the hips back with knees tracking over the toes until the thighs are parallel (or below), then drive up through the whole foot.",
+  "Piedi al centro della pedana alla larghezza spalle. Scendi controllato fino a ~90° senza staccare il bacino dallo schienale, spingi senza bloccare le ginocchia.": "Feet centred on the platform at shoulder width. Lower under control to ~90° without letting your hips leave the backrest, then press without locking the knees.",
+  "Passo avanti ampio, scendi in verticale finché il ginocchio posteriore sfiora terra. Il ginocchio anteriore resta in linea con il piede. Spingi con il tallone per risalire.": "Take a long step forward and descend vertically until the rear knee grazes the floor. The front knee stays in line with the foot. Push through the heel to stand.",
+  "Gambe quasi tese, scendi facendo scivolare il bilanciere lungo le cosce spingendo le anche indietro, schiena neutra. Risali contraendo glutei e femorali.": "Legs almost straight, lower the bar sliding along your thighs while pushing the hips back, spine neutral. Rise by squeezing glutes and hamstrings.",
+  "Regola il cuscinetto sopra le caviglie. Estendi le gambe con controllo fino a contrarre il quadricipite, scendi frenando senza far cadere il pacco pesi.": "Set the pad just above the ankles. Extend the legs under control until the quads contract, then lower resisting without letting the stack drop.",
+  "Cuscinetto sopra i talloni. Fletti le gambe portando i talloni verso i glutei senza sollevare il bacino, torna lento in allungamento.": "Pad just above the heels. Curl the legs bringing your heels toward your glutes without lifting the hips, then return slowly into a stretch.",
+  "Scapole appoggiate alla panca, bilanciere sul bacino. Spingi con i talloni ed estendi le anche fino ad allineare busto e cosce, contraendo forte i glutei in alto.": "Shoulder blades on the bench, bar across your hips. Drive through the heels and extend the hips until torso and thighs align, squeezing the glutes hard at the top.",
+  "Avampiedi sul rialzo, talloni liberi. Sali il più in alto possibile sulle punte, pausa, scendi in massimo allungamento. Movimento lento e completo.": "Balls of the feet on the step, heels free. Rise as high as possible onto your toes, pause, then lower into a full stretch. Slow and complete movement.",
+  "In piedi, bilanciere alle clavicole, core e glutei contratti. Spingi in verticale portando la testa leggermente avanti a fine spinta. Non inarcare la zona lombare.": "Standing, bar at the collarbones, core and glutes braced. Press vertically, moving your head slightly forward at lockout. Don't arch the lower back.",
+  "Manubri ai fianchi, gomiti semiflessi. Solleva lateralmente fino all'altezza delle spalle guidando con i gomiti, scendi lento. Carichi leggeri, zero slanci.": "Dumbbells at your sides, elbows slightly bent. Raise laterally to shoulder height leading with the elbows, then lower slowly. Light loads, no swinging.",
+  "Parti con i manubri davanti alle spalle e palmi verso di te; spingendo in alto ruota i polsi fino ad avere i palmi in avanti. Torna ruotando in senso inverso.": "Start with the dumbbells in front of your shoulders, palms facing you; as you press up rotate the wrists until the palms face forward. Reverse the rotation on the way down.",
+  "Corda all'altezza del viso. Tira verso la fronte aprendo i gomiti in fuori e ruotando esternamente le spalle. Ottimo per la salute della cuffia.": "Rope set at face height. Pull toward your forehead flaring the elbows out and externally rotating the shoulders. Great for rotator cuff health.",
+  "In piedi, gomiti fermi ai fianchi. Fletti gli avambracci portando il bilanciere alle spalle senza oscillare il busto, scendi in 2-3 secondi.": "Standing, elbows pinned at your sides. Curl the bar up to your shoulders without swinging the torso, then lower over 2-3 seconds.",
+  "Come il curl ma con presa neutra (palmi che si guardano). Colpisce brachiale e avambraccio. Gomiti fissi, discesa controllata.": "Like a curl but with a neutral grip (palms facing each other). Targets the brachialis and forearm. Elbows fixed, controlled descent.",
+  "Braccia appoggiate sul cuscino inclinato. Fletti fino in alto e scendi quasi a braccia distese senza mai perdere tensione. Isola il bicipite eliminando lo slancio.": "Arms resting on the angled pad. Curl all the way up and lower to almost straight arms without losing tension. Isolates the biceps by removing momentum.",
+  "Alla poulie alta, gomiti bloccati ai fianchi. Estendi gli avambracci fino in basso contraendo il tricipite, risali frenando fino ai 90°.": "At the high pulley, elbows locked at your sides. Extend the forearms all the way down squeezing the triceps, then return resisting to 90°.",
+  "Sdraiato, bilanciere EZ sopra la fronte. Piega solo i gomiti scendendo verso la testa e riestendi. Gomiti stretti e fermi per tutto il movimento.": "Lying down, EZ bar above your forehead. Bend only at the elbows lowering toward your head, then extend. Elbows tucked and still throughout.",
+  "Come la panca piana ma con presa alla larghezza spalle e gomiti vicini al corpo. Il carico si sposta sui tricipiti.": "Like the flat bench press but with a shoulder-width grip and elbows tucked. The load shifts onto the triceps.",
+  "Avambracci a terra, corpo in linea, addome e glutei contratti. Non far cadere il bacino né alzarlo. Respira e mantieni la posizione per il tempo previsto.": "Forearms on the floor, body in a straight line, abs and glutes braced. Don't let the hips sag or pike. Breathe and hold for the prescribed time.",
+  "Sdraiato, gambe piegate, mani alle tempie. Solleva le scapole arrotondando la parte alta della schiena, espira contraendo l'addome, scendi lento.": "Lying down, knees bent, hands at your temples. Lift the shoulder blades rounding the upper back, exhale as the abs contract, then lower slowly.",
+  "Sdraiato, mani sotto i glutei. Solleva le gambe tese fino alla verticale e scendile lente senza toccare terra, schiena lombare sempre aderente.": "Lying down, hands under your glutes. Raise straight legs to vertical and lower them slowly without touching the floor, keeping the lower back flat.",
+  "Seduto con busto inclinato indietro e gambe sollevate. Ruota il busto da un lato all'altro toccando terra accanto al fianco, con o senza peso.": "Seated with torso leaning back and legs lifted. Rotate side to side touching the floor beside your hip, with or without weight.",
+  "Postura eretta, sguardo avanti, appoggio sotto il baricentro. Mantieni un ritmo in cui riesci a parlare a frasi corte (fondo lento) o spingi a intervalli per l'alta intensità. Aumenta il volume gradualmente.": "Upright posture, eyes forward, foot landing under your centre of mass. Hold a pace where you can speak in short sentences (easy runs) or push intervals for high intensity. Build volume gradually.",
+  "Imposta velocità o pendenza adatte al tuo livello, non aggrapparti ai corrimano. Camminata in salita (5-10%) è un'ottima alternativa a basso impatto.": "Set a speed or incline suited to your level and don't hold the handrails. Incline walking (5-10%) is an excellent low-impact alternative.",
+  "Regola la sella all'altezza dell'anca: gamba quasi distesa nel punto più basso. Cadenza fluida 70-90 rpm, resistenza tale da mantenere lo sforzo costante.": "Set the saddle at hip height: leg almost straight at the bottom. Smooth cadence of 70-90 rpm, resistance that keeps the effort steady.",
+  "Sequenza: spinta gambe → apertura busto → tirata braccia; ritorno in ordine inverso. La forza viene per il 60% dalle gambe. Schiena neutra sempre.": "Sequence: leg drive → torso opens → arm pull; reverse on the recovery. About 60% of the power comes from the legs. Keep a neutral spine throughout.",
+  "Salta basso sull'avampiede, polsi che ruotano la corda, gomiti vicini al corpo. Ottimo per condizionamento: alterna round da 1-3 minuti a pause brevi.": "Jump low on the balls of your feet, wrists turning the rope, elbows close to your body. Great conditioning: alternate 1-3 minute rounds with short rests.",
+  /* fallback per gruppo */
+  "Esercizio per il pettorale: scapole addotte, movimento controllato in discesa e spinta senza bloccare i gomiti. Concentrati sul sentire lavorare il petto, non solo braccia e spalle.": "Chest exercise: shoulder blades retracted, controlled descent and press without locking the elbows. Focus on feeling the chest work, not just arms and shoulders.",
+  "Esercizio di tirata per il dorso: parti da braccia distese, tira guidando con i gomiti (non con le mani) e stringi le scapole a fine movimento. Torna in allungamento frenando il carico.": "Back pulling exercise: start from straight arms, pull leading with the elbows (not the hands) and squeeze the shoulder blades at the end. Return into a stretch resisting the load.",
+  "Esercizio per la parte inferiore: schiena neutra, ginocchia in linea con le punte dei piedi, scendi controllato e spingi con tutto il piede. La profondità corretta vale più del carico.": "Lower body exercise: neutral spine, knees tracking over the toes, descend under control and drive through the whole foot. Proper depth matters more than load.",
+  "Esercizio per i deltoidi: carichi moderati, niente slanci, movimento guidato dai gomiti. Ferma l'alzata all'altezza delle spalle e scendi lentamente.": "Deltoid exercise: moderate loads, no swinging, movement led by the elbows. Stop the raise at shoulder height and lower slowly.",
+  "Esercizio di flessione per i bicipiti: gomiti fermi vicino al busto, sali contraendo e scendi in 2-3 secondi senza oscillare il corpo.": "Biceps curling exercise: elbows fixed close to the torso, curl up squeezing and lower over 2-3 seconds without swinging.",
+  "Esercizio di estensione per i tricipiti: gomiti bloccati e vicini al corpo, estendi completamente contraendo e risali frenando il carico.": "Triceps extension exercise: elbows locked and close to the body, extend fully squeezing and return resisting the load.",
+  "Esercizio per il core: bacino stabile, zona lombare protetta, movimento lento guidato dall'addome con espirazione nella fase di contrazione.": "Core exercise: stable pelvis, protected lower back, slow movement led by the abs with an exhale during the contraction.",
+  "Attività aerobica: mantieni un ritmo sostenibile e costante, monitora respiro o frequenza cardiaca, e incrementa durata o intensità in modo graduale settimana dopo settimana.": "Aerobic activity: hold a sustainable, steady pace, monitor breathing or heart rate, and increase duration or intensity gradually week after week.",
+  "Esegui il movimento in modo lento e controllato, con postura corretta e senza compensi. Se non conosci la tecnica, chiedi una dimostrazione al trainer della tua palestra.": "Perform the movement slowly and under control, with good posture and no compensations. If you don't know the technique, ask a trainer at your gym for a demonstration.",
+};
+
+Object.assign(EN_UI, EN_CONTENT, EN_DESC);
+
 /* ====================== EXERCISE LIBRARY (pre-loaded) ====================== */
 const EXERCISE_DB = {
   Petto: ["Panca Piana Bilanciere", "Panca Piana Manubri", "Panca Inclinata Bilanciere", "Panca Inclinata Manubri", "Panca Declinata", "Chest Press", "Croci Manubri", "Croci ai Cavi", "Pectoral Machine", "Push-Up", "Dip alle Parallele"],
@@ -372,7 +818,7 @@ function BootScreen({ progress, fact }) {
       <div className="fade-in" style={{ width: "min(420px, 86vw)", textAlign: "center" }}>
         <Dumbbell size={34} color="#57c8f2" style={{ margin: "0 auto 10px", filter: "drop-shadow(0 0 8px rgba(87,200,242,.6))" }} />
         <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".35em" }}>GYMQUEST</div>
-        <div className="micro" style={{ marginTop: 4, marginBottom: 26 }}>INIZIALIZZAZIONE SISTEMA</div>
+        <div className="micro" style={{ marginTop: 4, marginBottom: 26 }}>{tr("INIZIALIZZAZIONE SISTEMA")}</div>
 
         {/* barra segmentata stile scudo */}
         <div className="row g6" style={{ justifyContent: "center" }}>
@@ -388,8 +834,8 @@ function BootScreen({ progress, fact }) {
         <div className="micro t-cyan" style={{ marginTop: 8 }}>{Math.round(progress * 100)}%</div>
 
         <div className="tiny t-dim" style={{ marginTop: 30, minHeight: 40, lineHeight: 1.6, padding: "0 10px" }}>
-          <span className="t-amber f-hud" style={{ fontSize: 9, letterSpacing: ".25em" }}>INTEL ▸ </span>
-          {fact}
+          <span className="t-amber f-hud" style={{ fontSize: 9, letterSpacing: ".25em" }}>{tr("INTEL ▸")} </span>
+          {tr(fact)}
         </div>
       </div>
     </div>
@@ -545,7 +991,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
     <div className="modal-back" onClick={onClose}>
       <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="row between">
-          <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>◈ SFIDE</div>
+          <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>{tr("◈ SFIDE")}</div>
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
         <div className="row g6 tiny t-faint" style={{ marginTop: 2, marginBottom: 14, alignItems: "center" }}>
@@ -571,7 +1017,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
                 <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "#060f18", border: `1px solid ${q.done ? "#ffd76a" : "#0e2233"}` }}>
                   <div className="row between g8">
                     <span className={q.done ? "t-amber" : "t-bright"} style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4 }}>
-                      {q.done && "✓ "}{q.text}
+                      {q.done && "✓ "}{tr(q.text)}
                     </span>
                     <span className="f-hud t-amber" style={{ fontSize: 12, fontWeight: 700, flexShrink: 0 }}>+{q.xp} XP</span>
                   </div>
@@ -602,8 +1048,8 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
                   }}>
                     <Medal size={20} color={ok ? "#ffd76a" : "#2a4a63"} style={{ flexShrink: 0 }} />
                     <div className="grow">
-                      <div className={ok ? "t-amber" : "t-dim"} style={{ fontSize: 13, fontWeight: 700 }}>{a.name}</div>
-                      <div className="tiny t-faint">{a.desc}</div>
+                      <div className={ok ? "t-amber" : "t-dim"} style={{ fontSize: 13, fontWeight: 700 }}>{tr(a.name)}</div>
+                      <div className="tiny t-faint">{tr(a.desc)}</div>
                     </div>
                     <span className="micro cham-s" style={{
                       padding: "2px 7px", flexShrink: 0,
@@ -649,7 +1095,7 @@ function ResultsScreen({ results, onClose }) {
     <Overlay>
     <div className="modal-back">
       <div className="modal-box cham fade-in">
-        <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".25em", fontSize: 15, textAlign: "center" }}>◈ RAPPORTO MISSIONE</div>
+        <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".25em", fontSize: 15, textAlign: "center" }}>{tr("◈ RAPPORTO MISSIONE")}</div>
         <div className="micro t-faint" style={{ textAlign: "center", marginBottom: 18 }}>{results.name}</div>
 
         {/* XP animato */}
@@ -672,13 +1118,13 @@ function ResultsScreen({ results, onClose }) {
         </div>
 
         {/* progresso quest animato */}
-        <div className="hud-label" style={{ marginBottom: 8 }}>▸ Avanzamento sfide</div>
+        <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Avanzamento sfide")}</div>
         <div className="stack-s" style={{ marginBottom: 16 }}>
           {results.quests.map((q, i) => (
             <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "#060f18", border: `1px solid ${q.completedNow ? "#ffd76a" : "#0e2233"}` }}>
               <div className="row between g8">
                 <span className={q.done ? "t-amber" : "t-bright"} style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.35 }}>
-                  {q.completedNow && "◈ "}{q.text}
+                  {q.completedNow && "◈ "}{tr(q.text)}
                 </span>
                 {q.completedNow && <span className="f-hud t-amber blink" style={{ fontSize: 11, fontWeight: 700, flexShrink: 0 }}>+{q.xp} XP</span>}
               </div>
@@ -691,10 +1137,10 @@ function ResultsScreen({ results, onClose }) {
               </div>
             </div>
           ))}
-          {results.quests.length === 0 && <div className="tiny t-faint">Nessuna sfida attiva oggi.</div>}
+          {results.quests.length === 0 && <div className="tiny t-faint">{tr("Nessuna sfida attiva oggi.")}</div>}
         </div>
 
-        <Btn primary full onClick={onClose}>Continua ›</Btn>
+        <Btn primary full onClick={onClose}>{tr("Continua ›")}</Btn>
       </div>
     </div>
     </Overlay>
@@ -744,10 +1190,10 @@ function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
           });
           const d = await r.json();
           if (d.premium_until) {
-            fireToast({ title: "◈ PREMIUM ATTIVO", sub: "Benvenuto tra gli Spartan" });
+            fireToast({ title: tr("◈ PREMIUM ATTIVO"), sub: tr("Benvenuto tra gli Spartan") });
             onUnlocked(d.premium_until); onClose();
           } else if (d.credits != null) {
-            fireToast({ title: "◈ CREDITI AGGIUNTI", sub: `Saldo: ${d.credits} crediti` });
+            fireToast({ title: tr("◈ CREDITI AGGIUNTI"), sub: `Saldo: ${d.credits} crediti` });
             if (onCredits) onCredits(d.credits);
             setUsage((u) => u ? { ...u, credits: d.credits } : u);
           } else setErr(d.error || "Pagamento non confermato");
@@ -782,7 +1228,7 @@ function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
     <div className="modal-back" onClick={onClose}>
       <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="row between">
-          <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>◈ STORE</div>
+          <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>{tr("◈ STORE")}</div>
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
 
@@ -790,26 +1236,26 @@ function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
           <div className="cham-s micro" style={{ margin: "12px 0", padding: "8px 10px", background: "#04101b", border: "1px solid #0e2233", lineHeight: 1.8 }}>
             QUESTA SETTIMANA — IMPORT PT: {usage.used.import}/{usage.limits.import}
             {usage.premium && <> · NUTRIZIONE: {usage.used.nutrition}/{usage.limits.nutrition} · SCAN: {usage.used.scan}/{usage.limits.scan}</>}
-            <br />CREDITI EXTRA: <span className="t-amber">{usage.credits}</span>
+            <br />{tr("CREDITI EXTRA:")} <span className="t-amber">{usage.credits}</span>
             <span className="t-faint"> (import/nutrizione 1 · scan 3)</span>
           </div>
         )}
 
         <div className="stack-s" style={{ margin: "12px 0 16px" }}>
           {!premium.is && (
-            <Card id="premium" gold title="◆ Premium — 12 mesi" price="20€"
+            <Card id="premium" gold title={tr("◆ Premium — 12 mesi")} price="20€"
               lines="Sblocca nutrizione AI e scan macchinari, con limiti settimanali alti su tutto" />
           )}
-          <Card id="pack30" title="Pacchetto 30 crediti" price="3€"
+          <Card id="pack30" title={tr("Pacchetto 30 crediti")} price="3€"
             lines="Una tantum · generazioni extra oltre il limite settimanale" />
-          <Card id="pack100" title="Pacchetto 100 crediti" price="8€"
+          <Card id="pack100" title={tr("Pacchetto 100 crediti")} price="8€"
             lines="Una tantum · il più conveniente per chi genera tanto" />
         </div>
 
         {clientId ? (
           <div ref={ppRef} style={{ minHeight: 46 }} />
         ) : (
-          <div className="tiny t-red" style={{ textAlign: "center" }}>⚠ VITE_PAYPAL_CLIENT_ID non configurato</div>
+          <div className="tiny t-red" style={{ textAlign: "center" }}>{tr("⚠ VITE_PAYPAL_CLIENT_ID non configurato")}</div>
         )}
         {err && <div className="tiny t-red" style={{ marginTop: 8, textAlign: "center" }}>⚠ {err}</div>}
         <div className="micro t-faint" style={{ marginTop: 12, textAlign: "center", lineHeight: 1.6 }}>
@@ -1017,6 +1463,11 @@ export default function App() {
     });
   };
 
+  /* lingua: la chiave canonica resta l'italiano, tr() traduce a schermo */
+  const [lang, setLang] = useState("it");
+  useEffect(() => { if (body.lang && body.lang !== lang) setLang(body.lang); }, [body.lang]);
+  setLangGlobal(lang);
+
   useEffect(() => { window.__gqXpSnap = { xp, level }; }, [xp, level]);
 
   const need = xpForLevel(level);
@@ -1096,10 +1547,10 @@ export default function App() {
               </span>
               <span className="f-hud hide-sm" style={{ fontSize: 11, letterSpacing: ".1em" }}>{user.username}</span>
             </button>
-            <button onClick={() => setQuestsOpen(true)} className="streak-pill cham-s tap" title="Sfide e medaglie"
+            <button onClick={() => setQuestsOpen(true)} className="streak-pill cham-s tap" title={tr("Sfide e medaglie")}
               style={{ cursor: "pointer", borderColor: "#8a6d1f", boxShadow: "0 0 10px rgba(255,215,106,.2)" }}>
               <Medal size={14} color="#ffd76a" />
-              <span className="f-hud t-amber hide-sm" style={{ fontWeight: 700, fontSize: 11, letterSpacing: ".15em" }}>SFIDE</span>
+              <span className="f-hud t-amber hide-sm" style={{ fontWeight: 700, fontSize: 11, letterSpacing: ".15em" }}>{tr("SFIDE")}</span>
             </button>
           </div>
         </div>
@@ -1169,7 +1620,7 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
   const deleteRoutine = (id) => {
     setRoutines((rs) => rs.filter((r) => r.id !== id));
     setConfirmDel(null);
-    fireToast({ title: "◈ SCHEDA ELIMINATA" });
+    fireToast({ title: tr("◈ SCHEDA ELIMINATA") });
   };
 
   const saveRoutine = (r, msg) => {
@@ -1194,7 +1645,7 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
 
   const abandonSession = () => {
     setSession(null); setConfirmAbandon(false);
-    fireToast({ title: "◈ SESSIONE ABBANDONATA", sub: "Nessun record salvato" });
+    fireToast({ title: tr("◈ SESSIONE ABBANDONATA"), sub: tr("Nessun record salvato") });
   };
 
   if (view === "session" && session) {
@@ -1205,7 +1656,7 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
   }
   if (view === "builder") {
     const initial = editId != null ? routines.find((r) => r.id === editId) : null;
-    return <RoutineEditor premium={premium} initial={initial} onClose={() => { setView("home"); setEditId(null); }}
+    return <RoutineEditor premium={premium} fireToast={fireToast} initial={initial} onClose={() => { setView("home"); setEditId(null); }}
       onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
   }
   if (view === "ai") return <AIWorkout premium={premium} onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ SCHEDA AI GENERATA")} />;
@@ -1221,19 +1672,19 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
         {/* Sessione in corso: banner di ripresa */}
         {session && (
           <Panel accent style={{ borderColor: "#ffd76a" }}>
-            <div className="f-hud t-amber blink" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 12 }}>● SESSIONE IN CORSO</div>
+            <div className="f-hud t-amber blink" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 12 }}>{tr("● SESSIONE IN CORSO")}</div>
             <div className="t-bright" style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{session.name}</div>
             <div className="tiny t-faint" style={{ marginTop: 2 }}>avviata alle {new Date(session.startedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</div>
             <div className="row g8" style={{ marginTop: 14 }}>
               {confirmAbandon ? (
                 <>
-                  <Btn onClick={abandonSession} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>Conferma abbandono</Btn>
-                  <Btn onClick={() => setConfirmAbandon(false)} style={{ flex: 1 }}>Annulla</Btn>
+                  <Btn onClick={abandonSession} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>{tr("Conferma abbandono")}</Btn>
+                  <Btn onClick={() => setConfirmAbandon(false)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
                 </>
               ) : (
                 <>
-                  <Btn primary onClick={() => setView("session")} style={{ flex: 2 }}>Riprendi ▶</Btn>
-                  <Btn onClick={() => setConfirmAbandon(true)} style={{ flex: 1 }}>Abbandona</Btn>
+                  <Btn primary onClick={() => setView("session")} style={{ flex: 2 }}>{tr("Riprendi ▶")}</Btn>
+                  <Btn onClick={() => setConfirmAbandon(true)} style={{ flex: 1 }}>{tr("Abbandona")}</Btn>
                 </>
               )}
             </div>
@@ -1241,14 +1692,14 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
         )}
 
         <div className="row between">
-          <h2 className="hud-title">▸ Schede attive</h2>
-          <Btn small onClick={() => setView("builder")}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> Nuova</Btn>
+          <h2 className="hud-title">{tr("▸ Schede attive")}</h2>
+          <Btn small onClick={() => setView("builder")}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
         </div>
 
         {routines.length === 0 && (
           <Panel>
             <div className="tiny t-faint" style={{ textAlign: "center", padding: "12px 0" }}>
-              Nessuna scheda. Creane una, importala da un documento PT o usa il generatore AI.
+              {tr("Nessuna scheda. Creane una, importala da un documento PT o usa il generatore AI.")}
             </div>
           </Panel>
         )}
@@ -1262,7 +1713,7 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
                 </div>
                 <div className="row wrap g6" style={{ marginTop: 8 }}>
                   {[...new Set(r.exercises.map((e) => e.group))].map((g) => (
-                    <span key={g} className="chip cham-s">{g}</span>
+                    <span key={g} className="chip cham-s">{tr(g)}</span>
                   ))}
                 </div>
               </div>
@@ -1270,15 +1721,15 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
             <div className="row between" style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #0e2233" }}>
               {confirmDel === r.id ? (
                 <div className="row g8" style={{ width: "100%" }}>
-                  <Btn small onClick={() => deleteRoutine(r.id)} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>Elimina scheda</Btn>
-                  <Btn small onClick={() => setConfirmDel(null)} style={{ flex: 1 }}>Annulla</Btn>
+                  <Btn small onClick={() => deleteRoutine(r.id)} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>{tr("Elimina scheda")}</Btn>
+                  <Btn small onClick={() => setConfirmDel(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
                 </div>
               ) : (
                 <>
                   <div className="row" style={{ gap: 18 }}>
-                    <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title="Modifica modello"
+                    <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title={tr("Modifica modello")}
                       style={{ color: "#5d87a3" }}><Pencil size={17} /></span>
-                    <span onClick={() => setConfirmDel(r.id)} className="tap icon-tap" title="Elimina"
+                    <span onClick={() => setConfirmDel(r.id)} className="tap icon-tap" title={tr("Elimina")}
                       style={{ color: "#5d87a3" }}><Trash2 size={17} /></span>
                   </div>
                   <Btn small primary disabled={!!session} onClick={() => startSession(r)}
@@ -1297,8 +1748,8 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
             <div className="row g12">
               <Upload size={20} color="#9be8ff" />
               <div className="grow">
-                <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>IMPORTA SCHEDA PT</div>
-                <div className="tiny t-dim">Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento</div>
+                <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("IMPORTA SCHEDA PT")}</div>
+                <div className="tiny t-dim">{tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}</div>
               </div>
               <ChevronRight size={16} color="#3f637c" />
             </div>
@@ -1314,10 +1765,10 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
       {/* RIGHT: history + library + PR */}
       <div className="col stack">
         <Panel>
-          <div className="hud-label" style={{ marginBottom: 8 }}>▸ Mission log — ultimi allenamenti</div>
+          <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Mission log — ultimi allenamenti")}</div>
           {(!history || history.length === 0) && (
             <div className="tiny t-faint" style={{ padding: "8px 0" }}>
-              Nessun allenamento registrato. Completa il primo workout per iniziare il log.
+              {tr("Nessun allenamento registrato. Completa il primo workout per iniziare il log.")}
             </div>
           )}
           {(history || []).slice(0, 8).map((h, i) => (
@@ -1332,7 +1783,7 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
               </div>
               <div className="row g6" style={{ alignItems: "center" }}>
                 <span className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 13 }}>
-                  {h.volume.toLocaleString()} <span className="t-faint" style={{ fontWeight: 500 }}>kg</span>
+                  {h.volume.toLocaleString()} <span className="t-faint" style={{ fontWeight: 500 }}>{tr("kg")}</span>
                 </span>
                 <ChevronRight size={13} color="#3f637c" />
               </div>
@@ -1348,12 +1799,12 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
           </div>
           {Object.keys(prs).length === 0 && (
             <div className="tiny t-faint" style={{ padding: "6px 0" }}>
-              Nessun record. Completa serie con carichi crescenti per registrare i PR.
+              {tr("Nessun record. Completa serie con carichi crescenti per registrare i PR.")}
             </div>
           )}
           {Object.entries(prs).map(([k, v]) => (
             <div key={k} className="divider-row">
-              <span style={{ fontSize: 14 }}>{k}</span>
+              <span style={{ fontSize: 14 }}>{tr(k)}</span>
               <span className="f-hud t-amber" style={{ fontWeight: 700, fontSize: 13 }}>{v} KG</span>
             </div>
           ))}
@@ -1378,7 +1829,7 @@ function WorkoutReport({ rec, onClose }) {
     <div className="modal-back" onClick={onClose}>
       <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ marginBottom: 2 }}>
-          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>◈ MISSION REPORT</div>
+          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>{tr("◈ MISSION REPORT")}</div>
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
         <div className="t-bright" style={{ fontSize: 16, fontWeight: 700 }}>{rec.name}</div>
@@ -1400,15 +1851,15 @@ function WorkoutReport({ rec, onClose }) {
 
         {(rec.exercises || []).length > 0 ? (
           <>
-            <div className="hud-label" style={{ marginBottom: 8 }}>▸ Dettaglio esercizi</div>
+            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Dettaglio esercizi")}</div>
             <div className="stack-s">
               {rec.exercises.map((ex, i) => {
                 const bi = bestOf(ex);
                 return (
                   <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "#060f18", border: "1px solid #0e2233" }}>
                     <div className="row between">
-                      <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</span>
-                      <span className="micro t-cyan">{(ex.group || "").toUpperCase()}</span>
+                      <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
+                      <span className="micro t-cyan">{tr(ex.group || "").toUpperCase()}</span>
                     </div>
                     {ex.note && <div className="tiny" style={{ color: "#8fb2c9", marginTop: 2 }}>{ex.note}</div>}
                     <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>
@@ -1429,10 +1880,10 @@ function WorkoutReport({ rec, onClose }) {
                 );
               })}
             </div>
-            <div className="micro t-faint" style={{ marginTop: 10, textAlign: "center" }}>★ MIGLIOR SERIE · LE SERIE BARRATE NON SONO STATE COMPLETATE</div>
+            <div className="micro t-faint" style={{ marginTop: 10, textAlign: "center" }}>{tr("★ MIGLIOR SERIE · LE SERIE BARRATE NON SONO STATE COMPLETATE")}</div>
           </>
         ) : (
-          <div className="tiny t-faint">Nessun dettaglio disponibile per questo allenamento (registrato con una versione precedente).</div>
+          <div className="tiny t-faint">{tr("Nessun dettaglio disponibile per questo allenamento (registrato con una versione precedente).")}</div>
         )}
       </div>
     </div>
@@ -1457,25 +1908,25 @@ function ExerciseLibrary() {
   return (
     <Panel>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
-      <div className="hud-label" style={{ marginBottom: 8 }}>▸ Libreria esercizi</div>
+      <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Libreria esercizi")}</div>
       <div style={{ position: "relative", marginBottom: 12 }}>
         <Search size={14} color="#3f637c" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
         <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder="Cerca esercizio..." style={{ paddingLeft: 32 }} />
+          placeholder={tr("Cerca esercizio...")} style={{ paddingLeft: 32 }} />
       </div>
       <div className="scroll-y stack-s">
         {Object.entries(filtered).map(([g, list]) => (
           <div key={g}>
             <button onClick={() => setOpen(open === g ? null : g)} className="tap cham-s row between"
               style={{ width: "100%", padding: "8px 10px", cursor: "pointer", border: "1px solid #0e2233", background: "#060f18" }}>
-              <span className="f-hud t-cyan" style={{ fontSize: 11, letterSpacing: ".2em" }}>{g.toUpperCase()}</span>
+              <span className="f-hud t-cyan" style={{ fontSize: 11, letterSpacing: ".2em" }}>{tr(g).toUpperCase()}</span>
               <span className="tiny t-faint">{list.length} ▾</span>
             </button>
             {(open === g || q) && (
               <div className="fade-in" style={{ paddingLeft: 12, paddingTop: 4 }}>
                 {list.map((e) => (
                   <div key={e} className="row between" style={{ fontSize: 14, padding: "5px 0", borderBottom: "1px solid #0a1826" }}>
-                    <span>{e}</span>
+                    <span>{tr(e)}</span>
                     <span onClick={() => setInfo({ name: e, group: g })} className="tap icon-tap" style={{ color: "#3f637c" }}>
                       <Info size={13} />
                     </span>
@@ -1581,8 +2032,8 @@ function ExerciseInfoModal({ name, group, ex, onClose }) {
       <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ marginBottom: 12 }}>
           <div>
-            <div className="t-bright" style={{ fontSize: 17, fontWeight: 700 }}>{name}</div>
-            <div className="micro t-cyan">{(group || "").toUpperCase()}</div>
+            <div className="t-bright" style={{ fontSize: 17, fontWeight: 700 }}>{tr(name)}</div>
+            <div className="micro t-cyan">{tr(group || "").toUpperCase()}</div>
           </div>
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
@@ -1594,11 +2045,11 @@ function ExerciseInfoModal({ name, group, ex, onClose }) {
             ? <img src={media} alt={name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", background: "#eef2f5" }} />
             : <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 44, color: "#1b3a52", lineHeight: 1 }}>{GROUP_ICONS[group] || "◇"}</div>
-                <div className="micro" style={{ marginTop: 8 }}>ANTEPRIMA NON DISPONIBILE</div>
+                <div className="micro" style={{ marginTop: 8 }}>{tr("ANTEPRIMA NON DISPONIBILE")}</div>
               </div>}
         </div>
-        <div className="hud-label" style={{ marginBottom: 6 }}>▸ Esecuzione</div>
-        <div className="t-dim" style={{ fontSize: 14, lineHeight: 1.7 }}>{desc}</div>
+        <div className="hud-label" style={{ marginBottom: 6 }}>{tr("▸ Esecuzione")}</div>
+        <div className="t-dim" style={{ fontSize: 14, lineHeight: 1.7 }}>{tr(desc)}</div>
       </div>
     </div>
     </Overlay>
@@ -1621,7 +2072,12 @@ const aiCall = async (payload, feature) => {
   const r = await fetch("/api/ai", {
     method: "POST", headers: await featHeaders(feature), body: JSON.stringify(payload),
   });
-  return r.json();
+  const txt = await r.text();
+  try { return JSON.parse(txt); }
+  catch {
+    /* il server ha risposto testo (crash/timeout): messaggio leggibile invece di "Unexpected token" */
+    throw new Error(`Errore server (${r.status}) — se persiste, verifica il deploy delle API`);
+  }
 };
 
 
@@ -1720,12 +2176,12 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
   };
 
   const trigger = variant === "float" ? (
-    <button onClick={() => premium && !premium.is ? premium.open() : camRef.current && camRef.current.click()} className="float-cam-btn cham-s tap" title="Scansiona macchinario">
+    <button onClick={() => premium && !premium.is ? premium.open() : camRef.current && camRef.current.click()} className="float-cam-btn cham-s tap" title={tr("Scansiona macchinario")}>
       {busy ? <Loader2 size={20} color="#ffd76a" className="spin" /> : <Camera size={20} color="#57c8f2" />}
     </button>
   ) : (
     <Btn small onClick={() => premium && !premium.is ? premium.open() : camRef.current && camRef.current.click()} style={{ flexShrink: 0 }}>
-      {busy ? <Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2 }} /> : <Camera size={13} style={{ display: "inline", verticalAlign: -2 }} />} Scan
+      {busy ? <Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2 }} /> : <Camera size={13} style={{ display: "inline", verticalAlign: -2 }} />} Scan macchinario
     </Btn>
   );
 
@@ -1742,30 +2198,30 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
             {busy && (
               <div style={{ textAlign: "center", padding: "30px 0" }}>
                 <Loader2 size={26} color="#57c8f2" className="spin" style={{ margin: "0 auto 10px" }} />
-                <div className="f-hud t-cyan" style={{ letterSpacing: ".2em", fontSize: 12 }}>ANALISI MACCHINARIO...</div>
+                <div className="f-hud t-cyan" style={{ letterSpacing: ".2em", fontSize: 12 }}>{tr("ANALISI MACCHINARIO...")}</div>
               </div>
             )}
             {res && res.error && (
               <div style={{ textAlign: "center", padding: "16px 0" }}>
                 <div className="tiny t-red">⚠ Analisi fallita: {typeof res.error === "string" ? res.error : "riprova con una foto più chiara"}</div>
-                <Btn small onClick={() => setRes(null)} style={{ marginTop: 12 }}>Chiudi</Btn>
+                <Btn small onClick={() => setRes(null)} style={{ marginTop: 12 }}>{tr("Chiudi")}</Btn>
               </div>
             )}
             {res && res.unknown && (
               <div style={{ textAlign: "center", padding: "10px 0" }}>
-                <div className="f-hud t-amber" style={{ letterSpacing: ".15em", fontSize: 13, fontWeight: 700 }}>MACCHINARIO NON RICONOSCIUTO</div>
+                <div className="f-hud t-amber" style={{ letterSpacing: ".15em", fontSize: 13, fontWeight: 700 }}>{tr("MACCHINARIO NON RICONOSCIUTO")}</div>
                 {res.guess && <div className="tiny t-dim" style={{ marginTop: 8, lineHeight: 1.6 }}>Sembra: {res.guess}</div>}
-                <div className="tiny t-faint" style={{ marginTop: 6 }}>Prova a inquadrare il macchinario per intero, da davanti.</div>
-                <Btn small onClick={() => setRes(null)} style={{ marginTop: 12 }}>Chiudi</Btn>
+                <div className="tiny t-faint" style={{ marginTop: 6 }}>{tr("Prova a inquadrare il macchinario per intero, da davanti.")}</div>
+                <Btn small onClick={() => setRes(null)} style={{ marginTop: 12 }}>{tr("Chiudi")}</Btn>
               </div>
             )}
             {res && res.machine && (
               <>
                 <div className="row between" style={{ marginBottom: 2 }}>
-                  <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>◈ MACCHINARIO</div>
+                  <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>{tr("◈ MACCHINARIO")}</div>
                   <span onClick={() => setRes(null)} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
                 </div>
-                <div className="t-bright" style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{res.machine}</div>
+                <div className="t-bright" style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{tr(res.machine)}</div>
                 <div className="tiny t-faint" style={{ marginBottom: 14 }}>{res.exercises.length} ESERCIZI POSSIBILI</div>
 
                 <div className="stack-s">
@@ -1778,11 +2234,11 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
                         <button onClick={() => setOpenEx(open ? null : name)} className="tap row between"
                           style={{ width: "100%", padding: "10px 12px", cursor: "pointer" }}>
                           <span className="row g8">
-                            <span className="t-bright" style={{ fontSize: 14, fontWeight: 700, textAlign: "left" }}>{name}</span>
-                            {inWo && <span className="micro cham-s" style={{ padding: "2px 7px", border: "1px solid #57c8f2", color: "#57c8f2" }}>IN SCHEDA</span>}
+                            <span className="t-bright" style={{ fontSize: 14, fontWeight: 700, textAlign: "left" }}>{tr(name)}</span>
+                            {inWo && <span className="micro cham-s" style={{ padding: "2px 7px", border: "1px solid #57c8f2", color: "#57c8f2" }}>{tr("IN SCHEDA")}</span>}
                           </span>
                           <span className="row g8" style={{ alignItems: "center" }}>
-                            <span className="micro t-cyan">{g.toUpperCase()}</span>
+                            <span className="micro t-cyan">{tr(g).toUpperCase()}</span>
                             <span className="t-faint">{open ? "▾" : "▸"}</span>
                           </span>
                         </button>
@@ -1795,12 +2251,12 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
                               </div>
                             )}
                             <div className="tiny t-dim" style={{ lineHeight: 1.65 }}>
-                              {EXERCISE_INFO[name] || INFO_FALLBACK[g] || INFO_FALLBACK.Altro}
+                              {tr(EXERCISE_INFO[name] || INFO_FALLBACK[g] || INFO_FALLBACK.Altro)}
                             </div>
                             {!inWo && (
                               <Btn small primary full style={{ marginTop: 10 }}
-                                onClick={() => { onAdd(name, g); fireToast({ title: "◈ ESERCIZIO AGGIUNTO", sub: name }); setRes(null); }}>
-                                ＋ Aggiungi all'allenamento
+                                onClick={() => { onAdd(name, g); fireToast({ title: tr("◈ ESERCIZIO AGGIUNTO"), sub: name }); setRes(null); }}>
+                                {tr("＋ Aggiungi all'allenamento")}
                               </Btn>
                             )}
                           </div>
@@ -1839,13 +2295,13 @@ function FloatingTimer() {
 
   return (
     <Overlay>
-      <button onClick={() => setOpen(!open)} className="float-timer-btn cham-s tap" title="Timer di recupero">
+      <button onClick={() => setOpen(!open)} className="float-timer-btn cham-s tap" title={tr("Timer di recupero")}>
         <Timer size={20} color={running && left > 0 ? "#ffd76a" : "#57c8f2"} className={running && left > 0 ? "blink" : ""} />
       </button>
       {open && (
         <div className="float-timer cham-s fade-in">
           <div className="row between" style={{ marginBottom: 8 }}>
-            <span className="hud-label">RECUPERO</span>
+            <span className="hud-label">{tr("RECUPERO")}</span>
             <span onClick={() => setOpen(false)} className="tap t-faint" style={{ cursor: "pointer", fontSize: 15, padding: 2 }}>✕</span>
           </div>
           <div className="row g12" style={{ alignItems: "center" }}>
@@ -1860,9 +2316,9 @@ function FloatingTimer() {
           </div>
           <div className="row g8">
             {running
-              ? <Btn small onClick={() => setRunning(false)} style={{ flex: 1 }}><Pause size={11} style={{ display: "inline", verticalAlign: -1 }} /> Pausa</Btn>
-              : <Btn small primary onClick={() => { if (left === 0) setLeft(dur); setRunning(true); }} style={{ flex: 1 }}><Play size={11} style={{ display: "inline", verticalAlign: -1 }} /> Avvia</Btn>}
-            <Btn small onClick={() => { setLeft(dur); setRunning(false); }} style={{ flex: 1 }}>↻ Reset</Btn>
+              ? <Btn small onClick={() => setRunning(false)} style={{ flex: 1 }}><Pause size={11} style={{ display: "inline", verticalAlign: -1 }} />{tr("Pausa")}</Btn>
+              : <Btn small primary onClick={() => { if (left === 0) setLeft(dur); setRunning(true); }} style={{ flex: 1 }}><Play size={11} style={{ display: "inline", verticalAlign: -1 }} />{tr("Avvia")}</Btn>}
+            <Btn small onClick={() => { setLeft(dur); setRunning(false); }} style={{ flex: 1 }}>{tr("↻ Reset")}</Btn>
           </div>
         </div>
       )}
@@ -1923,7 +2379,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
       if (ex.mode !== "time" && (st.w || 0) > (prs[ex.name] || 0)) {
         setPrs((p) => ({ ...p, [ex.name]: st.w }));
         setSessionPrCount((c) => c + 1);
-        fireToast({ title: "▲ NEW RECORD", sub: `${ex.name} — ${st.w} KG`, color: "#ffd76a" });
+        fireToast({ title: tr("▲ NEW RECORD"), sub: `${tr(ex.name)} — ${st.w} KG`, color: "#ffd76a" });
       }
     }
   };
@@ -2014,14 +2470,14 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
         <Overlay>
         <div className="modal-back" onClick={() => setConfirmExit(false)}>
           <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", marginBottom: 8 }}>SESSIONE ANCORA ATTIVA</div>
+            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", marginBottom: 8 }}>{tr("SESSIONE ANCORA ATTIVA")}</div>
             <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 16 }}>
               Uscendo la sessione resta in corso: la ritrovi in Training e ci rientri anche
               se chiudi l'app. Per registrare l'allenamento usa "Termina".
             </div>
             <div className="row g8">
-              <Btn onClick={() => setConfirmExit(false)} style={{ flex: 1 }}>Resta</Btn>
-              <Btn primary onClick={() => { setConfirmExit(false); exitToHome(); }} style={{ flex: 1 }}>Esci ›</Btn>
+              <Btn onClick={() => setConfirmExit(false)} style={{ flex: 1 }}>{tr("Resta")}</Btn>
+              <Btn primary onClick={() => { setConfirmExit(false); exitToHome(); }} style={{ flex: 1 }}>{tr("Esci ›")}</Btn>
             </div>
           </div>
         </div>
@@ -2033,7 +2489,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
         <Overlay>
         <div className="modal-back">
           <div className="modal-box cham fade-in">
-            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 15, marginBottom: 4 }}>◈ MISSION COMPLETE</div>
+            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 15, marginBottom: 4 }}>{tr("◈ MISSION COMPLETE")}</div>
             <div className="tiny t-faint" style={{ marginBottom: 14 }}>{session.name}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
               {[
@@ -2051,12 +2507,12 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
               ))}
             </div>
             <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 12 }}>
-              Vuoi salvare le modifiche fatte in sessione (pesi, serie, nome, note) anche nel <span className="t-cyan">modello base</span> della scheda?
+              Vuoi salvare le modifiche fatte in sessione (pesi, serie, nome, note) anche nel <span className="t-cyan">{tr("modello base")}</span> della scheda?
             </div>
             <div className="stack-s">
-              <Btn primary full onClick={() => complete(true)}>Sì, aggiorna il modello ✓</Btn>
-              <Btn full onClick={() => complete(false)}>No, salva solo il record</Btn>
-              <button onClick={() => setFinishing(false)} className="tap micro t-faint" style={{ cursor: "pointer", padding: 6 }}>‹ torna alla sessione</button>
+              <Btn primary full onClick={() => complete(true)}>{tr("Sì, aggiorna il modello ✓")}</Btn>
+              <Btn full onClick={() => complete(false)}>{tr("No, salva solo il record")}</Btn>
+              <button onClick={() => setFinishing(false)} className="tap micro t-faint" style={{ cursor: "pointer", padding: 6 }}>{tr("‹ torna alla sessione")}</button>
             </div>
           </div>
         </div>
@@ -2064,26 +2520,26 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
       )}
 
       <div className="row between g8">
-        <Btn small onClick={() => setConfirmExit(true)}>‹ Esci</Btn>
+        <Btn small onClick={() => setConfirmExit(true)}>{tr("‹ Esci")}</Btn>
         <input className="hud-input cham-s f-hud" value={session.name}
           onChange={(e) => upd((s) => ({ ...s, name: e.target.value.toUpperCase() }))}
           style={{ textAlign: "center", fontWeight: 700, letterSpacing: ".12em", fontSize: 13, flex: 1 }} />
-        <Btn small primary onClick={() => setFinishing(true)}>Termina ✓</Btn>
+        <Btn small primary onClick={() => setFinishing(true)}>{tr("Termina ✓")}</Btn>
       </div>
 
       <Panel style={{ padding: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", textAlign: "center" }}>
           <div>
             <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 16 }}>{volume.toLocaleString()}</div>
-            <div className="micro">VOLUME KG</div>
+            <div className="micro">{tr("VOLUME KG")}</div>
           </div>
           <div>
             <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 16 }}>{doneSets}<span className="t-faint">/{totalSets}</span></div>
-            <div className="micro">SERIE</div>
+            <div className="micro">{tr("SERIE")}</div>
           </div>
           <div>
             <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 16 }}>{durMin}<span className="t-faint">m</span></div>
-            <div className="micro">DURATA</div>
+            <div className="micro">{tr("DURATA")}</div>
           </div>
         </div>
       </Panel>
@@ -2093,20 +2549,20 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
           <div className="row between g8" style={{ marginBottom: 4 }}>
             <div className="grow">
               <div className="row g6">
-                <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{ex.name}</span>
+                <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{tr(ex.name)}</span>
                 <span onClick={() => setInfo(ex)} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={14} /></span>
               </div>
-              <div className="micro">{(ex.group || "").toUpperCase()}{ex.mode !== "time" && ` · PR ${prs[ex.name] || "—"} KG`}</div>
+              <div className="micro">{tr(ex.group || "").toUpperCase()}{ex.mode !== "time" && ` · PR ${prs[ex.name] || "—"} KG`}</div>
             </div>
             {prs[ex.name] && ex.mode !== "time" && <Trophy size={15} color="#ffd76a" />}
           </div>
           <input className="hud-input cham-s" value={ex.note || ""} onChange={(e) => updateNote(ei, e.target.value)}
-            placeholder="Note esercizio..." style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9" }} />
+            placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9" }} />
 
           {ex.mode === "time" ? (
             <>
               <div className="set-grid-t micro" style={{ marginBottom: 4, padding: "0 4px" }}>
-                <span>SET</span><span>TEMPO</span><span>KM</span><span></span>
+                <span>{tr("SET")}</span><span>{tr("TEMPO")}</span><span>{tr("KM")}</span><span></span>
               </div>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid-t cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
@@ -2136,7 +2592,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
           ) : (
             <>
               <div className="set-grid micro" style={{ marginBottom: 4, padding: "0 4px" }}>
-                <span>SET</span><span>KG</span><span>REPS</span><span></span>
+                <span>{tr("SET")}</span><span>{tr("KG")}</span><span>{tr("REPS")}</span><span></span>
               </div>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
@@ -2155,7 +2611,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
               ))}
             </>
           )}
-          <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>+ SERIE</button>
+          <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>{tr("+ SERIE")}</button>
         </Panel>
       ))}
     </div>
@@ -2163,7 +2619,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
 }
 
 /* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ---------------- */
-function RoutineEditor({ premium, initial, onClose, onSave }) {
+function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
   const [draft, setDraft] = useState(() => initial
     ? JSON.parse(JSON.stringify(initial))
     : { id: Date.now(), name: "", exercises: [] });
@@ -2204,31 +2660,31 @@ function RoutineEditor({ premium, initial, onClose, onSave }) {
   }));
 
   return (
-    <div className="fade-in stack" style={{ maxWidth: 640 }}>
+    <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       <div className="row between">
-        <Btn small onClick={onClose}>‹ Annulla</Btn>
+        <Btn small onClick={onClose}>{tr("‹ Annulla")}</Btn>
         <span className="hud-title">{initial ? "Modifica modello" : "Nuova scheda"}</span>
         <Btn small primary disabled={!draft.name || !draft.exercises.length}
-          onClick={() => onSave({ ...draft, name: draft.name.toUpperCase() })}>Salva</Btn>
+          onClick={() => onSave({ ...draft, name: draft.name.toUpperCase() })}>{tr("Salva")}</Btn>
       </div>
       <input className="hud-input cham-s" value={draft.name}
-        onChange={(e) => upd((d) => ({ ...d, name: e.target.value }))} placeholder="Nome scheda (es. LEG DAY)" />
+        onChange={(e) => upd((d) => ({ ...d, name: e.target.value }))} placeholder={tr("Nome scheda (es. LEG DAY)")} />
 
       {/* Esercizi nel modello: serie modificabili ed eliminabili, note sotto il titolo */}
       {draft.exercises.map((ex, ei) => (
-        <Panel key={ex.name} accent style={{ padding: 12 }}>
+        <Panel key={tr(ex.name)} accent style={{ padding: 12 }}>
           <div className="row between g8" style={{ marginBottom: 4 }}>
             <div className="row g6">
-              <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{ex.name}</span>
-              <span className="micro t-cyan" style={{ alignSelf: "center" }}>{(ex.group || "").toUpperCase()}</span>
+              <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
+              <span className="micro t-cyan" style={{ alignSelf: "center" }}>{tr(ex.group || "").toUpperCase()}</span>
               <span onClick={() => setInfo(ex)} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={13} /></span>
             </div>
             <span onClick={() => toggleEx(ex.name, ex.group)} className="tap" style={{ cursor: "pointer", color: "#6e3028" }}><Trash2 size={14} /></span>
           </div>
           <input className="hud-input cham-s" value={ex.note || ""}
             onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, note: e.target.value }) }))}
-            placeholder="Note esercizio..." style={{ fontSize: 12, padding: "6px 8px", marginBottom: 8, color: "#8fb2c9" }} />
+            placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 8, color: "#8fb2c9" }} />
           {ex.sets.map((s, si) => (
             <div key={si} className="row g8" style={{ marginBottom: 5, alignItems: "center" }}>
               <span className="f-hud t-faint" style={{ fontSize: 11, width: 18, textAlign: "center" }}>{si + 1}</span>
@@ -2237,43 +2693,41 @@ function RoutineEditor({ premium, initial, onClose, onSave }) {
                   <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec ? Math.round(s.sec / 60) : ""}
                     onChange={(e) => updateSet(ei, si, "sec", e.target.value === "" ? "" : Number(e.target.value) * 60)}
                     style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">MIN</span>
+                  <span className="micro">{tr("MIN")}</span>
                   <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist}
                     onChange={(e) => updateSet(ei, si, "dist", e.target.value)} placeholder="—"
                     style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">KM</span>
+                  <span className="micro">{tr("KM")}</span>
                 </>
               ) : (
                 <>
                   <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
                     onChange={(e) => updateSet(ei, si, "w", e.target.value)}
                     style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">KG</span>
+                  <span className="micro">{tr("KG")}</span>
                   <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r}
                     onChange={(e) => updateSet(ei, si, "r", e.target.value)}
                     style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">REPS</span>
+                  <span className="micro">{tr("REPS")}</span>
                 </>
               )}
               <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#523030", marginLeft: "auto" }}><X size={13} /></span>
             </div>
           ))}
-          <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>+ SERIE</button>
+          <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>{tr("+ SERIE")}</button>
         </Panel>
       ))}
 
-      <div className="row g8">
-        <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtra esercizi..." style={{ flex: 1 }} />
-        <MachineScan premium={premium} variant="inline" fireToast={() => {}}
-          currentNames={draft.exercises.map((e) => e.name)}
-          onAdd={(name, group) => toggleEx(name, group)} />
-      </div>
+      <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("Filtra esercizi...")} />
+      <MachineScan premium={premium} variant="float" fireToast={fireToast}
+        currentNames={draft.exercises.map((e) => e.name)}
+        onAdd={(name, group) => toggleEx(name, group)} />
       {Object.entries(EXERCISE_DB).map(([group, list]) => {
         const shown = list.filter((e) => e.toLowerCase().includes(q.toLowerCase()));
         if (!shown.length) return null;
         return (
           <Panel key={group} style={{ padding: 12 }}>
-            <div className="f-hud t-cyan" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".25em", marginBottom: 8 }}>{group.toUpperCase()}</div>
+            <div className="f-hud t-cyan" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".25em", marginBottom: 8 }}>{tr(group).toUpperCase()}</div>
             <div className="row wrap g6">
               {shown.map((ex) => (
                 <button key={ex} onClick={() => toggleEx(ex, group)}
@@ -2338,7 +2792,8 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
         headers: await featHeaders("import"),
         body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1000, messages: [{ role: "user", content }] }),
       });
-      const data = await response.json();
+      const _txt = await response.text();
+      let data; try { data = JSON.parse(_txt); } catch { throw new Error(`Errore server (${response.status})`); }
       if (data.error === "limit_reached") throw new Error("LIMIT");
       if (data.error) throw new Error(typeof data.error === "string" ? data.error : "Errore API");
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
@@ -2387,8 +2842,8 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
   return (
     <div className="fade-in stack" style={{ maxWidth: 640 }}>
       <div className="row between">
-        <Btn small onClick={onClose}>‹ Indietro</Btn>
-        <span className="hud-title">Import scheda PT</span>
+        <Btn small onClick={onClose}>{tr("‹ Indietro")}</Btn>
+        <span className="hud-title">{tr("Import scheda PT")}</span>
         <div style={{ width: 64 }} />
       </div>
 
@@ -2414,17 +2869,17 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
                 <>
                   <FileText size={24} color="#9be8ff" />
                   <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{file.name}</span>
-                  <span className="micro">TOCCA PER SOSTITUIRE</span>
+                  <span className="micro">{tr("TOCCA PER SOSTITUIRE")}</span>
                 </>
               ) : (
                 <>
                   <Upload size={24} color="#57c8f2" />
-                  <span className="f-hud t-cyan" style={{ fontSize: 12, letterSpacing: ".2em" }}>CARICA DOCUMENTO</span>
-                  <span className="tiny t-dim">Trascina qui il file, oppure tocca — PDF · Foto · Testo</span>
+                  <span className="f-hud t-cyan" style={{ fontSize: 12, letterSpacing: ".2em" }}>{tr("CARICA DOCUMENTO")}</span>
+                  <span className="tiny t-dim">{tr("Trascina qui il file, oppure tocca — PDF · Foto · Testo")}</span>
                 </>
               )}
             </button>
-            <div className="micro" style={{ textAlign: "center", margin: "12px 0" }}>— OPPURE —</div>
+            <div className="micro" style={{ textAlign: "center", margin: "12px 0" }}>{tr("— OPPURE —")}</div>
             <textarea className="hud-input cham-s" value={pasted} onChange={(e) => setPasted(e.target.value)} rows={4}
               placeholder={"Incolla qui il testo della scheda...\nes. Panca piana 4x8 80kg\nRematore 3x10 60kg"}
               style={{ resize: "none" }} />
@@ -2437,7 +2892,7 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
           )}
 
           <Btn primary full disabled={loading || (!file && !pasted.trim())} onClick={interpret}>
-            {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> Analisi in corso...</span> : "◈ Interpreta con AI"}
+            {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Analisi in corso...")}</span> : "◈ Interpreta con AI"}
           </Btn>
         </>
       ) : (
@@ -2452,23 +2907,23 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
                 <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid #0a1826" }}>
                   <div className="row between g8">
                     <div className="grow">
-                      <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{e.name}</span>
-                      <span className="micro" style={{ marginLeft: 8 }}>{e.group.toUpperCase()}</span>
-                      {e.isCustom && <span className="micro cham-s" style={{ marginLeft: 8, padding: "2px 7px", border: "1px solid #ffd76a", color: "#ffd76a" }}>NUOVO</span>}
+                      <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(e.name)}</span>
+                      <span className="micro" style={{ marginLeft: 8 }}>{tr(e.group).toUpperCase()}</span>
+                      {e.isCustom && <span className="micro cham-s" style={{ marginLeft: 8, padding: "2px 7px", border: "1px solid #ffd76a", color: "#ffd76a" }}>{tr("NUOVO")}</span>}
                     </div>
                     <span className="tiny t-dim" style={{ flexShrink: 0 }}>
                       {e.mode === "time" ? `${e.sets.length} × tempo` : `${e.sets.length} × ${e.sets[0].r}${e.sets[0].w ? ` @ ${e.sets[0].w}kg` : ""}`}
                     </span>
                   </div>
                   <input className="hud-input cham-s" value={e.note || ""} onChange={(ev) => updEx("note", ev.target.value)}
-                    placeholder="Note esercizio..." style={{ fontSize: 12, padding: "6px 8px", marginTop: 6, color: "#8fb2c9" }} />
+                    placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginTop: 6, color: "#8fb2c9" }} />
                   {e.isCustom && (
                     <div className="stack-s fade-in" style={{ marginTop: 6, paddingLeft: 10, borderLeft: "2px solid #ffd76a" }}>
-                      <div className="micro t-amber">ESERCIZIO NON IN LIBRERIA — PERSONALIZZALO</div>
+                      <div className="micro t-amber">{tr("ESERCIZIO NON IN LIBRERIA — PERSONALIZZALO")}</div>
                       <textarea className="hud-input cham-s" value={e.desc} onChange={(ev) => updEx("desc", ev.target.value)} rows={2}
-                        placeholder="Descrizione esecuzione (mostrata nel pop-up info)..." style={{ fontSize: 12, padding: "6px 8px", resize: "none" }} />
+                        placeholder={tr("Descrizione esecuzione (mostrata nel pop-up info)...")} style={{ fontSize: 12, padding: "6px 8px", resize: "none" }} />
                       <input className="hud-input cham-s" value={e.img} onChange={(ev) => updEx("img", ev.target.value)}
-                        placeholder="URL immagine/GIF (opzionale)..." style={{ fontSize: 12, padding: "6px 8px" }} />
+                        placeholder={tr("URL immagine/GIF (opzionale)...")} style={{ fontSize: 12, padding: "6px 8px" }} />
                     </div>
                   )}
                 </div>
@@ -2476,8 +2931,8 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
             })}
           </Panel>
           <div className="row g8">
-            <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>↻ Riprova</Btn>
-            <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>Salva scheda ✓</Btn>
+            <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Riprova")}</Btn>
+            <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>{tr("Salva scheda ✓")}</Btn>
           </div>
         </>
       )}
@@ -2533,19 +2988,19 @@ function AIWorkout({ premium, onClose, onSave }) {
   return (
     <div className="fade-in stack" style={{ maxWidth: 560 }}>
       <div className="row between">
-        <Btn small onClick={onClose}>‹ Indietro</Btn>
-        <span className="hud-title">Generatore AI</span>
+        <Btn small onClick={onClose}>{tr("‹ Indietro")}</Btn>
+        <span className="hud-title">{tr("Generatore AI")}</span>
         <div style={{ width: 64 }} />
       </div>
       {!result ? (
         <Panel className="stack">
-          <div><div className="hud-label" style={{ marginBottom: 6 }}>Obiettivo</div>
+          <div><div className="hud-label" style={{ marginBottom: 6 }}>{tr("Obiettivo")}</div>
             <Opt options={["Massa", "Forza", "Dimagrimento"]} value={goal} set={setGoal} /></div>
           <div>
-            <div className="hud-label" style={{ marginBottom: 6 }}>Giorni/settimana · <span className="t-cyan">{days}</span></div>
+            <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Giorni/settimana ·")} <span className="t-cyan">{days}</span></div>
             <input type="range" min="2" max="4" value={days} onChange={(e) => setDays(Number(e.target.value))} />
           </div>
-          <div><div className="hud-label" style={{ marginBottom: 6 }}>Attrezzatura</div>
+          <div><div className="hud-label" style={{ marginBottom: 6 }}>{tr("Attrezzatura")}</div>
             <Opt options={["Palestra completa", "Manubri", "Corpo libero"]} value={equip} set={setEquip} /></div>
           <Btn primary full disabled={loading} onClick={() => premium && !premium.is ? premium.open() : generate()}>
             {loading ? "Generazione..." : "Genera scheda"}
@@ -2558,16 +3013,16 @@ function AIWorkout({ premium, onClose, onSave }) {
             {result.plan.map((p) => <div key={p} className="tiny t-dim">{p}</div>)}
             <div style={{ marginTop: 12 }}>
               {result.exercises.map((e) => (
-                <div key={e.name} className="divider-row">
-                  <span className="t-bright" style={{ fontSize: 14 }}>{e.name}</span>
+                <div key={tr(e.name)} className="divider-row">
+                  <span className="t-bright" style={{ fontSize: 14 }}>{tr(e.name)}</span>
                   <span className="tiny t-dim">{e.sets.length} × {e.sets[0].r}{e.sets[0].w ? ` @ ${e.sets[0].w}kg` : ""}</span>
                 </div>
               ))}
             </div>
           </Panel>
           <div className="row g8">
-            <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>↻ Rigenera</Btn>
-            <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>Salva ✓</Btn>
+            <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Rigenera")}</Btn>
+            <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>{tr("Salva ✓")}</Btn>
           </div>
         </>
       )}
@@ -2603,7 +3058,7 @@ function AuthScreen({ fireToast }) {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw });
         if (error) throw new Error("Email o password non corretti");
-        fireToast({ title: "◈ ACCESSO EFFETTUATO" });
+        fireToast({ title: tr("◈ ACCESSO EFFETTUATO") });
       }
       if (mode === "register") {
         if (username.trim().length < 3) throw new Error("Username: minimo 3 caratteri");
@@ -2632,10 +3087,26 @@ function AuthScreen({ fireToast }) {
           <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".3em" }}>
             GYM<span className="t-faint">//</span>QUEST
           </div>
-          <div className="micro" style={{ marginTop: 6 }}>TRAINING HUD SYSTEM</div>
+          <div className="micro" style={{ marginTop: 6 }}>{tr("TRAINING HUD SYSTEM")}</div>
         </div>
 
         <div className="panel panel-accent cham stack" style={{ padding: 24 }}>
+          {step === 1 && (
+            <>
+              <div className="hud-title" style={{ fontSize: 12 }}>{tr("Lingua")}</div>
+              <div className="tiny t-faint">{tr("Scegli la lingua dell'app")}</div>
+              <div className="stack-s">
+                {LANG_OPTS.map((o) => (
+                  <button key={o.id} onClick={() => { setLang(o.id); setLangGlobal(o.id); }}
+                    className="tap cham-s" style={{ cursor: "pointer", width: "100%", padding: "12px 14px", textAlign: "left",
+                      border: "1px solid " + (lang === o.id ? "#57c8f2" : "#1b3a52"),
+                      background: lang === o.id ? "#0c2a3d" : "#060f18" }}>
+                    <div className={lang === o.id ? "t-cyan" : "t-bright"} style={{ fontSize: 15, fontWeight: 700 }}>{o.flag} {o.label}</div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <div className="hud-title" style={{ textAlign: "center", fontSize: 13 }}>
             {mode === "login" ? "Accedi" : mode === "register" ? "Crea account" : "Recupera password"}
           </div>
@@ -2644,25 +3115,25 @@ function AuthScreen({ fireToast }) {
             <>
               <div className="tiny t-dim" style={{ textAlign: "center", lineHeight: 1.6 }}>
                 {mode === "forgot"
-                  ? <>Se <span className="t-cyan">{email}</span> è registrata, riceverai un link per reimpostare la password.</>
-                  : <>Ti abbiamo inviato un'email di conferma a <span className="t-cyan">{email}</span>. Aprila per attivare l'account.</>}
+                  ? <>{tr("Se")} <span className="t-cyan">{email}</span>{tr("è registrata, riceverai un link per reimpostare la password.")}</>
+                  : <>{tr("Ti abbiamo inviato un'email di conferma a")} <span className="t-cyan">{email}</span>{tr(". Aprila per attivare l'account.")}</>}
               </div>
-              <Btn full onClick={() => { setMode("login"); reset(); }}>‹ Torna al login</Btn>
+              <Btn full onClick={() => { setMode("login"); reset(); }}>{tr("‹ Torna al login")}</Btn>
             </>
           ) : (
             <>
-              <AuthField icon={Mail} type="email" placeholder="Email" value={email}
+              <AuthField icon={Mail} type="email" placeholder={tr("Email")} value={email}
                 onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
 
               {mode === "register" && (
-                <AuthField icon={User} type="text" placeholder="Username" value={username}
+                <AuthField icon={User} type="text" placeholder={tr("Username")} value={username}
                   onChange={(e) => setUsername(e.target.value)} />
               )}
 
               {mode !== "forgot" && (
                 <div style={{ position: "relative" }}>
                   <Lock size={15} color="#3f637c" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }} />
-                  <input type={showPw ? "text" : "password"} placeholder="Password" value={pw}
+                  <input type={showPw ? "text" : "password"} placeholder={tr("Password")} value={pw}
                     onChange={(e) => setPw(e.target.value)} className="hud-input cham-s"
                     style={{ paddingLeft: 34, paddingRight: 40 }}
                     autoComplete={mode === "login" ? "current-password" : "new-password"} />
@@ -2674,7 +3145,7 @@ function AuthScreen({ fireToast }) {
               )}
 
               {mode === "register" && (
-                <AuthField icon={Lock} type={showPw ? "text" : "password"} placeholder="Conferma password"
+                <AuthField icon={Lock} type={showPw ? "text" : "password"} placeholder={tr("Conferma password")}
                   value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" />
               )}
 
@@ -2687,11 +3158,11 @@ function AuthScreen({ fireToast }) {
               <div className="row between">
                 {mode === "login" ? (
                   <>
-                    <button className="link-btn tap" onClick={() => { setMode("forgot"); reset(); }}>Password dimenticata?</button>
-                    <button className="link-btn tap" onClick={() => { setMode("register"); reset(); }}>Crea account ›</button>
+                    <button className="link-btn tap" onClick={() => { setMode("forgot"); reset(); }}>{tr("Password dimenticata?")}</button>
+                    <button className="link-btn tap" onClick={() => { setMode("register"); reset(); }}>{tr("Crea account ›")}</button>
                   </>
                 ) : (
-                  <button className="link-btn tap" onClick={() => { setMode("login"); reset(); }}>‹ Torna al login</button>
+                  <button className="link-btn tap" onClick={() => { setMode("login"); reset(); }}>{tr("‹ Torna al login")}</button>
                 )}
               </div>
             </>
@@ -2713,6 +3184,7 @@ const BodyField = ({ draft, setD, label, k, unit, step }) => (
 /* ================================ PROFILE ================================ */
 function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup }) {
   const [usage, setUsage] = useState(null);
+  const [usageErr, setUsageErr] = useState(null);
   useEffect(() => {
     (async () => {
       try {
@@ -2720,7 +3192,8 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
         const r = await fetch("/api/usage", { headers: { Authorization: `Bearer ${session?.access_token || ""}` } });
         const d = await r.json();
         if (d.limits) setUsage(d);
-      } catch {}
+        else setUsageErr(d.error || `Errore ${r.status}`);
+      } catch (e) { setUsageErr(e.message || "Errore di rete"); }
     })();
   }, []);
 
@@ -2738,7 +3211,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
 
   const saveBody = () => {
     setBody(draft);
-    fireToast({ title: "◈ DATI SALVATI", sub: "Profilo corporeo aggiornato" });
+    fireToast({ title: tr("◈ DATI SALVATI"), sub: tr("Profilo corporeo aggiornato") });
   };
 
   const saveAccount = async () => {
@@ -2751,7 +3224,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
     if (error) return setPwError(error.message);
     onUserUpdate({ ...user, username: username.trim() });
     setOldPw(""); setNewPw("");
-    fireToast({ title: "◈ ACCOUNT AGGIORNATO", sub: username.trim() });
+    fireToast({ title: tr("◈ ACCOUNT AGGIORNATO"), sub: username.trim() });
   };
 
   return (
@@ -2773,22 +3246,33 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             {premium && premium.is ? (
               <span className="t-amber">◆ ACCOUNT PREMIUM — attivo fino al {new Date(premium.until).toLocaleDateString("it-IT")}</span>
             ) : (
-              <span className="t-faint">Account gratuito · <span onClick={() => premium && premium.open()} className="tap t-cyan" style={{ cursor: "pointer" }}>passa a Premium ›</span></span>
+              <span className="t-faint">{tr("Account gratuito ·")} <span onClick={() => premium && premium.open()} className="tap t-cyan" style={{ cursor: "pointer" }}>{tr("passa a Premium ›")}</span></span>
             )}
           </div>
+          <div className="row g8" style={{ margin: "10px 0" }}>
+            <span className="hud-label" style={{ alignSelf: "center" }}>{tr("Lingua")}</span>
+            {LANG_OPTS.map((o) => (
+              <button key={o.id} onClick={() => { setLangGlobal(o.id); setBody((b) => ({ ...b, lang: o.id })); }}
+                className={"tap cham-s chip " + ((body.lang || "it") === o.id ? "chip-on" : "")}
+                style={{ cursor: "pointer", padding: "6px 12px", fontSize: 12 }}>
+                {o.flag} {o.label}
+              </button>
+            ))}
+          </div>
           <div className="row g8 wrap">
-            <Btn small onClick={onRedoSetup}>◈ Rifai setup profilo</Btn>
-            <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} /> Esci</Btn>
+            <Btn small onClick={onRedoSetup}>{tr("◈ Rifai setup profilo")}</Btn>
+            <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} />{tr("Esci")}</Btn>
           </div>
         </Panel>
 
         {/* Utilizzo AI settimanale + negozio */}
         <Panel>
           <div className="row between" style={{ marginBottom: 10 }}>
-            <div className="hud-label">▸ Generazioni AI — questa settimana</div>
+            <div className="hud-label">{tr("▸ Generazioni AI — questa settimana")}</div>
             {usage && <span className="f-hud t-amber" style={{ fontSize: 11, fontWeight: 700 }}>CREDITI: {usage.credits}</span>}
           </div>
-          {!usage && <div className="tiny t-faint">Caricamento utilizzo…</div>}
+          {!usage && !usageErr && <div className="tiny t-faint">{tr("Caricamento utilizzo…")}</div>}
+          {usageErr && <div className="tiny t-red">⚠ Impossibile caricare l'utilizzo: {usageErr}</div>}
           {usage && [
             ["Import scheda PT", "import"],
             ["Piano nutrizionale", "nutrition"],
@@ -2811,7 +3295,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             );
           })}
           <div className="micro t-faint" style={{ margin: "2px 0 10px" }}>
-            I LIMITI SI AZZERANO OGNI SETTIMANA · OLTRE IL LIMITE SI USANO I CREDITI EXTRA
+            {tr("I LIMITI SI AZZERANO OGNI SETTIMANA · OLTRE IL LIMITE SI USANO I CREDITI EXTRA")}
           </div>
           <Btn primary full onClick={() => premium && premium.open()}>
             ◈ Negozio — crediti{premium && !premium.is ? " e Premium" : ""} ›
@@ -2820,19 +3304,19 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
 
 
         <Panel>
-          <div className="hud-label" style={{ marginBottom: 12 }}>▸ Impostazioni account</div>
+          <div className="hud-label" style={{ marginBottom: 12 }}>{tr("▸ Impostazioni account")}</div>
           <div className="stack-s">
             <div>
-              <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>Username</div>
+              <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>{tr("Username")}</div>
               <input className="hud-input cham-s" value={username} onChange={(e) => setUsername(e.target.value)} />
             </div>
             <div>
-              <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>Nuova password</div>
+              <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>{tr("Nuova password")}</div>
               <input className="hud-input cham-s" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)}
-                placeholder="Minimo 6 caratteri" autoComplete="new-password" />
+                placeholder={tr("Minimo 6 caratteri")} autoComplete="new-password" />
             </div>
             {pwError && <div className="tiny t-red">⚠ {pwError}</div>}
-            <Btn primary full onClick={saveAccount}>Salva account</Btn>
+            <Btn primary full onClick={saveAccount}>{tr("Salva account")}</Btn>
           </div>
         </Panel>
       </div>
@@ -2848,7 +3332,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             <BodyField draft={draft} setD={setD} label="Altezza" k="altezza" unit="cm" />
             <BodyField draft={draft} setD={setD} label="Età" k="eta" unit="anni" />
             <div>
-              <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>Sesso</div>
+              <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>{tr("Sesso")}</div>
               <div className="row g6">
                 {["M", "F"].map((s) => (
                   <button key={s} onClick={() => setDraft((d) => ({ ...d, sesso: s }))}
@@ -2862,7 +3346,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             <BodyField draft={draft} setD={setD} label="Massa grassa" k="bf" unit="%" step="0.5" />
           </div>
 
-          <div className="hud-label" style={{ margin: "16px 0 8px", fontSize: 9 }}>Circonferenze (cm)</div>
+          <div className="hud-label" style={{ margin: "16px 0 8px", fontSize: 9 }}>{tr("Circonferenze (cm)")}</div>
           <div className="field-grid">
             <BodyField draft={draft} setD={setD} label="Collo" k="collo" step="0.5" />
             <BodyField draft={draft} setD={setD} label="Petto" k="petto" step="0.5" />
@@ -2872,7 +3356,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
           </div>
 
           <div className="row between cham-s" style={{ marginTop: 16, padding: "10px 14px", background: "#060f18", border: "1px solid #0e2233" }}>
-            <span className="hud-label" style={{ fontSize: 9 }}>BMI calcolato</span>
+            <span className="hud-label" style={{ fontSize: 9 }}>{tr("BMI calcolato")}</span>
             <span>
               <span className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 16 }}>{bmi}</span>
               {bmiLabel && <span className="micro" style={{ marginLeft: 8 }}>{bmiLabel}</span>}
@@ -2972,7 +3456,8 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           }],
         }),
       });
-      const data = await response.json();
+      const _txt = await response.text();
+      let data; try { data = JSON.parse(_txt); } catch { throw new Error(`Errore server (${response.status})`); }
       if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error("Limite settimanale raggiunto"); }
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
       meals = JSON.parse(text.replace(/```json|```/g, "").trim());
@@ -2981,7 +3466,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
     }
     setNutri({ goal, days, targets, meals });
     setLoading(false);
-    fireToast({ title: "◈ PIANO GENERATO", sub: `${targets.kcal} kcal · P${targets.p} C${targets.c} G${targets.f}` });
+    fireToast({ title: tr("◈ PIANO GENERATO"), sub: `${targets.kcal} kcal · P${targets.p} C${targets.c} G${targets.f}` });
   };
 
   const startEdit = () => { setDraft({ ...nutri.targets }); setEditing(true); };
@@ -2992,23 +3477,23 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
     };
     setNutri({ ...nutri, targets: t });
     setEditing(false);
-    fireToast({ title: "◈ TARGET AGGIORNATI", sub: `${t.kcal} kcal` });
+    fireToast({ title: tr("◈ TARGET AGGIORNATI"), sub: `${t.kcal} kcal` });
   };
 
   /* ---- Dati corporei mancanti: blocca la generazione ---- */
   const missingData = !body.peso || !body.altezza || !body.eta;
   if (!nutri && missingData) return (
     <div className="fade-in stack" style={{ maxWidth: 560 }}>
-      <h2 className="hud-title">▸ Piano nutrizionale</h2>
+      <h2 className="hud-title">{tr("▸ Piano nutrizionale")}</h2>
       <Panel accent style={{ textAlign: "center", padding: 32 }}>
         <Ruler size={26} color="#ffd76a" style={{ margin: "0 auto 12px" }} />
-        <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>DATI CORPOREI MANCANTI</div>
+        <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("DATI CORPOREI MANCANTI")}</div>
         <div className="tiny t-dim" style={{ marginTop: 8, lineHeight: 1.6 }}>
-          Per calcolare il fabbisogno servono almeno <span className="t-cyan">peso, altezza ed età</span>.
+          Per calcolare il fabbisogno servono almeno <span className="t-cyan">{tr("peso, altezza ed età")}</span>.
           Inseriscili nel profilo, poi torna qui.
         </div>
         <div style={{ marginTop: 16 }}>
-          <Btn primary onClick={goProfile}>Vai al profilo ›</Btn>
+          <Btn primary onClick={goProfile}>{tr("Vai al profilo ›")}</Btn>
         </div>
       </Panel>
     </div>
@@ -3017,15 +3502,15 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
   /* ---- Nessun piano: schermata di generazione ---- */
   if (!nutri) return (
     <div className="fade-in stack" style={{ maxWidth: 560 }}>
-      <h2 className="hud-title">▸ Piano nutrizionale</h2>
+      <h2 className="hud-title">{tr("▸ Piano nutrizionale")}</h2>
       <Panel accent className="stack">
         <div className="tiny t-dim" style={{ lineHeight: 1.6 }}>
-          L'AI calcola il tuo fabbisogno dai <span className="t-cyan">dati corporei del profilo</span> ({body.peso}kg · {body.altezza}cm · {body.eta} anni)
+          L'AI calcola il tuo fabbisogno dai <span className="t-cyan">{tr("dati corporei del profilo")}</span> ({body.peso}kg · {body.altezza}cm · {body.eta} anni)
           e dal volume di allenamento, poi genera un piano giornaliero con macro da palestra
           (proteine 2g/kg, grassi 0.9g/kg, carboidrati a completamento).
         </div>
         <div>
-          <div className="hud-label" style={{ marginBottom: 6 }}>Obiettivo</div>
+          <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Obiettivo")}</div>
           <div className="row wrap g6">
             {["Massa", "Mantenimento", "Definizione"].map((o) => (
               <button key={o} onClick={() => setGoal(o)}
@@ -3041,7 +3526,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           <input type="range" min="2" max="6" value={days} onChange={(e) => setDays(Number(e.target.value))} />
         </div>
         <Btn primary full disabled={loading} onClick={() => premium && !premium.is ? premium.open() : generate()}>
-          {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> Generazione...</span> : "◈ Genera piano AI"}
+          {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Generazione...")}</span> : "◈ Genera piano AI"}
         </Btn>
       </Panel>
     </div>
@@ -3054,18 +3539,18 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
       <div className="col stack">
         <div className="row between">
           <h2 className="hud-title">▸ Piano — {nutri.goal}</h2>
-          <Btn small onClick={() => setNutri(null)}>↻ Nuovo</Btn>
+          <Btn small onClick={() => setNutri(null)}>{tr("↻ Nuovo")}</Btn>
         </div>
 
         <Panel accent>
           <div className="row between" style={{ marginBottom: 12 }}>
             <div>
               <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 24 }}>{t.kcal}</div>
-              <div className="micro">KCAL / GIORNO</div>
+              <div className="micro">{tr("KCAL / GIORNO")}</div>
             </div>
             {!editing
-              ? <Btn small onClick={startEdit}>Modifica target</Btn>
-              : <Btn small primary onClick={saveEdit}>Salva ✓</Btn>}
+              ? <Btn small onClick={startEdit}>{tr("Modifica target")}</Btn>
+              : <Btn small primary onClick={saveEdit}>{tr("Salva ✓")}</Btn>}
           </div>
 
           {!editing ? (
@@ -3111,7 +3596,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
             ))}
           </Panel>
         ))}
-        <div className="micro">Il piano è indicativo: consulta un professionista per esigenze specifiche.</div>
+        <div className="micro">{tr("Il piano è indicativo: consulta un professionista per esigenze specifiche.")}</div>
       </div>
     </div>
   );
@@ -3135,6 +3620,7 @@ const ObNumF = ({ d, set, label, k, unit, ph }) => (
 
 function OnboardingWizard({ body, setBody, username, fireToast }) {
   const [step, setStep] = useState(1);
+  const [lang, setLang] = useState(body.lang || "it");
   const [d, setD] = useState({
     sesso: body.sesso || "M", eta: body.eta || "", altezza: body.altezza || "",
     peso: body.peso || "", bf: body.bf || "",
@@ -3148,7 +3634,7 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
 
   const next = () => {
     setErr(null);
-    if (step === 1) {
+    if (step === 2) {
       if (!d.eta || !d.altezza || !d.peso) return setErr("Compila età, altezza e peso");
       if (d.eta < 14 || d.eta > 100) return setErr("Età non valida");
       if (d.altezza < 120 || d.altezza > 230) return setErr("Altezza non valida (cm)");
@@ -3162,11 +3648,12 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
       ...b,
       sesso: d.sesso, eta: Number(d.eta), altezza: Number(d.altezza),
       peso: Number(d.peso), bf: d.bf === "" ? "" : Number(d.bf),
+      lang,
       attivita: d.attivita, giorniAllenamento: d.giorniAllenamento,
       esperienza: d.esperienza, obiettivo: d.obiettivo,
       onboarded: true,
     }));
-    fireToast({ title: "◈ PROFILO CONFIGURATO", sub: "Benvenuto a bordo, " + username });
+    fireToast({ title: tr("◈ PROFILO CONFIGURATO"), sub: "Benvenuto a bordo, " + username });
   };
 
   const Chips = ({ k, options }) => (
@@ -3185,23 +3672,23 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
     <div className="auth-wrap">
       <div className="auth-box fade-in" style={{ maxWidth: 440 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <div className="f-hud t-cyan" style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".25em" }}>SETUP PROFILO</div>
+          <div className="f-hud t-cyan" style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".25em" }}>{tr("SETUP PROFILO")}</div>
           <div className="row center g6" style={{ marginTop: 10 }}>
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <div key={s} className="seg" style={{ width: 40, flex: "none",
                 background: step >= s ? "linear-gradient(180deg,#9be8ff,#3fa9d9)" : "#0e2233",
                 boxShadow: step >= s ? "0 0 6px rgba(87,200,242,.6)" : "none" }} />
             ))}
           </div>
-          <div className="micro" style={{ marginTop: 6 }}>PASSO {step} DI 3</div>
+          <div className="micro" style={{ marginTop: 6 }}>{tr("PASSO")} {step} {tr("DI")} 4</div>
         </div>
 
         <div className="panel panel-accent cham stack" style={{ padding: 24 }}>
-          {step === 1 && (
+          {step === 2 && (
             <>
-              <div className="hud-title" style={{ fontSize: 12 }}>Dati base</div>
+              <div className="hud-title" style={{ fontSize: 12 }}>{tr("Dati base")}</div>
               <div>
-                <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>Sesso</div>
+                <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>{tr("Sesso")}</div>
                 <div className="row g6">
                   {["M", "F"].map((s) => (
                     <button key={s} onClick={() => set("sesso", s)}
@@ -3221,11 +3708,11 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
-              <div className="hud-title" style={{ fontSize: 12 }}>Stile di vita</div>
+              <div className="hud-title" style={{ fontSize: 12 }}>{tr("Stile di vita")}</div>
               <div>
-                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>Attività quotidiana (fuori palestra)</div>
+                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>{tr("Attività quotidiana (fuori palestra)")}</div>
                 <div className="stack-s">
                   {ACTIVITY_OPTS.map((o) => (
                     <button key={o.id} onClick={() => set("attivita", o.id)}
@@ -3240,23 +3727,23 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
                 </div>
               </div>
               <div>
-                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>Allenamenti a settimana · <span className="t-cyan">{d.giorniAllenamento}</span></div>
+                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>{tr("Allenamenti a settimana ·")} <span className="t-cyan">{d.giorniAllenamento}</span></div>
                 <input type="range" min="1" max="7" value={d.giorniAllenamento}
                   onChange={(e) => set("giorniAllenamento", Number(e.target.value))} />
               </div>
               <div>
-                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>Esperienza in palestra</div>
+                <div className="hud-label" style={{ marginBottom: 6, fontSize: 9 }}>{tr("Esperienza in palestra")}</div>
                 <Chips k="esperienza" options={["Principiante", "Intermedio", "Avanzato"]} />
               </div>
             </>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <>
-              <div className="hud-title" style={{ fontSize: 12 }}>Obiettivo</div>
+              <div className="hud-title" style={{ fontSize: 12 }}>{tr("Obiettivo")}</div>
               <Chips k="obiettivo" options={["Massa", "Mantenimento", "Definizione"]} />
               <div className="cham-s stack-s" style={{ padding: "12px 14px", background: "#060f18", border: "1px solid #0e2233" }}>
-                <div className="hud-label" style={{ fontSize: 9 }}>Riepilogo</div>
+                <div className="hud-label" style={{ fontSize: 9 }}>{tr("Riepilogo")}</div>
                 <div className="tiny t-dim" style={{ lineHeight: 1.7 }}>
                   {d.sesso === "M" ? "Uomo" : "Donna"} · {d.eta} anni · {d.altezza} cm · {d.peso} kg{d.bf ? " · " + d.bf + "% BF" : ""}<br />
                   Attività {d.attivita.toLowerCase()} · {d.giorniAllenamento} allenamenti/sett · {d.esperienza}<br />
@@ -3269,10 +3756,10 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
           {err && <div className="tiny t-red">⚠ {err}</div>}
 
           <div className="row g8">
-            {step > 1 && <Btn onClick={() => setStep(step - 1)} style={{ flex: 1 }}>‹ Indietro</Btn>}
-            {step < 3
-              ? <Btn primary onClick={next} style={{ flex: 2 }}>Avanti ›</Btn>
-              : <Btn primary onClick={finish} style={{ flex: 2 }}>◈ Inizia</Btn>}
+            {step > 1 && <Btn onClick={() => setStep(step - 1)} style={{ flex: 1 }}>{tr("‹ Indietro")}</Btn>}
+            {step < 4
+              ? <Btn primary onClick={next} style={{ flex: 2 }}>{tr("Avanti ›")}</Btn>
+              : <Btn primary onClick={finish} style={{ flex: 2 }}>{tr("◈ Inizia")}</Btn>}
           </div>
         </div>
       </div>
@@ -3324,7 +3811,7 @@ function InstallBanner({ ip }) {
     }}>
       <div className="row between g12">
         <div className="grow">
-          <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".12em" }}>◈ INSTALLA GYMQUEST</div>
+          <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".12em" }}>{tr("◈ INSTALLA GYMQUEST")}</div>
           <div className="tiny t-dim" style={{ marginTop: 2, lineHeight: 1.5 }}>
             {ip.canInstall
               ? "Aggiungila alla schermata home come app"
@@ -3332,7 +3819,7 @@ function InstallBanner({ ip }) {
           </div>
         </div>
         <div className="row g8" style={{ flexShrink: 0, alignItems: "center" }}>
-          {ip.canInstall && <Btn small primary onClick={ip.install}>Installa</Btn>}
+          {ip.canInstall && <Btn small primary onClick={ip.install}>{tr("Installa")}</Btn>}
           <span onClick={ip.dismiss} className="tap t-faint" style={{ cursor: "pointer", fontSize: 16, padding: 4 }}>✕</span>
         </div>
       </div>
