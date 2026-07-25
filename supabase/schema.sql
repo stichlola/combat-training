@@ -46,6 +46,7 @@ create table if not exists public.premium (
   updated_at timestamptz default now()
 );
 alter table public.premium enable row level security;
+drop policy if exists "read own premium" on public.premium;
 create policy "read own premium" on public.premium
   for select using (auth.uid() = user_id);
 -- NESSUNA policy di insert/update per gli utenti: è voluto.
@@ -65,6 +66,7 @@ create table if not exists public.usage (
   updated_at timestamptz default now()
 );
 alter table public.usage enable row level security;
+drop policy if exists "read own usage" on public.usage;
 create policy "read own usage" on public.usage
   for select using (auth.uid() = user_id);
 -- nessuna policy di scrittura per gli utenti: scrive solo il serverless.
