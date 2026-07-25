@@ -1208,7 +1208,7 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
     return <RoutineEditor premium={premium} initial={initial} onClose={() => { setView("home"); setEditId(null); }}
       onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
   }
-  if (view === "ai") return <AIWorkout onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ SCHEDA AI GENERATA")} />;
+  if (view === "ai") return <AIWorkout premium={premium} onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ SCHEDA AI GENERATA")} />;
   /* nota: la conversione della scheda PT (import) resta gratuita per scelta */
   if (view === "import") return <DocImport premium={premium} onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ DOCUMENTO INTERPRETATO")} />;
 
@@ -2486,7 +2486,7 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
 }
 
 /* ---------------- AI Workout Generator ---------------- */
-function AIWorkout({ onClose, onSave }) {
+function AIWorkout({ premium, onClose, onSave }) {
   const [goal, setGoal] = useState("Massa");
   const [days, setDays] = useState(3);
   const [equip, setEquip] = useState("Palestra completa");
@@ -2712,6 +2712,18 @@ const BodyField = ({ draft, setD, label, k, unit, step }) => (
 
 /* ================================ PROFILE ================================ */
 function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup }) {
+  const [usage, setUsage] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const r = await fetch("/api/usage", { headers: { Authorization: `Bearer ${session?.access_token || ""}` } });
+        const d = await r.json();
+        if (d.limits) setUsage(d);
+      } catch {}
+    })();
+  }, []);
+
   const [draft, setDraft] = useState(body);
   const [username, setUsername] = useState(user.username);
   const [oldPw, setOldPw] = useState("");
@@ -2769,6 +2781,43 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} /> Esci</Btn>
           </div>
         </Panel>
+
+        {/* Utilizzo AI settimanale + negozio */}
+        <Panel>
+          <div className="row between" style={{ marginBottom: 10 }}>
+            <div className="hud-label">▸ Generazioni AI — questa settimana</div>
+            {usage && <span className="f-hud t-amber" style={{ fontSize: 11, fontWeight: 700 }}>CREDITI: {usage.credits}</span>}
+          </div>
+          {!usage && <div className="tiny t-faint">Caricamento utilizzo…</div>}
+          {usage && [
+            ["Import scheda PT", "import"],
+            ["Piano nutrizionale", "nutrition"],
+            ["Scan macchinari", "scan"],
+          ].map(([label, k]) => {
+            const lim = usage.limits[k], used = usage.used[k];
+            return (
+              <div key={k} style={{ marginBottom: 10 }}>
+                <div className="row between tiny" style={{ marginBottom: 4 }}>
+                  <span className="t-dim">{label}</span>
+                  <span className={lim === 0 ? "t-faint" : used >= lim ? "t-amber" : "t-bright"}>
+                    {lim === 0 ? "PREMIUM" : `${used} / ${lim}`}
+                  </span>
+                </div>
+                <div className="cham-s" style={{ height: 6, background: "#0e2233", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${lim ? Math.min(100, (used / lim) * 100) : 0}%`,
+                    background: used >= lim && lim > 0 ? "linear-gradient(90deg,#ffd76a,#ffb84d)" : "linear-gradient(90deg,#3fa9d9,#9be8ff)" }} />
+                </div>
+              </div>
+            );
+          })}
+          <div className="micro t-faint" style={{ margin: "2px 0 10px" }}>
+            I LIMITI SI AZZERANO OGNI SETTIMANA · OLTRE IL LIMITE SI USANO I CREDITI EXTRA
+          </div>
+          <Btn primary full onClick={() => premium && premium.open()}>
+            ◈ Negozio — crediti{premium && !premium.is ? " e Premium" : ""} ›
+          </Btn>
+        </Panel>
+
 
         <Panel>
           <div className="hud-label" style={{ marginBottom: 12 }}>▸ Impostazioni account</div>
