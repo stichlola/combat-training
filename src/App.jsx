@@ -198,8 +198,6 @@ const EN_UI = {
   "◈ GYMQUEST PREMIUM": "◈ GYMQUEST PREMIUM",
   "SBLOCCA LE FUNZIONI AI AVANZATE": "UNLOCK ADVANCED AI FEATURES",
   "◆ Premium — 12 mesi": "◆ Premium — 12 months",
-  "Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi":
-    "PT routine import, AI nutrition and machine scan with generous weekly limits",
   "Pacchetto 30 crediti": "30 credits pack",
   "Pacchetto 100 crediti": "100 credits pack",
   "Una tantum · generazioni extra oltre il limite settimanale":
@@ -3099,22 +3097,6 @@ function AuthScreen({ fireToast }) {
         </div>
 
         <div className="panel panel-accent cham stack" style={{ padding: 24 }}>
-          {step === 1 && (
-            <>
-              <div className="hud-title" style={{ fontSize: 12 }}>{tr("Lingua")}</div>
-              <div className="tiny t-faint">{tr("Scegli la lingua dell'app")}</div>
-              <div className="stack-s">
-                {LANG_OPTS.map((o) => (
-                  <button key={o.id} onClick={() => { setLang(o.id); setLangGlobal(o.id); }}
-                    className="tap cham-s" style={{ cursor: "pointer", width: "100%", padding: "12px 14px", textAlign: "left",
-                      border: "1px solid " + (lang === o.id ? "#57c8f2" : "#1b3a52"),
-                      background: lang === o.id ? "#0c2a3d" : "#060f18" }}>
-                    <div className={lang === o.id ? "t-cyan" : "t-bright"} style={{ fontSize: 15, fontWeight: 700 }}>{o.flag} {o.label}</div>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
           <div className="hud-title" style={{ textAlign: "center", fontSize: 13 }}>
             {mode === "login" ? "Accedi" : mode === "register" ? "Crea account" : "Recupera password"}
           </div>
