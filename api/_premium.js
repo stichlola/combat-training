@@ -45,8 +45,8 @@ export async function grantPremium(userId, orderId) {
 /* Free: una sola prova a settimana per funzione (assaggio che porta all'abbonamento).
    Premium: limiti ampi. Oltre il limite si usano i crediti extra acquistabili. */
 export const WEEKLY_LIMITS = {
-  free:    { import: 1,  nutrition: 1,  scan: 1 },
-  premium: { import: 20, nutrition: 25, scan: 40 },
+  free:    { import: 1,  nutrition: 1,  scan: 1,  workout: 1 },
+  premium: { import: 20, nutrition: 25, scan: 40, workout: 25 },
 };
 const wk = () => {
   const d = new Date(), j = new Date(d.getFullYear(), 0, 1);
@@ -58,8 +58,8 @@ export async function getUsage(userId) {
   if (!r.ok) throw new Error(`Lettura usage fallita (${r.status}) — la tabella "usage" esiste su Supabase?`);
   const rows = await r.json();
   let u = rows && rows[0];
-  if (!u) u = { user_id: userId, week: wk(), import_n: 0, nutrition_n: 0, scan_n: 0, credits: 0 };
-  if (u.week !== wk()) { u.week = wk(); u.import_n = 0; u.nutrition_n = 0; u.scan_n = 0; }
+  if (!u) u = { user_id: userId, week: wk(), import_n: 0, nutrition_n: 0, scan_n: 0, workout_n: 0, credits: 0 };
+  if (u.week !== wk()) { u.week = wk(); u.import_n = 0; u.nutrition_n = 0; u.scan_n = 0; u.workout_n = 0; }
   return u;
 }
 

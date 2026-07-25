@@ -6,7 +6,7 @@ import { getUserFromToken, isPremium, consumeUsage } from "./_premium.js";
 
 /* Tutte e tre sono funzioni premium: i non abbonati hanno 1 prova a settimana
    ciascuna, poi il limite li porta allo store (abbonamento o crediti). */
-const LIMITED = ["import", "nutrition", "scan"];
+const LIMITED = ["import", "nutrition", "scan", "workout"];
 
 export default async function handler(req, res) {
   // TUTTO dentro try/catch: un errore nei controlli non deve mai produrre

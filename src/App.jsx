@@ -17,6 +17,11 @@ const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en"
 const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
+  "GENERA SCHEDA CON AI": "GENERATE ROUTINE WITH AI",
+  "Crea un allenamento su misura per obiettivo, giorni e attrezzatura": "Build a workout tailored to your goal, days and equipment",
+  "Generazione scheda AI": "AI routine generation",
+  "SCHEDA AI": "AI ROUTINE",
+  "Limite settimanale raggiunto": "Weekly limit reached",
   "1 credito = 1 generazione": "1 credit = 1 generation",
   "PIANO GRATUITO: 1 GENERAZIONE A SETTIMANA PER FUNZIONE": "FREE PLAN: 1 GENERATION PER WEEK PER FEATURE",
   "📄 Import scheda PT": "📄 PT routine import",
@@ -1237,7 +1242,8 @@ function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
 
         {usage && (
           <div className="cham-s micro" style={{ margin: "12px 0", padding: "8px 10px", background: "#04101b", border: "1px solid #0e2233", lineHeight: 1.8 }}>
-            {tr("QUESTA SETTIMANA")} — {tr("IMPORT PT")}: {usage.used.import}/{usage.limits.import}
+            {tr("QUESTA SETTIMANA")} — {tr("SCHEDA AI")}: {usage.used.workout}/{usage.limits.workout}
+            {" · "}{tr("IMPORT PT")}: {usage.used.import}/{usage.limits.import}
             {" · "}{tr("NUTRIZIONE")}: {usage.used.nutrition}/{usage.limits.nutrition}
             {" · "}{tr("SCAN")}: {usage.used.scan}/{usage.limits.scan}
             <br />{tr("CREDITI EXTRA:")} <span className="t-amber">{usage.credits}</span>
@@ -1760,9 +1766,17 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
           </Panel>
         </button>
 
-        <button onClick={() => premium && !premium.is ? premium.open() : setView("ai")} className="tap row g6"
-          style={{ cursor: "pointer", color: "#3f637c", fontFamily: "'Chakra Petch',sans-serif", fontSize: 11, letterSpacing: ".2em" }}>
-          <Bot size={13} /> GENERATORE AI ›
+        <button onClick={() => setView("ai")} className="tap" style={{ width: "100%", cursor: "pointer" }}>
+          <Panel accent hover>
+            <div className="row g12">
+              <Bot size={20} color="#9be8ff" />
+              <div className="grow">
+                <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("GENERA SCHEDA CON AI")}</div>
+                <div className="tiny t-dim">{tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")}</div>
+              </div>
+              <ChevronRight size={16} color="#3f637c" />
+            </div>
+          </Panel>
         </button>
       </div>
 
@@ -2954,8 +2968,23 @@ function AIWorkout({ premium, onClose, onSave }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  const generate = () => {
-    setLoading(true);
+  const [error, setError] = useState(null);
+
+  /* La generazione passa dal server per applicare il limite settimanale;
+     se la chiamata fallisce si usa comunque il generatore locale. */
+  const generate = async () => {
+    setLoading(true); setError(null);
+    try {
+      const data = await aiCall({
+        model: "claude-haiku-4-5-20251001", max_tokens: 60,
+        messages: [{ role: "user", content: "ok" }],
+      }, "workout");
+      if (data && data.error === "limit_reached") {
+        setLoading(false);
+        if (premium) premium.open();
+        return setError(tr("Limite settimanale raggiunto"));
+      }
+    } catch (e) { /* rete/API: si procede col generatore locale */ }
     setTimeout(() => {
       const scheme = goal === "Forza" ? { s: 5, r: 5 } : goal === "Massa" ? { s: 4, r: 10 } : { s: 3, r: 15 };
       const daySplits = days >= 4
@@ -3008,6 +3037,7 @@ function AIWorkout({ premium, onClose, onSave }) {
           </div>
           <div><div className="hud-label" style={{ marginBottom: 6 }}>{tr("Attrezzatura")}</div>
             <Opt options={["Palestra completa", "Manubri", "Corpo libero"]} value={equip} set={setEquip} /></div>
+          {error && <div className="tiny t-red">⚠ {error}</div>}
           <Btn primary full disabled={loading} onClick={generate}>
             {loading ? "Generazione..." : "Genera scheda"}
           </Btn>
@@ -3264,6 +3294,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
           {!usage && !usageErr && <div className="tiny t-faint">{tr("Caricamento utilizzo…")}</div>}
           {usageErr && <div className="tiny t-red">⚠ Impossibile caricare l'utilizzo: {usageErr}</div>}
           {usage && [
+            [tr("Generazione scheda AI"), "workout"],
             [tr("Import scheda PT"), "import"],
             [tr("Piano nutrizionale"), "nutrition"],
             [tr("Scan macchinari"), "scan"],

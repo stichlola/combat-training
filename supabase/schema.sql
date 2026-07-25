@@ -61,6 +61,7 @@ create table if not exists public.usage (
   import_n integer default 0,
   nutrition_n integer default 0,
   scan_n integer default 0,
+  workout_n integer default 0,
   credits integer default 0,
   last_order_id text,
   updated_at timestamptz default now()
@@ -70,3 +71,5 @@ drop policy if exists "read own usage" on public.usage;
 create policy "read own usage" on public.usage
   for select using (auth.uid() = user_id);
 -- nessuna policy di scrittura per gli utenti: scrive solo il serverless.
+
+alter table public.usage add column if not exists workout_n integer default 0;
