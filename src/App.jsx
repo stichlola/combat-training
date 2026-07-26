@@ -1487,8 +1487,7 @@ export default function App() {
           messages: [{ role: "user", content: `Genera quest per un'app fitness in stile Halo Reach (nomi militari/epici in italiano). Rispondi SOLO con JSON valido: {"daily":[14 oggetti],"weekly":[11 oggetti]}. Ogni oggetto: {"text": string (max 60 caratteri, include il numero target), "metric": uno tra "workouts"|"sets"|"volume"|"cardio"|"pr", "target": number (daily: workouts 1-2, sets 10-25, volume 1500-8000, cardio 10-20, pr 1; weekly: workouts 3-5, sets 50-90, volume 15000-30000, cardio 60-90, pr 2), "xp": number (30-100 daily, 120-220 weekly, proporzionato alla difficoltà)}` }],
         });
         const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
-        const m = text.match(/\{[\s\S]*\}/);
-        const p = JSON.parse(m ? m[0] : text);
+        const p = parseLoose(text);
         const valid = (a) => Array.isArray(a) && a.length >= 8 && a.every((q) => q.text && QUEST_METRICS.includes(q.metric) && q.target > 0 && q.xp > 0);
         if (valid(p.daily) && valid(p.weekly)) {
           QUEST_POOL_DAILY.splice(0, QUEST_POOL_DAILY.length, ...p.daily);
@@ -2370,8 +2369,7 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
       if (data.error) throw new Error(typeof data.error === "string" ? data.error : (data.error.message || "Errore API"));
       if (data.error) throw new Error(data.error === "premium_required" ? "Funzione riservata a Premium" : data.error);
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-      const m = text.match(/\{[\s\S]*\}/); // estrai il JSON anche se il modello aggiunge testo attorno
-      const parsed = JSON.parse(m ? m[0] : text);
+      const parsed = parseLoose(text);
       if (parsed.machine && MACHINE_DB[parsed.machine]) {
         /* esercizi già nella scheda in cima e aperti; gli altri collassati sotto */
         const inWo = MACHINE_DB[parsed.machine].filter((e) => currentNames.includes(e));
@@ -3002,15 +3000,14 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
       const response = await fetch("/api/ai", {
         method: "POST",
         headers: await featHeaders("import"),
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1000, messages: [{ role: "user", content }] }),
+        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2500, messages: [{ role: "user", content }] }),
       });
       const _txt = await response.text();
       let data; try { data = JSON.parse(_txt); } catch { throw new Error(`Errore server (${response.status})`); }
       if (data.error === "limit_reached") throw new Error("LIMIT");
       if (data.error) throw new Error(typeof data.error === "string" ? data.error : "Errore API");
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-      const clean = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
+      const parsed = parseLoose(text);
       const routine = {
         id: Date.now(),
         name: (parsed.name || "SCHEDA PT").toUpperCase(),
@@ -3654,6 +3651,48 @@ function MacroBar({ label, grams, kcalPerG, totalKcal, color }) {
 
 
 
+/* ---------------- Parsing tollerante delle risposte AI ---------------- */
+/* I modelli possono troncare il JSON se lo spazio finisce: qui si recupera
+   la parte valida chiudendo le parentesi rimaste aperte. */
+const repairJSON = (raw) => {
+  const start = raw.indexOf("{");
+  if (start < 0) return raw;
+  const s = raw.slice(start);
+  let inStr = false, esc = false, lastComplete = -1;
+  const stack = [];
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (esc) { esc = false; continue; }
+    if (ch === "\\") { esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === "{" || ch === "[") stack.push(ch === "{" ? "}" : "]");
+    else if (ch === "}" || ch === "]") { stack.pop(); lastComplete = i; }
+    else if (ch === ",") lastComplete = i - 1;
+  }
+  if (!stack.length) return s;
+  let out = s.slice(0, lastComplete + 1).replace(/,\s*$/, "");
+  const st = [];
+  let inS = false, es = false;
+  for (let i = 0; i < out.length; i++) {
+    const ch = out[i];
+    if (es) { es = false; continue; }
+    if (ch === "\\") { es = true; continue; }
+    if (ch === '"') { inS = !inS; continue; }
+    if (inS) continue;
+    if (ch === "{" || ch === "[") st.push(ch === "{" ? "}" : "]");
+    else if (ch === "}" || ch === "]") st.pop();
+  }
+  while (st.length) out += st.pop();
+  return out;
+};
+const parseLoose = (text) => {
+  const clean = (text || "").replace(/```json|```/g, "");
+  const m = clean.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch {} }
+  return JSON.parse(repairJSON(clean));
+};
+
 /* ---------------- Stima calorica live ---------------- */
 /* Tabella generica per 100 g (o per pezzo dove indicato): serve solo a dare
    una stima immediata mentre componi, non è un database nutrizionale completo. */
@@ -4176,7 +4215,7 @@ REGOLE:
       }
 
       const data = await aiCall({
-        model: "claude-haiku-4-5-20251001", max_tokens: 1500,
+        model: "claude-haiku-4-5-20251001", max_tokens: 4000,
         messages: [{ role: "user", content }],
       }, "nutrition");
 
@@ -4184,8 +4223,7 @@ REGOLE:
       if (data.error) throw new Error(typeof data.error === "string" ? data.error : (data.error.message || "Errore API"));
 
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-      const m = text.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(m ? m[0] : text);
+      const parsed = parseLoose(text);
       const tg = parsed.targets || {};
       setResult({
         sourcePlan: parsed.sourcePlan || null,
@@ -4328,7 +4366,7 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
         method: "POST",
         headers: await featHeaders("nutrition"),
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001", max_tokens: 1000,
+          model: "claude-haiku-4-5-20251001", max_tokens: 4000,
           messages: [{
             role: "user",
             content: `Genera un piano alimentare giornaliero per palestra. Target: ${targets.kcal} kcal, ${targets.p}g proteine, ${targets.c}g carboidrati, ${targets.f}g grassi. Utente: ${body.sesso === "M" ? "uomo" : "donna"}, ${body.peso}kg, obiettivo ${goal.toLowerCase()}, si allena ${days} volte a settimana.
@@ -4357,8 +4395,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
       let data; try { data = JSON.parse(_txt); } catch { throw new Error(`Errore server (${response.status})`); }
       if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error("Limite settimanale raggiunto"); }
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-      const mm = text.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(mm ? mm[0] : text);
+      const parsed = parseLoose(text);
       if (parsed.meals || parsed.sourcePlan) {
         meals = parsed.meals || {};
         sourcePlan = parsed.sourcePlan || null;
