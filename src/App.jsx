@@ -1224,7 +1224,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
                 border: `1px solid ${RARITY[selTrophy.rarity].border}`, color: RARITY[selTrophy.rarity].color,
               }}>{RARITY[selTrophy.rarity].label}</span>
 
-              <div className="cham-s" style={{ height: "min(520px, 55vh)", flexShrink: 0, marginTop: 12, background: "radial-gradient(ellipse at center, #0b1c2c 0%, #060f18 70%)", border: "1px solid #0e2233", overflow: "hidden" }}>
+              <div className="cham-s" style={{ height: "min(400px, 42vh)", flexShrink: 0, marginTop: 12, background: "radial-gradient(ellipse at center, #0b1c2c 0%, #060f18 70%)", border: "1px solid #0e2233", overflow: "hidden" }}>
                 <React.Suspense fallback={<div className="row" style={{ justifyContent: "center", height: "100%", alignItems: "center" }}><Loader2 className="spin" size={22} color="#57c8f2" /></div>}>
                   <Trophy3D model={selTrophy.model} glow={RARITY[selTrophy.rarity].color} />
                 </React.Suspense>
@@ -1233,9 +1233,9 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
                 ⟲ TRASCINA PER RUOTARE
               </div>
 
-              <div className="cham-s" style={{ marginTop: 10, padding: "14px 16px", background: "#060f18", border: "1px solid #0e2233", overflowY: "auto", scrollbarWidth: "none", minHeight: 0 }}>
+              <div className="cham-s" style={{ marginTop: 10, padding: "12px 14px", background: "#060f18", border: "1px solid #0e2233", height: "min(200px, 26vh)", flexShrink: 0, overflowY: "auto", scrollbarWidth: "thin", scrollbarColor: "#1f6f9e transparent" }}>
                 <div className="f-hud t-amber" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".2em", marginBottom: 6 }}>◈ ARCHIVIO DEI PRECURSORI</div>
-                <div className="t-dim" style={{ fontSize: 13.5, lineHeight: 1.7, fontStyle: "italic" }}>{selTrophy.lore}</div>
+                <div className="t-dim" style={{ fontSize: 13, lineHeight: 1.7, fontStyle: "italic" }}>{selTrophy.lore}</div>
                 <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px dashed #0e2233" }}>
                   <span className="micro t-faint">COME SI SBLOCCA · </span>
                   <span className="micro t-bright">{selTrophy.how}</span>

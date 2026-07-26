@@ -584,7 +584,7 @@ function buildScouter() {
   lip.position.set(-0.75, -1.04, 0.36);
   g.add(lip);
   // display HUD arancione sulla lente
-  const hudMat = new THREE.MeshBasicMaterial({ map: scouterHudTexture(), transparent: true, depthWrite: false });
+  const hudMat = new THREE.MeshBasicMaterial({ map: scouterHudTexture(), transparent: true, depthWrite: false, side: THREE.DoubleSide });
   const hud = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.03), hudMat);
   hud.position.set(-0.75, -0.42, 0.42);
   g.add(hud);
