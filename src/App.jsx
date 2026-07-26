@@ -4526,37 +4526,6 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
             </>
           )}
 
-          {code && (
-          <Panel accent style={{ borderColor: "#ffd76a", marginTop: 12 }}>
-            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12 }}>{tr("PAGAMENTO RICEVUTO")}</div>
-            <div className="tiny t-dim" style={{ marginTop: 6, lineHeight: 1.6 }}>
-              {tr("Conserva questo codice: crea un account quando vuoi e riscattalo dal profilo per attivare l'acquisto.")}
-            </div>
-            <div className="f-hud t-bright cham-s" style={{ marginTop: 10, padding: "12px 10px", background: "#04101b",
-              border: "1px solid #ffd76a", textAlign: "center", fontSize: 20, fontWeight: 700, letterSpacing: ".12em" }}>
-              {code}
-            </div>
-            <Btn small full style={{ marginTop: 8 }}
-              onClick={() => { try { navigator.clipboard.writeText(code); fireToast({ title: tr("◈ CODICE COPIATO") }); } catch {} }}>
-              {tr("Copia codice")}
-            </Btn>
-          </Panel>
-        )}
-
-        {!isGuest && (
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #0e2233" }}>
-            <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Hai un codice di riscatto?")}</div>
-            <div className="row g8">
-              <input className="hud-input cham-s" value={redeem} onChange={(e) => setRedeem(e.target.value)}
-                placeholder="XXXX-XXXX-XXXX" style={{ flex: 1, textAlign: "center", letterSpacing: ".1em" }} />
-              <Btn small primary onClick={doRedeem} disabled={!redeem.trim()}>{tr("Riscatta")}</Btn>
-            </div>
-            {redeemMsg && <div className="tiny t-red" style={{ marginTop: 6 }}>⚠ {redeemMsg}</div>}
-          </div>
-        )}
-
-        {err && <div className="tiny t-red">⚠ {err}</div>}
-
           <div className="row g8">
             {step > 1 && <Btn onClick={() => setStep(step - 1)} style={{ flex: 1 }}>{tr("‹ Indietro")}</Btn>}
             {step < 4
