@@ -17,6 +17,8 @@ const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en"
 const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
+  "PDF troppo grande (max 3.5 MB): comprimilo o incolla il testo.": "PDF too large (max 3.5 MB): compress it or paste the text.",
+  "File troppo grande: usa una foto più piccola o incolla il testo.": "File too large: use a smaller photo or paste the text.",
   "SERVE UN ACCOUNT": "AN ACCOUNT IS REQUIRED",
   "In modalità ospite puoi allenarti e comporre i pasti a mano. Le funzioni AI richiedono un account gratuito; con Premium hai limiti ampi su tutto.": "In guest mode you can train and build meals by hand. AI features require a free account; Premium gives you generous limits on everything.",
   "(SCEGLI 1)": "(PICK 1)", "(SCELTA MULTIPLA)": "(MULTIPLE CHOICE)",
@@ -2980,13 +2982,15 @@ function DocImport({ premium, onClose, onSave }) {
     try {
       const content = [];
       if (file) {
-        const b64 = await readBase64(file);
         if (file.type === "application/pdf") {
-          content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } });
+          if (file.size > 3.5 * 1024 * 1024) throw new Error(tr("PDF troppo grande (max 3.5 MB): comprimilo o incolla il testo."));
+          content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: await readBase64(file) } });
         } else if (file.type.startsWith("image/")) {
-          content.push({ type: "image", source: { type: "base64", media_type: file.type, data: b64 } });
+          /* le foto da smartphone superano il limite del serverless: si ridimensionano prima */
+          const { b64, type } = await resizeImage(file, 1400);
+          content.push({ type: "image", source: { type: "base64", media_type: type, data: b64 } });
         } else {
-          content.push({ type: "text", text: decodeURIComponent(escape(atob(b64))) });
+          content.push({ type: "text", text: decodeURIComponent(escape(atob(await readBase64(file)))) });
         }
       }
       if (pasted.trim()) content.push({ type: "text", text: pasted });
@@ -3007,7 +3011,7 @@ Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contie
         body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2500, messages: [{ role: "user", content }] }),
       });
       const _txt = await response.text();
-      let data; try { data = JSON.parse(_txt); } catch { throw new Error(`Errore server (${response.status})`); }
+      let data; try { data = JSON.parse(_txt); } catch { throw new Error(response.status === 413 ? tr("File troppo grande: usa una foto più piccola o incolla il testo.") : `Errore server (${response.status})`); }
       if (data.error === "limit_reached") throw new Error("LIMIT");
       if (data.error) throw new Error(typeof data.error === "string" ? data.error : "Errore API");
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
@@ -4223,19 +4227,25 @@ REGOLE:
 - "q" è la quantità come scritta nel documento (es. "80g", "2 uova", "1 tazza").`;
 
       if (file) {
-        const b64 = await new Promise((ok, ko) => {
-          const r = new FileReader();
-          r.onload = () => ok(r.result.split(",")[1]);
-          r.onerror = () => ko(new Error("Lettura file fallita"));
-          r.readAsDataURL(file);
-        });
         const isPdf = file.type === "application/pdf";
         const isImg = (file.type || "").startsWith("image/");
-        const block = isPdf
-          ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
-          : isImg
-          ? { type: "image", source: { type: "base64", media_type: file.type, data: b64 } }
-          : { type: "text", text: atob(b64) };
+        let block;
+        if (isImg) {
+          const r = await resizeImage(file, 1400);   // foto: ridimensionate prima dell'invio
+          block = { type: "image", source: { type: "base64", media_type: r.type, data: r.b64 } };
+        } else {
+          if (isPdf && file.size > 3.5 * 1024 * 1024)
+            throw new Error(tr("PDF troppo grande (max 3.5 MB): comprimilo o incolla il testo."));
+          const b64 = await new Promise((ok, ko) => {
+            const rd = new FileReader();
+            rd.onload = () => ok(rd.result.split(",")[1]);
+            rd.onerror = () => ko(new Error("Lettura file fallita"));
+            rd.readAsDataURL(file);
+          });
+          block = isPdf
+            ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
+            : { type: "text", text: atob(b64) };
+        }
         content = [block, { type: "text", text: prompt }];
       } else {
         content = [{ type: "text", text: pasted }, { type: "text", text: prompt }];
@@ -4420,7 +4430,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
         }),
       });
       const _txt = await response.text();
-      let data; try { data = JSON.parse(_txt); } catch { throw new Error(`Errore server (${response.status})`); }
+      let data; try { data = JSON.parse(_txt); } catch { throw new Error(response.status === 413 ? tr("File troppo grande: usa una foto più piccola o incolla il testo.") : `Errore server (${response.status})`); }
       if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error("Limite settimanale raggiunto"); }
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
       const parsed = parseLoose(text);
