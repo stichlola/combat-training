@@ -17,6 +17,20 @@ const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en"
 const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
+  "(SCEGLI 1)": "(PICK 1)", "(SCELTA MULTIPLA)": "(MULTIPLE CHOICE)",
+  "SCEGLI QUANTI VUOI": "PICK AS MANY AS YOU LIKE",
+  "AGGIUNGI ALIMENTO": "ADD FOOD", "Aggiungi": "Add",
+  "generico": "generic", "tuo": "yours",
+  "stima non disponibile": "estimate unavailable",
+  "KCAL STIMATE": "ESTIMATED KCAL",
+  "Tocca le opzioni per comporre il pasto.": "Tap the options to build your meal.",
+  "VOCI NON STIMABILI NON INCLUSE NEL TOTALE": "NON-ESTIMABLE ITEMS ARE NOT IN THE TOTAL",
+  "Stime indicative: consulta un professionista per esigenze specifiche.": "Indicative estimates: consult a professional for specific needs.",
+  "Bresaola / affettato magro": "Bresaola / lean cold cuts", "Gamberi o seppie": "Prawns or cuttlefish",
+  "Ricotta o fiocchi di latte": "Ricotta or cottage cheese", "Legumi cotti (lenticchie, ceci)": "Cooked legumes (lentils, chickpeas)",
+  "Tofu o tempeh": "Tofu or tempeh", "Avena o fiocchi d'avena": "Oats", "Couscous o bulgur": "Couscous or bulgur",
+  "Mandorle o noci": "Almonds or walnuts", "Semi di chia o lino": "Chia or flax seeds",
+  "Frutto di stagione": "Seasonal fruit", "Maltodestrine (post-workout)": "Maltodextrin (post-workout)",
   "Continua senza account ›": "Continue without an account ›",
   "PROVA SUBITO · I DATI RESTANO SU QUESTO DISPOSITIVO": "TRY IT NOW · DATA STAYS ON THIS DEVICE",
   "MODALITÀ OSPITE": "GUEST MODE",
@@ -3639,6 +3653,108 @@ function MacroBar({ label, grams, kcalPerG, totalKcal, color }) {
 
 
 
+
+/* ---------------- Stima calorica live ---------------- */
+/* Tabella generica per 100 g (o per pezzo dove indicato): serve solo a dare
+   una stima immediata mentre componi, non è un database nutrizionale completo. */
+const KCAL_DB = [
+  { k: ["petto di pollo", "pollo", "tacchino", "fesa"], p: 23, c: 0, f: 2 },
+  { k: ["manzo", "bovino", "vitello"], p: 21, c: 0, f: 6 },
+  { k: ["merluzzo", "orata", "branzino", "pesce bianco", "platessa"], p: 18, c: 0, f: 1 },
+  { k: ["salmone"], p: 20, c: 0, f: 13 },
+  { k: ["tonno"], p: 25, c: 0, f: 1 },
+  { k: ["gambero", "gamberetti", "seppia", "polpo"], p: 18, c: 1, f: 1 },
+  { k: ["bresaola"], p: 32, c: 0, f: 2 },
+  { k: ["prosciutto crudo"], p: 27, c: 0, f: 12 },
+  { k: ["prosciutto cotto"], p: 20, c: 1, f: 8 },
+  { k: ["uova intere", "uovo intero", "uova"], p: 13, c: 1, f: 11, unit: 55 },
+  { k: ["albume", "albumi"], p: 11, c: 1, f: 0 },
+  { k: ["yogurt greco", "skyr"], p: 10, c: 4, f: 0 },
+  { k: ["fiocchi di latte", "ricotta"], p: 12, c: 3, f: 6 },
+  { k: ["whey", "proteine in polvere", "proteine polvere"], p: 78, c: 8, f: 6 },
+  { k: ["parmigiano", "grana"], p: 33, c: 0, f: 29 },
+  { k: ["mozzarella"], p: 18, c: 1, f: 16 },
+  { k: ["tofu"], p: 12, c: 2, f: 7 },
+  { k: ["tempeh"], p: 19, c: 9, f: 11 },
+  { k: ["seitan"], p: 24, c: 14, f: 2 },
+  { k: ["lenticchie", "ceci", "fagioli"], p: 9, c: 20, f: 1 },
+  { k: ["riso"], p: 7, c: 78, f: 1 },
+  { k: ["pasta"], p: 12, c: 72, f: 2 },
+  { k: ["polenta", "farina di mais"], p: 8, c: 76, f: 3 },
+  { k: ["patate dolci"], p: 2, c: 20, f: 0 },
+  { k: ["patate"], p: 2, c: 17, f: 0 },
+  { k: ["pane"], p: 9, c: 48, f: 3 },
+  { k: ["avena", "fiocchi d'avena"], p: 13, c: 62, f: 7 },
+  { k: ["couscous", "bulgur"], p: 12, c: 72, f: 1 },
+  { k: ["quinoa"], p: 14, c: 64, f: 6 },
+  { k: ["gallette"], p: 8, c: 81, f: 3 },
+  { k: ["banana"], p: 1, c: 23, f: 0, unit: 120 },
+  { k: ["mela", "pera"], p: 0, c: 14, f: 0, unit: 180 },
+  { k: ["frutti di bosco", "fragole"], p: 1, c: 8, f: 0 },
+  { k: ["arancia", "agrumi"], p: 1, c: 12, f: 0, unit: 180 },
+  { k: ["olio"], p: 0, c: 0, f: 100 },
+  { k: ["burro d'arachidi", "burro di arachidi"], p: 25, c: 20, f: 50 },
+  { k: ["mandorle", "noci", "nocciole", "frutta secca", "anacardi"], p: 18, c: 8, f: 55 },
+  { k: ["avocado"], p: 2, c: 9, f: 15 },
+  { k: ["semi di chia", "semi di lino", "semi"], p: 17, c: 42, f: 31 },
+  { k: ["cioccolato fondente", "fondente"], p: 10, c: 22, f: 46 },
+  { k: ["miele", "marmellata"], p: 0, c: 78, f: 0 },
+  { k: ["maltodestrine"], p: 0, c: 95, f: 0 },
+  { k: ["barretta"], p: 33, c: 40, f: 13 },
+  { k: ["verdure", "verdura", "insalata", "broccoli", "spinaci", "zucchine", "pomodori", "peperoni", "melanzane", "funghi", "finocchi"], p: 2, c: 5, f: 0 },
+  { k: ["carote"], p: 1, c: 10, f: 0 },
+];
+const norm = (s) => (s || "").toLowerCase().replace(/[^a-zà-ù0-9 ]/gi, " ").replace(/\s+/g, " ").trim();
+const findKcalEntry = (name) => {
+  const n = norm(name);
+  let best = null, bestLen = 0;
+  for (const e of KCAL_DB) for (const key of e.k) {
+    if (n.includes(key) && key.length > bestLen) { best = e; bestLen = key.length; }
+  }
+  return best;
+};
+/* interpreta "200g", "1", "12-15g", "150 g", "A volontà" -> grammi (null se non stimabile) */
+const parseQty = (q, entry) => {
+  const s = norm(q);
+  if (!s || /volont|libero|q b/.test(s)) return null;
+  const range = s.match(/(\d+)\s*-\s*(\d+)/);
+  if (range) return (Number(range[1]) + Number(range[2])) / 2;
+  const g = s.match(/(\d+(?:[.,]\d+)?)\s*(?:g|gr|grammi)\b/);
+  if (g) return Number(g[1].replace(",", "."));
+  const ml = s.match(/(\d+(?:[.,]\d+)?)\s*ml\b/);
+  if (ml) return Number(ml[1].replace(",", "."));
+  const cucch = s.match(/(\d+)?\s*cucchiai?o?/);
+  if (cucch) return (Number(cucch[1]) || 1) * 12;
+  const pcs = s.match(/^(\d+(?:[.,]\d+)?)/);
+  if (pcs && entry && entry.unit) return Number(pcs[1].replace(",", ".")) * entry.unit;
+  if (pcs) return Number(pcs[1].replace(",", ".")) * 100;
+  return null;
+};
+/* stima macro di una voce {q, n}; null se non stimabile */
+const estimateOne = (text) => {
+  const e = findKcalEntry(text);
+  if (!e) return null;
+  const g = parseQty(text, e);
+  if (g == null) return null;
+  return { p: e.p * g / 100, c: e.c * g / 100, f: e.f * g / 100 };
+};
+/* gestisce anche le voci composte: "3 uova intere + 100g albumi" */
+const estimate = (item) => {
+  const parts = `${item.q || ""} ${item.n || ""}`.split("+");
+  let tot = { p: 0, c: 0, f: 0 }, hit = false;
+  for (const part of parts) {
+    const m = estimateOne(part);
+    if (m) { tot = { p: tot.p + m.p, c: tot.c + m.c, f: tot.f + m.f }; hit = true; }
+  }
+  if (!hit) return null;
+  return { ...tot, kcal: Math.round(tot.p * 4 + tot.c * 4 + tot.f * 9) };
+};
+const sumEstimates = (items) => items.reduce((a, it) => {
+  const e = estimate(it);
+  return e ? { p: a.p + e.p, c: a.c + e.c, f: a.f + e.f, kcal: a.kcal + e.kcal, known: a.known + 1 }
+           : { ...a, unknown: a.unknown + 1 };
+}, { p: 0, c: 0, f: 0, kcal: 0, known: 0, unknown: 0 });
+
 /* ============================ PIANO A FONTI (unificato) ============================ */
 /* Un solo piano, due letture: la finestra alimentare (quando mangi) e le fonti
    intercambiabili divise per categoria (cosa scegli). Componi il pasto scegliendo
@@ -3678,7 +3794,7 @@ const DEFAULT_SOURCE_PLAN = {
       { q: "A volontà", n: "Verdure a foglia verde o di stagione" },
       { q: "12-15g", n: "Olio EVO (1 cucchiaio abbondante)", alt: "1 cucchiaino se scegli 3 uova intere" },
     ] },
-    { name: "Snack / Post-workout", rule: "", items: [
+    { name: "Snack / Post-workout", rule: "SCEGLI QUANTI VUOI", items: [
       { q: "150g", n: "Yogurt greco 0%" },
       { q: "30g", n: "Proteine in polvere (whey)" },
       { q: "1", n: "Banana o mela grande (~180-200g)" },
@@ -3688,14 +3804,76 @@ const DEFAULT_SOURCE_PLAN = {
   directives: "Pranzo e Cena sono totalmente interscambiabili. Mantenere l'idratazione a 2.5-3 litri d'acqua al giorno.",
 };
 
+/* opzioni generiche sempre disponibili in aggiunta a quelle del piano */
+const GENERIC_EXTRA = {
+  "Fonti proteiche": [
+    { q: "150g", n: "Bresaola / affettato magro" }, { q: "200g", n: "Gamberi o seppie" },
+    { q: "150g", n: "Ricotta o fiocchi di latte" }, { q: "200g", n: "Legumi cotti (lenticchie, ceci)" },
+    { q: "150g", n: "Tofu o tempeh" },
+  ],
+  "Fonti carboidrati": [
+    { q: "80g", n: "Avena o fiocchi d'avena" }, { q: "100g", n: "Couscous o bulgur" },
+    { q: "80g", n: "Quinoa" }, { q: "120g", n: "Pane integrale" }, { q: "40g", n: "Gallette di riso" },
+  ],
+  "Grassi e fibre": [
+    { q: "20g", n: "Mandorle o noci" }, { q: "15g", n: "Burro d'arachidi" },
+    { q: "80g", n: "Avocado" }, { q: "20g", n: "Semi di chia o lino" }, { q: "30g", n: "Parmigiano" },
+  ],
+  "Snack / Post-workout": [
+    { q: "1", n: "Frutto di stagione" }, { q: "25g", n: "Cioccolato fondente 85%" },
+    { q: "40g", n: "Barretta proteica" }, { q: "30g", n: "Maltodestrine (post-workout)" },
+    { q: "200g", n: "Yogurt greco 0%" },
+  ],
+};
+
 function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRegen, loading }) {
   const cats = plan.categories || [];
-  const toggle = (cat, idx) => setPicks({ ...picks, [cat]: picks[cat] === idx ? undefined : idx });
-  const chosen = cats.filter((c) => picks[c.name] != null);
+  const [addFor, setAddFor] = useState(null);        // categoria in cui si sta aggiungendo a mano
+  const [nf, setNf] = useState({ q: "", n: "" });
+
+  /* normalizza: il vecchio formato salvava un solo indice per categoria */
+  const sel = {}, custom = (picks && picks.__custom) || {};
+  for (const c of cats) {
+    const v = picks ? picks[c.name] : undefined;
+    sel[c.name] = Array.isArray(v) ? v : (v == null ? [] : [v]);
+  }
+  const single = (c) => /scegli\s*1/i.test(c.rule || "");
+
+  const toggle = (c, idx) => {
+    const cur = sel[c.name];
+    const next = single(c)
+      ? (cur.includes(idx) ? [] : [idx])
+      : (cur.includes(idx) ? cur.filter((x) => x !== idx) : [...cur, idx]);
+    setPicks({ ...picks, __custom: custom, [c.name]: next });
+  };
+  const addCustom = (catName) => {
+    if (!nf.n.trim()) return;
+    const list = [...(custom[catName] || []), { q: nf.q.trim(), n: nf.n.trim() }];
+    setPicks({ ...picks, __custom: { ...custom, [catName]: list } });
+    setNf({ q: "", n: "" }); setAddFor(null);
+  };
+  const delCustom = (catName, i) => {
+    const list = (custom[catName] || []).filter((_, j) => j !== i);
+    setPicks({ ...picks, __custom: { ...custom, [catName]: list } });
+  };
+
+  /* voci scelte + totali stimati */
+  const chosen = [];
+  for (const c of cats) {
+    for (const i of sel[c.name]) if (c.items && c.items[i]) chosen.push({ ...c.items[i], cat: c.name });
+    for (const it of (custom[c.name] || [])) chosen.push({ ...it, cat: c.name, custom: true });
+  }
+  const tot = sumEstimates(chosen);
+  const liveNf = nf.n.trim() ? estimate(nf) : null;
+
+  const Est = ({ item, dim }) => {
+    const e = estimate(item);
+    if (!e) return <span className="micro t-faint">~</span>;
+    return <span className={`micro ${dim ? "t-faint" : "t-cyan"}`}>{e.kcal} kcal</span>;
+  };
 
   return (
     <div className="fade-in stack" style={{ maxWidth: 780 }}>
-      {/* intestazione in stile scheda */}
       <Panel accent style={{ borderColor: "#ffd76a" }}>
         <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 15 }}>
           {tr("PIANO NUTRIZIONALE")}
@@ -3709,16 +3887,13 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
         )}
       </Panel>
 
-      {/* finestra alimentare */}
       {(plan.window || []).length > 0 && (
         <Panel>
           <div className="hud-label" style={{ marginBottom: 10 }}>{tr("▸ Finestra alimentare & tempistiche")}</div>
           {plan.window.map((w, i) => (
             <div key={i} className="row g12" style={{ padding: "8px 0", borderBottom: "1px solid #0a1826", alignItems: "flex-start" }}>
               <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, width: 106, flexShrink: 0,
-                borderLeft: `2px solid ${w.fasting ? "#3f637c" : "#ffd76a"}`, paddingLeft: 8 }}>
-                {w.time}
-              </div>
+                borderLeft: `2px solid ${w.fasting ? "#3f637c" : "#ffd76a"}`, paddingLeft: 8 }}>{w.time}</div>
               <div className="grow">
                 <div className={w.fasting ? "t-faint" : "t-bright"} style={{ fontSize: 14, fontWeight: 700 }}>{w.label}</div>
                 {w.note && <div className="tiny t-faint">{w.note}</div>}
@@ -3728,56 +3903,121 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
         </Panel>
       )}
 
-      {/* categorie di fonti: si sceglie un'opzione per categoria */}
       <div className="two-col">
         {cats.map((c) => {
           const color = CAT_COLORS[c.name] || "#57c8f2";
+          const extra = GENERIC_EXTRA[c.name] || [];
+          const base = c.items || [];
+          const all = [...base, ...extra];
           return (
             <Panel key={c.name} style={{ borderLeft: `3px solid ${color}` }}>
               <div className="row between" style={{ marginBottom: 8 }}>
                 <span className="f-hud" style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
                   {c.name.toUpperCase()}
                 </span>
-                {c.rule && <span className="micro t-faint">({c.rule})</span>}
+                <span className="micro t-faint">{single(c) ? tr("(SCEGLI 1)") : tr("(SCELTA MULTIPLA)")}</span>
               </div>
-              {(c.items || []).map((it, i) => {
-                const on = picks[c.name] === i;
+
+              {all.map((it, i) => {
+                const on = sel[c.name].includes(i);
                 return (
-                  <button key={i} onClick={() => toggle(c.name, i)} className="tap cham-s"
+                  <button key={i} onClick={() => toggle(c, i)} className="tap cham-s"
                     style={{ width: "100%", textAlign: "left", cursor: "pointer", padding: "9px 10px", marginBottom: 5,
                       border: `1px solid ${on ? color : "#0e2233"}`, background: on ? "#0c2233" : "#060f18" }}>
-                    <div style={{ fontSize: 14, lineHeight: 1.4 }}>
-                      <span className="f-hud" style={{ color: on ? color : "#c9e8f7", fontWeight: 700 }}>{it.q}</span>
-                      <span className={on ? "t-bright" : "t-dim"}> {it.n}</span>
+                    <div className="row between g8">
+                      <div style={{ fontSize: 14, lineHeight: 1.4 }}>
+                        <span className="f-hud" style={{ color: on ? color : "#c9e8f7", fontWeight: 700 }}>{it.q}</span>
+                        <span className={on ? "t-bright" : "t-dim"}> {it.n}</span>
+                        {i >= base.length && <span className="micro t-faint"> · {tr("generico")}</span>}
+                      </div>
+                      <Est item={it} dim={!on} />
                     </div>
                     {it.alt && <div className="micro t-faint" style={{ marginTop: 2 }}>({it.alt})</div>}
                   </button>
                 );
               })}
+
+              {(custom[c.name] || []).map((it, i) => (
+                <div key={"c" + i} className="cham-s row between g8"
+                  style={{ padding: "9px 10px", marginBottom: 5, border: `1px solid ${color}`, background: "#0c2233" }}>
+                  <div style={{ fontSize: 14 }}>
+                    <span className="f-hud" style={{ color, fontWeight: 700 }}>{it.q}</span>
+                    <span className="t-bright"> {it.n}</span>
+                    <span className="micro t-faint"> · {tr("tuo")}</span>
+                  </div>
+                  <div className="row g8" style={{ alignItems: "center" }}>
+                    <Est item={it} />
+                    <span onClick={() => delCustom(c.name, i)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={13} /></span>
+                  </div>
+                </div>
+              ))}
+
+              {addFor === c.name ? (
+                <div className="cham-s stack-s" style={{ padding: 10, background: "#04101b", border: "1px solid #1b3a52" }}>
+                  <div className="row g6">
+                    <input className="hud-input cham-s" value={nf.q} onChange={(e) => setNf({ ...nf, q: e.target.value })}
+                      placeholder={tr("Quantità")} style={{ width: 88, textAlign: "center", fontSize: 13, padding: "7px 6px" }} />
+                    <input className="hud-input cham-s" value={nf.n} onChange={(e) => setNf({ ...nf, n: e.target.value })}
+                      placeholder={tr("Alimento")} style={{ flex: 1, fontSize: 13, padding: "7px 8px" }} />
+                  </div>
+                  <div className="row between" style={{ alignItems: "center" }}>
+                    <span className="micro t-cyan">
+                      {liveNf ? `≈ ${liveNf.kcal} kcal · P${Math.round(liveNf.p)} C${Math.round(liveNf.c)} G${Math.round(liveNf.f)}`
+                              : tr("stima non disponibile")}
+                    </span>
+                    <div className="row g6">
+                      <Btn small onClick={() => { setAddFor(null); setNf({ q: "", n: "" }); }}>{tr("Annulla")}</Btn>
+                      <Btn small primary onClick={() => addCustom(c.name)} disabled={!nf.n.trim()}>{tr("Aggiungi")}</Btn>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => { setAddFor(c.name); setNf({ q: "", n: "" }); }} className="dash-btn cham-s tap">
+                  ＋ {tr("AGGIUNGI ALIMENTO")}
+                </button>
+              )}
             </Panel>
           );
         })}
       </div>
 
-      {/* riepilogo della composizione */}
       <Panel accent>
-        <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Il pasto che hai composto")}</div>
-        {chosen.length === 0 && (
-          <div className="tiny t-faint">{tr("Tocca un'opzione per categoria per comporre il pasto.")}</div>
+        <div className="row between" style={{ marginBottom: 10 }}>
+          <div>
+            <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 24 }}>≈ {tot.kcal}</div>
+            <div className="micro">{tr("KCAL STIMATE")}{targets ? ` / ${targets.kcal}` : ""}</div>
+          </div>
+          {chosen.length > 0 && <Btn small onClick={() => setPicks({})}>{tr("Svuota")}</Btn>}
+        </div>
+        {targets && chosen.length > 0 && (
+          <div className="stack-s" style={{ marginBottom: 10 }}>
+            {[["Proteine", tot.p, targets.p, "#57c8f2"], ["Carboidrati", tot.c, targets.c, "#9be8ff"], ["Grassi", tot.f, targets.f, "#ffd76a"]].map(([l, cur, goal, col]) => (
+              <div key={l}>
+                <div className="row between tiny" style={{ marginBottom: 3 }}>
+                  <span className="t-dim">{tr(l)}</span>
+                  <span className={cur > goal * 1.05 ? "t-amber" : "t-bright"}>{Math.round(cur)} / {goal} g</span>
+                </div>
+                <div className="cham-s" style={{ height: 6, background: "#0e2233", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min(100, goal ? (cur / goal) * 100 : 0)}%`,
+                    background: cur > goal * 1.05 ? "#ffd76a" : col, transition: "width .3s" }} />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-        {chosen.map((c) => {
-          const it = c.items[picks[c.name]];
-          return (
-            <div key={c.name} className="divider-row">
-              <span style={{ fontSize: 14 }}>
-                <span className="f-hud t-cyan" style={{ fontWeight: 700 }}>{it.q}</span> {it.n}
-              </span>
-              <span className="micro t-faint">{c.name}</span>
-            </div>
-          );
-        })}
-        {chosen.length > 0 && (
-          <Btn small style={{ marginTop: 10 }} onClick={() => setPicks({})}>{tr("Svuota")}</Btn>
+        {chosen.length === 0 && <div className="tiny t-faint">{tr("Tocca le opzioni per comporre il pasto.")}</div>}
+        {chosen.map((it, i) => (
+          <div key={i} className="divider-row">
+            <span style={{ fontSize: 14 }}>
+              <span className="f-hud t-cyan" style={{ fontWeight: 700 }}>{it.q}</span> {it.n}
+            </span>
+            <Est item={it} />
+          </div>
+        ))}
+        {tot.unknown > 0 && (
+          <div className="micro t-faint" style={{ marginTop: 8 }}>
+            {tot.unknown} {tr("VOCI NON STIMABILI NON INCLUSE NEL TOTALE")}
+          </div>
         )}
       </Panel>
 
@@ -3794,7 +4034,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
           {loading ? tr("Generazione...") : tr("◈ Rigenera con AI")}
         </Btn>
       </div>
-      <div className="micro">{tr("Il piano è indicativo: consulta un professionista per esigenze specifiche.")}</div>
+      <div className="micro">{tr("Stime indicative: consulta un professionista per esigenze specifiche.")}</div>
     </div>
   );
 }
