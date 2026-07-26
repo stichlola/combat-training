@@ -8,6 +8,7 @@
    La lettura di potenza deriva dal livello del giocatore.
    ============================================================ */
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, RefreshCw } from "lucide-react";
 import { supabase } from "./lib/supabase";
 
@@ -208,8 +209,8 @@ export default function Scouter({ level = 1, onClose }) {
     : sensor === "on" ? "RICERCA SOGGETTO…"
     : "ANALISI SOGGETTO…";
 
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#000", fontFamily: "monospace" }}>
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#000", fontFamily: "monospace", overflow: "hidden" }}>
       {/* feed fotocamera */}
       <video ref={videoRef} playsInline muted
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "saturate(.85) contrast(1.05)" }} />
@@ -354,19 +355,20 @@ export default function Scouter({ level = 1, onClose }) {
         .sc-rescan { bottom: 30px; padding: 12px 26px; font-size: 12px; }
         .sc-close { top: 24px; right: 30px; padding: 10px; }
         @media (max-width: 640px) {
-          .sc-reticle { width: 34vmin; height: 34vmin; }
-          .sc-cross { width: 52vmin; }
-          .sc-cross[style*="width: 1px"] { width: 1px; height: 52vmin; }
-          .sc-label { top: 18px; left: 20px; font-size: 10px; max-width: 62vw; }
-          .sc-panel { right: 18px; min-width: 0; }
-          .sc-panel-title { font-size: 9px; }
-          .sc-power { font-size: 30px; }
-          .sc-stats { font-size: 9px; margin-top: 8px; gap: 5px; }
-          .sc-sub { font-size: 8px; margin-top: 8px; max-width: 44vw; margin-left: auto; }
-          .sc-rescan { bottom: 22px; padding: 9px 16px; font-size: 10px; }
-          .sc-close { top: 16px; right: 18px; padding: 7px; }
+          .sc-reticle { width: 26vmin; height: 26vmin; }
+          .sc-cross { width: 40vmin; }
+          .sc-cross[style*="width: 1px"] { width: 1px; height: 40vmin; }
+          .sc-label { top: 20px; left: 50%; transform: translateX(-50%); font-size: 9px; white-space: nowrap; }
+          .sc-panel { right: 20px; min-width: 0; }
+          .sc-panel-title { font-size: 8px; }
+          .sc-power { font-size: 24px; }
+          .sc-stats { font-size: 8px; margin-top: 8px; gap: 4px; }
+          .sc-sub { font-size: 7px; margin-top: 8px; max-width: 40vw; margin-left: auto; }
+          .sc-rescan { bottom: 24px; padding: 8px 14px; font-size: 9px; }
+          .sc-close { top: 18px; right: 20px; padding: 6px; }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }
