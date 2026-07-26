@@ -461,9 +461,55 @@ function drawRecruitFace(ctx, s) {
 }
 
 
+/* Scouter da ricognizione: archetto auricolare + lente verde traslucida */
+function buildScouter({ glow = ECO_GREEN } = {}) {
+  const g = new THREE.Group();
+  const shell = metal(0x2e3a44, 0.35, 0.8);
+  // archetto che gira intorno alla testa
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.09, 14, 48, Math.PI * 1.25), shell);
+  band.rotation.z = Math.PI * 0.875;
+  g.add(band);
+  // modulo auricolare
+  const ear = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.52, 0.24), shell);
+  ear.position.set(-0.88, -0.42, 0);
+  ear.rotation.z = 0.15;
+  g.add(ear);
+  const earBtn = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.07, 0.06, 16),
+    new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff2222, emissiveIntensity: 1.2 })
+  );
+  earBtn.rotation.x = Math.PI / 2;
+  earBtn.position.set(-0.88, -0.28, 0.15);
+  g.add(earBtn);
+  // braccetto della lente
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.55, 12), shell);
+  arm.rotation.z = -0.9;
+  arm.position.set(-0.55, -0.42, 0.18);
+  g.add(arm);
+  // montatura lente
+  const frame = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.05, 12, 40), shell);
+  frame.position.set(-0.28, -0.62, 0.3);
+  g.add(frame);
+  // lente verde traslucida luminosa
+  const lens = new THREE.Mesh(
+    new THREE.CircleGeometry(0.28, 40),
+    new THREE.MeshStandardMaterial({
+      color: glow, emissive: glow, emissiveIntensity: 0.9,
+      transparent: true, opacity: 0.55, side: THREE.DoubleSide, roughness: 0.1,
+    })
+  );
+  lens.position.set(-0.28, -0.62, 0.3);
+  g.add(lens);
+  const l = new THREE.PointLight(glow, 6, 4);
+  l.position.set(-0.3, -0.6, 0.8);
+  g.add(l);
+  return g;
+}
+
 /* Mappa id trofeo → builder del modello (importata dal visore lazy) */
 export const MODEL_BUILDERS = {
   recruit: () => buildMedal({ face: drawRecruitFace, metalColor: GOLD, coreGlow: ECO_GREEN }),
+  scouter: () => buildScouter({ glow: ECO_GREEN }),
   firstw: () => buildDumbbell({ color: BRONZE }),
   orb5: () => buildPrecursorOrb({ glow: ECO_GREEN }),
   crystal10: () => buildEcoCrystal({ glow: ECO_GREEN }),

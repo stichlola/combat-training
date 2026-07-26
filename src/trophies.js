@@ -17,6 +17,15 @@ export const TROPHIES = [
     model: "recruit",
   },
   {
+    id: "scouter",
+    name: "Scouter del Ricognitore",
+    rarity: "comune",
+    how: "Si ottiene all'iscrizione, insieme alla medaglia. Sblocca lo Scouter nella sezione GAME.",
+    lore: "Ogni cercatore di taglie che si rispetti, in qualunque galassia, porta uno scouter all'orecchio: inquadra un soggetto e la lente verde ne legge la potenza, la resistenza, la velocità. Questo esemplare arriva dal mercato dei relitti dell'oasi — un gadget di quelli che i viandanti spaziali si passano di mano in mano, rattoppato e perfettamente funzionante. Damastir lo accese la prima volta per curiosità. Quello che lesse sul display di chi gli stava intorno cambiò per sempre il suo modo di guardare le persone. Ora tocca a te: attivalo nella sezione GAME.",
+    check: () => true,
+    model: "scouter",
+  },
+  {
     id: "firstw",
     name: "Battesimo del Ferro",
     rarity: "comune",
