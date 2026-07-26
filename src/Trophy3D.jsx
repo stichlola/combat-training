@@ -35,17 +35,17 @@ export default function Trophy3D({ model, glow = "#39ff88" }) {
     scene.add(warm);
 
     // modello
-    const model = build();
+    const obj = (MODEL_BUILDERS[model] || MODEL_BUILDERS.recruit)();
     // normalizza dimensioni
-    const box = new THREE.Box3().setFromObject(model);
+    const box = new THREE.Box3().setFromObject(obj);
     const size = box.getSize(new THREE.Vector3());
     const scale = 2.1 / Math.max(size.x, size.y, size.z);
-    model.scale.setScalar(scale);
-    const box2 = new THREE.Box3().setFromObject(model);
+    obj.scale.setScalar(scale);
+    const box2 = new THREE.Box3().setFromObject(obj);
     const center = box2.getCenter(new THREE.Vector3());
-    model.position.sub(center);
-    model.position.y += 0.15;
-    scene.add(model);
+    obj.position.sub(center);
+    obj.position.y += 0.15;
+    scene.add(obj);
 
     // piedistallo
     const ped = new THREE.Mesh(
@@ -87,8 +87,8 @@ export default function Trophy3D({ model, glow = "#39ff88" }) {
         velY *= 0.94;                       // inerzia
         rotY += velY + 0.004;               // auto-rotazione lenta
       }
-      model.rotation.y = rotY;
-      model.rotation.x = rotX * 0.6;
+      obj.rotation.y = rotY;
+      obj.rotation.x = rotX * 0.6;
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
     };
@@ -117,7 +117,7 @@ export default function Trophy3D({ model, glow = "#39ff88" }) {
       });
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
-  }, [build, glow]);
+  }, [model, glow]);
 
   return <div ref={mountRef} style={{ width: "100%", height: "100%" }} />;
 }
