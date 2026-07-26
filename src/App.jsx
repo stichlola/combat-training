@@ -7,6 +7,8 @@ import {
   User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save,
   Pencil, Info, Pause, Camera, Medal
 } from "lucide-react";
+import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
+const Trophy3D = React.lazy(() => import("./Trophy3D"));   // three.js caricato solo quando serve
 
 /* ================================ I18N ================================ */
 /* Le stringhe italiane restano le chiavi canoniche (anche nel database:
@@ -1100,7 +1102,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
         </div>
 
         <div className="row g6" style={{ marginBottom: 14 }}>
-          {[["daily", "GIORNALIERE"], ["weekly", "SETTIMANALI"], ["ach", "MEDAGLIE"]].map(([k, l]) => (
+          {[["daily", "GIORNALIERE"], ["weekly", "SETTIMANALI"], ["ach", "MEDAGLIE"], ["troph", "TROFEI"]].map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} className={`tap cham-s chip ${tab === k ? "chip-on" : ""}`}
               style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "8px 0", fontSize: 10 }}>
               {l}
@@ -1108,7 +1110,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
           ))}
         </div>
 
-        {tab !== "ach" && (
+        {tab !== "ach" && tab !== "troph" && (
           <>
             <div className="micro t-faint" style={{ marginBottom: 10 }}>
               {tab === "daily" ? `SI RINNOVANO TRA ~${hLeft}H` : "SI RINNOVANO OGNI SETTIMANA"}
@@ -1162,6 +1164,80 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
               })}
             </div>
           </>
+        )}
+
+        {tab === "troph" && (() => {
+          const got = unlockedTrophies(stats, prs, level).map((t) => t.id);
+          return (
+            <>
+              <div className="micro t-faint" style={{ marginBottom: 10 }}>
+                {got.length} / {TROPHIES.length} NELLA SALA TROFEI
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {TROPHIES.map((t) => {
+                  const ok = got.includes(t.id);
+                  const r = RARITY[t.rarity];
+                  return (
+                    <div key={t.id} className="tap cham-s"
+                      onClick={() => ok && setSelTrophy(t)}
+                      style={{
+                        padding: "12px 6px", background: "#060f18", textAlign: "center",
+                        border: `1px solid ${ok ? r.border : "#0e2233"}`,
+                        cursor: ok ? "pointer" : "default", opacity: ok ? 1 : 0.6,
+                      }}>
+                      <Trophy size={26} color={ok ? r.color : "#1d3448"}
+                        style={{ filter: ok ? `drop-shadow(0 0 6px ${r.color}66)` : "none" }} />
+                      <div className={ok ? "t-bright" : "t-faint"}
+                        style={{ fontSize: 10, fontWeight: 700, marginTop: 6, lineHeight: 1.3 }}>
+                        {ok ? t.name : "???"}
+                      </div>
+                      <div className="micro" style={{ color: ok ? r.color : "#1d3448", marginTop: 3, fontSize: 8 }}>
+                        {ok ? r.label : "BLOCCATO"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="micro t-faint" style={{ marginTop: 10, textAlign: "center" }}>
+                TOCCA UN TROFEO PER AMMIRARLO IN 3D
+              </div>
+            </>
+          );
+        })()}
+
+        {/* -------- Visore 3D del trofeo -------- */}
+        {selTrophy && (
+          <div className="modal-back" onClick={() => setSelTrophy(null)} style={{ zIndex: 60 }}>
+            <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+              <div className="row between">
+                <div className="f-hud" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13, color: RARITY[selTrophy.rarity].color }}>
+                  {selTrophy.name.toUpperCase()}
+                </div>
+                <span onClick={() => setSelTrophy(null)} className="tap t-faint"
+                  style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
+              </div>
+              <span className="micro cham-s" style={{
+                display: "inline-block", padding: "2px 8px", marginTop: 6,
+                border: `1px solid ${RARITY[selTrophy.rarity].border}`, color: RARITY[selTrophy.rarity].color,
+              }}>{RARITY[selTrophy.rarity].label}</span>
+
+              <div className="cham-s" style={{ height: 300, marginTop: 12, background: "radial-gradient(ellipse at center, #0b1c2c 0%, #060f18 70%)", border: "1px solid #0e2233", overflow: "hidden" }}>
+                <Trophy3D build={selTrophy.build} glow={RARITY[selTrophy.rarity].color} />
+              </div>
+              <div className="micro t-faint" style={{ textAlign: "center", marginTop: 6, letterSpacing: ".15em" }}>
+                ⟲ TRASCINA PER RUOTARE
+              </div>
+
+              <div className="cham-s" style={{ marginTop: 10, padding: "12px 14px", background: "#060f18", border: "1px solid #0e2233" }}>
+                <div className="f-hud t-amber" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".2em", marginBottom: 6 }}>◈ ARCHIVIO DEI PRECURSORI</div>
+                <div className="t-dim" style={{ fontSize: 12.5, lineHeight: 1.65, fontStyle: "italic" }}>{selTrophy.lore}</div>
+                <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px dashed #0e2233" }}>
+                  <span className="micro t-faint">COME SI SBLOCCA · </span>
+                  <span className="micro t-bright">{selTrophy.how}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -1659,6 +1735,18 @@ export default function App() {
   setLangGlobal(lang);
 
   useEffect(() => { window.__gqXpSnap = { xp, level }; }, [xp, level]);
+
+  /* trofei: avvisa quando se ne sblocca uno nuovo (derivati da stats/prs/livello, niente DB) */
+  const trophyRef = useRef(null);
+  useEffect(() => {
+    if (!hydrated) return;
+    const ids = unlockedTrophies(stats, prs, level).map((t) => t.id);
+    if (trophyRef.current === null) { trophyRef.current = ids; return; }   // baseline al primo caricamento
+    const fresh = TROPHIES.filter((t) => ids.includes(t.id) && !trophyRef.current.includes(t.id));
+    trophyRef.current = ids;
+    fresh.forEach((t, i) =>
+      setTimeout(() => fireToast({ title: tr("◈ TROFEO SBLOCCATO"), sub: t.name, color: RARITY[t.rarity].color }), 900 * (i + 1)));
+  }, [stats, prs, level, hydrated]);
 
   const need = xpForLevel(level);
   const rank = LEVEL_TITLES[Math.min(4, Math.floor(level / 6))];
