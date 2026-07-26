@@ -1211,7 +1211,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
         {selTrophy && (
           <div className="modal-back" onClick={() => setSelTrophy(null)} style={{ zIndex: 60 }}>
             <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 720, width: "96vw", maxHeight: "96vh", overflow: "hidden", display: "flex", flexDirection: "column", padding: "22px 24px" }}>
+              style={{ maxWidth: "min(980px, 96vw)", width: "96vw", maxHeight: "96vh", overflow: "hidden", display: "flex", flexDirection: "column", padding: "22px 24px" }}>
               <div className="row between">
                 <div className="f-hud" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13, color: RARITY[selTrophy.rarity].color }}>
                   {selTrophy.name.toUpperCase()}
@@ -1224,7 +1224,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
                 border: `1px solid ${RARITY[selTrophy.rarity].border}`, color: RARITY[selTrophy.rarity].color,
               }}>{RARITY[selTrophy.rarity].label}</span>
 
-              <div className="cham-s" style={{ height: "min(440px, 48vh)", flexShrink: 0, marginTop: 12, background: "radial-gradient(ellipse at center, #0b1c2c 0%, #060f18 70%)", border: "1px solid #0e2233", overflow: "hidden" }}>
+              <div className="cham-s" style={{ height: "min(520px, 55vh)", flexShrink: 0, marginTop: 12, background: "radial-gradient(ellipse at center, #0b1c2c 0%, #060f18 70%)", border: "1px solid #0e2233", overflow: "hidden" }}>
                 <React.Suspense fallback={<div className="row" style={{ justifyContent: "center", height: "100%", alignItems: "center" }}><Loader2 className="spin" size={22} color="#57c8f2" /></div>}>
                   <Trophy3D model={selTrophy.model} glow={RARITY[selTrophy.rarity].color} />
                 </React.Suspense>

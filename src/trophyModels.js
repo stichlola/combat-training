@@ -461,47 +461,136 @@ function drawRecruitFace(ctx, s) {
 }
 
 
-/* Scouter da ricognizione: archetto auricolare + lente verde traslucida */
-function buildScouter({ glow = ECO_GREEN } = {}) {
+/* Scouter tattico (modello di riferimento del committente):
+   unità auricolare massiccia verde militare con prese d'aria e viti,
+   braccio snodato, grande lente rossa traslucida con HUD arancione. */
+function roundedRectShape(w, h, r) {
+  const s = new THREE.Shape();
+  const x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
+/* Texture HUD arancione per la lente (stile display tattico) */
+function scouterHudTexture() {
+  return canvasTexture(1024, (ctx, s) => {
+    const W = 1024, H = 620;
+    ctx.clearRect(0, 0, W, H);
+    const O = "#ff8a2a";
+    ctx.strokeStyle = O;
+    ctx.fillStyle = O;
+    ctx.shadowColor = O;
+    ctx.shadowBlur = 14;
+    // staffe angolari
+    ctx.lineWidth = 10;
+    const B = 60, L = 90;
+    for (const [cx, cy, sx, sy] of [[B, B, 1, 1], [W - B, B, -1, 1], [B, H - B, 1, -1], [W - B, H - B, -1, -1]]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + sx * L, cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + sy * L);
+      ctx.stroke();
+    }
+    // reticolo centrale: cerchio + crociera
+    const cx = 400, cy = 300;
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(cx, cy, 95, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 140, cy); ctx.lineTo(cx - 105, cy);
+    ctx.moveTo(cx + 105, cy); ctx.lineTo(cx + 140, cy);
+    ctx.moveTo(cx, cy - 140); ctx.lineTo(cx, cy - 105);
+    ctx.moveTo(cx, cy + 105); ctx.lineTo(cx, cy + 140);
+    ctx.stroke();
+    // frecce che puntano al reticolo
+    const tri = (x, y, a) => {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+      ctx.beginPath(); ctx.moveTo(0, -26); ctx.lineTo(20, 14); ctx.lineTo(-20, 14); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    };
+    tri(cx, cy - 165, 0); tri(cx, cy + 165, Math.PI);
+    tri(cx - 165, cy, -Math.PI / 2); tri(cx + 165, cy, Math.PI / 2);
+    // grafico a barre (destra)
+    const bars = [70, 120, 95, 160, 135, 200, 110];
+    bars.forEach((h, i) => ctx.fillRect(650 + i * 42, 420 - h, 30, h));
+    ctx.lineWidth = 5;
+    ctx.strokeRect(640, 190, 310, 240);
+    // secondo grafico (basso-sinistra)
+    [50, 90, 65, 110, 80].forEach((h, i) => ctx.fillRect(90 + i * 38, 560 - h, 26, h));
+    // marcatori testo
+    ctx.font = "700 30px monospace";
+    ctx.fillText("PWR", 660, 160);
+    ctx.font = "600 24px monospace";
+    ctx.fillText("◈ GYMQUEST · PROPERTY OF D.S.", 90, 80);
+  });
+}
+
+function buildScouter() {
   const g = new THREE.Group();
-  const shell = metal(0x2e3a44, 0.35, 0.8);
-  // archetto che gira intorno alla testa
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.09, 14, 48, Math.PI * 1.25), shell);
-  band.rotation.z = Math.PI * 0.875;
-  g.add(band);
-  // modulo auricolare
-  const ear = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.52, 0.24), shell);
-  ear.position.set(-0.88, -0.42, 0);
-  ear.rotation.z = 0.15;
+  const olive = metal(0x4d5545, 0.5, 0.45);      // verde militare
+  const dark = metal(0x23282c, 0.45, 0.6);       // parti scure
+
+  // --- unità auricolare: blocco arrotondato massiccio ---
+  const earGeo = new THREE.ExtrudeGeometry(roundedRectShape(1.05, 1.5, 0.3),
+    { depth: 0.42, bevelEnabled: true, bevelSize: 0.07, bevelThickness: 0.07, bevelSegments: 3 });
+  const ear = new THREE.Mesh(earGeo, olive);
+  ear.position.set(0.72, 0, -0.21);
   g.add(ear);
-  const earBtn = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.07, 0.07, 0.06, 16),
-    new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff2222, emissiveIntensity: 1.2 })
-  );
-  earBtn.rotation.x = Math.PI / 2;
-  earBtn.position.set(-0.88, -0.28, 0.15);
-  g.add(earBtn);
-  // braccetto della lente
-  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.55, 12), shell);
-  arm.rotation.z = -0.9;
-  arm.position.set(-0.55, -0.42, 0.18);
+  // imbottitura interna
+  const pad = new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRectShape(0.8, 1.25, 0.28),
+    { depth: 0.08, bevelEnabled: false }), dark);
+  pad.position.set(0.72, 0, -0.28);
+  g.add(pad);
+  // prese d'aria sul fianco
+  for (let i = 0; i < 5; i++) {
+    const vent = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.72, 0.06), dark);
+    vent.position.set(0.44 + i * 0.14, -0.1, 0.27);
+    g.add(vent);
+  }
+  // viti agli angoli
+  for (const [vx, vy] of [[0.32, 0.58], [1.12, 0.58], [0.32, -0.58], [1.12, -0.58]]) {
+    const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.05, 12), dark);
+    screw.rotation.x = Math.PI / 2;
+    screw.position.set(vx, vy, 0.28);
+    g.add(screw);
+  }
+  // fascia sopra la testa (arco che parte dall'unità auricolare)
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.09, 14, 48, Math.PI), dark);
+  band.position.set(0.42, 0.62, 0);
+  g.add(band);
+  // --- braccio snodato verso la lente ---
+  const hinge = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 20), dark);
+  hinge.rotation.x = Math.PI / 2;
+  hinge.position.set(0.28, -0.45, 0.3);
+  g.add(hinge);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.14), olive);
+  arm.position.set(-0.05, -0.45, 0.32);
   g.add(arm);
-  // montatura lente
-  const frame = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.05, 12, 40), shell);
-  frame.position.set(-0.28, -0.62, 0.3);
-  g.add(frame);
-  // lente verde traslucida luminosa
-  const lens = new THREE.Mesh(
-    new THREE.CircleGeometry(0.28, 40),
-    new THREE.MeshStandardMaterial({
-      color: glow, emissive: glow, emissiveIntensity: 0.9,
-      transparent: true, opacity: 0.55, side: THREE.DoubleSide, roughness: 0.1,
-    })
-  );
-  lens.position.set(-0.28, -0.62, 0.3);
-  g.add(lens);
-  const l = new THREE.PointLight(glow, 6, 4);
-  l.position.set(-0.3, -0.6, 0.8);
+  // --- grande lente rossa traslucida ---
+  const lensGeo = new THREE.ExtrudeGeometry(roundedRectShape(1.85, 1.12, 0.18),
+    { depth: 0.05, bevelEnabled: false });
+  const glass = new THREE.Mesh(lensGeo, new THREE.MeshStandardMaterial({
+    color: 0xff2a12, transparent: true, opacity: 0.32, roughness: 0.12, metalness: 0.1,
+    emissive: 0xcc1800, emissiveIntensity: 0.35, side: THREE.DoubleSide,
+  }));
+  glass.position.set(-0.75, -0.42, 0.34);
+  g.add(glass);
+  // cornice inferiore della lente
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.12, 0.14), olive);
+  lip.position.set(-0.75, -1.04, 0.36);
+  g.add(lip);
+  // display HUD arancione sulla lente
+  const hudMat = new THREE.MeshBasicMaterial({ map: scouterHudTexture(), transparent: true, depthWrite: false });
+  const hud = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.03), hudMat);
+  hud.position.set(-0.75, -0.42, 0.42);
+  g.add(hud);
+  // luce arancione del display
+  const l = new THREE.PointLight(0xff6a1a, 7, 4);
+  l.position.set(-0.75, -0.4, 0.9);
   g.add(l);
   return g;
 }
@@ -509,7 +598,7 @@ function buildScouter({ glow = ECO_GREEN } = {}) {
 /* Mappa id trofeo → builder del modello (importata dal visore lazy) */
 export const MODEL_BUILDERS = {
   recruit: () => buildMedal({ face: drawRecruitFace, metalColor: GOLD, coreGlow: ECO_GREEN }),
-  scouter: () => buildScouter({ glow: ECO_GREEN }),
+  scouter: () => buildScouter(),
   firstw: () => buildDumbbell({ color: BRONZE }),
   orb5: () => buildPrecursorOrb({ glow: ECO_GREEN }),
   crystal10: () => buildEcoCrystal({ glow: ECO_GREEN }),
