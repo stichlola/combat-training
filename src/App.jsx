@@ -17,6 +17,59 @@ const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en"
 const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
+  "▸ Componi il pasto": "▸ Build your meal",
+  "PASTI CONSIGLIATI": "SUGGESTED MEALS", "COMPONI TU": "BUILD YOUR OWN",
+  "KCAL SELEZIONATE": "KCAL SELECTED", "Svuota": "Clear",
+  "▸ Il tuo piatto": "▸ Your plate",
+  "Nessun alimento. Scegli dalle categorie e compone il pasto come preferisci.": "No food yet. Pick from the categories and build your meal however you like.",
+  "Genera o importa un piano per vedere i target di riferimento.": "Generate or import a plan to see your reference targets.",
+  "PORZIONE STANDARD": "STANDARD PORTION",
+  "proteine": "protein", "carboidrati": "carbs", "grassi": "fat",
+  "Valori medi indicativi per 100 g di prodotto crudo.": "Average indicative values per 100 g of raw product.",
+  "Fibre e verdure": "Fibre and vegetables", "Snack e post-workout": "Snacks and post-workout",
+  "Petto di pollo": "Chicken breast", "Tacchino (fesa)": "Turkey breast", "Manzo magro": "Lean beef",
+  "Merluzzo": "Cod", "Salmone": "Salmon", "Tonno al naturale": "Tuna in water",
+  "Uova intere": "Whole eggs", "Albume": "Egg white", "Skyr / Greco 0%": "Skyr / Greek 0%",
+  "Fiocchi di latte": "Cottage cheese", "Whey in polvere": "Whey powder", "Tofu": "Tofu",
+  "Tempeh": "Tempeh", "Lenticchie secche": "Dry lentils", "Seitan": "Seitan",
+  "Riso bianco": "White rice", "Riso basmati": "Basmati rice", "Pasta di semola": "Durum wheat pasta",
+  "Patate": "Potatoes", "Patate dolci": "Sweet potatoes", "Avena": "Oats",
+  "Pane integrale": "Wholemeal bread", "Couscous": "Couscous", "Quinoa": "Quinoa",
+  "Gallette di riso": "Rice cakes", "Banana": "Banana", "Mela": "Apple", "Frutti di bosco": "Berries",
+  "Olio EVO": "Olive oil", "Mandorle": "Almonds", "Noci": "Walnuts", "Arachidi": "Peanuts",
+  "Burro d'arachidi": "Peanut butter", "Avocado": "Avocado", "Semi di chia": "Chia seeds",
+  "Parmigiano": "Parmesan", "Cioccolato fondente 85%": "Dark chocolate 85%",
+  "Broccoli": "Broccoli", "Spinaci": "Spinach", "Zucchine": "Courgettes",
+  "Insalata mista": "Mixed salad", "Pomodori": "Tomatoes", "Peperoni": "Peppers",
+  "Carote": "Carrots", "Melanzane": "Aubergines", "Funghi": "Mushrooms",
+  "Barretta proteica": "Protein bar", "Whey + acqua": "Whey + water",
+  "Yogurt greco + miele": "Greek yogurt + honey", "Gallette + bresaola": "Rice cakes + bresaola",
+  "Frullato banana + whey": "Banana + whey shake", "Maltodestrine": "Maltodextrin",
+  "Riso + tonno": "Rice + tuna", "Toast integrale + albumi": "Wholemeal toast + egg whites",
+  "OPZIONI · RUOTANO OGNI GIORNO": "OPTIONS · THEY ROTATE DAILY",
+  "OPZIONE": "OPTION", "opzioni": "options", "MODIFICA": "EDIT",
+  "Alimento": "Food", "Quantità": "Amount", "ALIMENTO": "FOOD",
+  "Elimina opzione": "Delete option",
+  "Nessun alimento — tocca per aggiungerne": "No food yet — tap to add some",
+  "◈ PASTO AGGIORNATO": "◈ MEAL UPDATED",
+  "VERRANNO APPLICATE ALLA PROSSIMA RIGENERAZIONE": "APPLIED ON THE NEXT REGENERATION",
+  "Importa piano nutrizionale": "Import nutrition plan",
+  "IMPORTA PIANO NUTRIZIONALE": "IMPORT NUTRITION PLAN",
+  "Carica il piano del tuo nutrizionista (PDF, foto, testo) — l'AI lo converte": "Upload your nutritionist's plan (PDF, photo, text) — AI converts it",
+  "CARICA PIANO ALIMENTARE": "UPLOAD MEAL PLAN",
+  "Incolla qui il tuo piano alimentare...": "Paste your meal plan here...",
+  "PASTI RILEVATI": "MEALS DETECTED",
+  "Salva piano ✓": "Save plan ✓",
+  "◈ PIANO IMPORTATO": "◈ PLAN IMPORTED",
+  "Preferenze alimentari": "Dietary preferences",
+  "opzionale": "optional",
+  "Es. vegetariano, niente lattosio, digiuno intermittente 16:8 con 2 pasti, allergia alle noci...": "E.g. vegetarian, lactose-free, 16:8 intermittent fasting with 2 meals, nut allergy...",
+  "TARGET MODIFICATI": "TARGETS CHANGED",
+  "I pasti mostrati sono ancora quelli dei target precedenti. Rigenerali per allinearli ai nuovi valori.": "The meals shown still match the previous targets. Regenerate them to align with the new values.",
+  "↻ Rigenera pasti sui nuovi target": "↻ Regenerate meals on new targets",
+  "↻ Rigenera pasti (stessi target)": "↻ Regenerate meals (same targets)",
+  "Rigenerazione...": "Regenerating...",
+  "⤓ Importa un altro piano": "⤓ Import another plan",
   "GENERA SCHEDA CON AI": "GENERATE ROUTINE WITH AI",
   "Crea un allenamento su misura per obiettivo, giorni e attrezzatura": "Build a workout tailored to your goal, days and equipment",
   "Generazione scheda AI": "AI routine generation",
@@ -3452,16 +3505,481 @@ function MacroBar({ label, grams, kcalPerG, totalKcal, color }) {
   );
 }
 
+
+
+
+/* ================================ COMPONI PASTO ================================ */
+/* Modalità "pick & place": niente pasti preconfezionati, ma fonti divise per
+   categoria con la grammatura già calcolata per una porzione standard.
+   Macro per 100 g di prodotto (crudo salvo diverso indicato). */
+const FOOD_DB = {
+  Proteine: [
+    { n: "Petto di pollo", p: 23, c: 0, f: 2 },
+    { n: "Tacchino (fesa)", p: 24, c: 0, f: 1 },
+    { n: "Manzo magro", p: 21, c: 0, f: 5 },
+    { n: "Merluzzo", p: 18, c: 0, f: 1 },
+    { n: "Salmone", p: 20, c: 0, f: 13 },
+    { n: "Tonno al naturale", p: 25, c: 0, f: 1 },
+    { n: "Uova intere", p: 13, c: 1, f: 11 },
+    { n: "Albume", p: 11, c: 1, f: 0 },
+    { n: "Skyr / Greco 0%", p: 10, c: 4, f: 0 },
+    { n: "Fiocchi di latte", p: 12, c: 3, f: 4 },
+    { n: "Whey in polvere", p: 78, c: 8, f: 6 },
+    { n: "Tofu", p: 12, c: 2, f: 7 },
+    { n: "Tempeh", p: 19, c: 9, f: 11 },
+    { n: "Lenticchie secche", p: 25, c: 50, f: 1 },
+    { n: "Seitan", p: 24, c: 14, f: 2 },
+  ],
+  Carboidrati: [
+    { n: "Riso bianco", p: 7, c: 78, f: 1 },
+    { n: "Riso basmati", p: 8, c: 77, f: 1 },
+    { n: "Pasta di semola", p: 12, c: 72, f: 2 },
+    { n: "Patate", p: 2, c: 17, f: 0 },
+    { n: "Patate dolci", p: 2, c: 20, f: 0 },
+    { n: "Avena", p: 13, c: 62, f: 7 },
+    { n: "Pane integrale", p: 9, c: 45, f: 3 },
+    { n: "Couscous", p: 12, c: 72, f: 1 },
+    { n: "Quinoa", p: 14, c: 64, f: 6 },
+    { n: "Gallette di riso", p: 8, c: 81, f: 3 },
+    { n: "Banana", p: 1, c: 23, f: 0 },
+    { n: "Mela", p: 0, c: 14, f: 0 },
+    { n: "Frutti di bosco", p: 1, c: 8, f: 0 },
+  ],
+  Grassi: [
+    { n: "Olio EVO", p: 0, c: 0, f: 100 },
+    { n: "Mandorle", p: 21, c: 9, f: 50 },
+    { n: "Noci", p: 15, c: 7, f: 65 },
+    { n: "Arachidi", p: 26, c: 16, f: 49 },
+    { n: "Burro d'arachidi", p: 25, c: 20, f: 50 },
+    { n: "Avocado", p: 2, c: 9, f: 15 },
+    { n: "Semi di chia", p: 17, c: 42, f: 31 },
+    { n: "Parmigiano", p: 33, c: 0, f: 29 },
+    { n: "Cioccolato fondente 85%", p: 10, c: 22, f: 46 },
+  ],
+  "Fibre e verdure": [
+    { n: "Broccoli", p: 3, c: 7, f: 0 },
+    { n: "Spinaci", p: 3, c: 4, f: 0 },
+    { n: "Zucchine", p: 1, c: 3, f: 0 },
+    { n: "Insalata mista", p: 1, c: 3, f: 0 },
+    { n: "Pomodori", p: 1, c: 4, f: 0 },
+    { n: "Peperoni", p: 1, c: 6, f: 0 },
+    { n: "Carote", p: 1, c: 10, f: 0 },
+    { n: "Melanzane", p: 1, c: 6, f: 0 },
+    { n: "Funghi", p: 3, c: 3, f: 0 },
+  ],
+  "Snack e post-workout": [
+    { n: "Barretta proteica", p: 33, c: 40, f: 13 },
+    { n: "Whey + acqua", p: 78, c: 8, f: 6 },
+    { n: "Yogurt greco + miele", p: 8, c: 18, f: 0 },
+    { n: "Gallette + bresaola", p: 22, c: 45, f: 4 },
+    { n: "Frullato banana + whey", p: 20, c: 30, f: 2 },
+    { n: "Maltodestrine", p: 0, c: 95, f: 0 },
+    { n: "Riso + tonno", p: 16, c: 40, f: 2 },
+    { n: "Toast integrale + albumi", p: 14, c: 40, f: 3 },
+  ],
+};
+
+/* macro-guida di una porzione standard per categoria */
+const PORTION_RULE = {
+  Proteine: { macro: "p", target: 25 },
+  Carboidrati: { macro: "c", target: 40 },
+  Grassi: { macro: "f", target: 10 },
+  "Fibre e verdure": { macro: "c", target: 8 },
+  "Snack e post-workout": { macro: "p", target: 20 },
+};
+const kcalOf = (m) => Math.round(m.p * 4 + m.c * 4 + m.f * 9);
+/* grammi che forniscono la quota-macro della porzione (arrotondati a 5 g) */
+const portionGrams = (food, cat) => {
+  const rule = PORTION_RULE[cat];
+  const per100 = food[rule.macro];
+  if (!per100) return 100;
+  return Math.max(5, Math.round((rule.target * 100 / per100) / 5) * 5);
+};
+const macrosFor = (food, grams) => ({
+  p: (food.p * grams) / 100, c: (food.c * grams) / 100, f: (food.f * grams) / 100,
+});
+
+function NutriSubTabs({ value, onChange }) {
+  return (
+    <div className="row g6">
+      {[["plan", tr("PASTI CONSIGLIATI")], ["compose", tr("COMPONI TU")]].map(([k, l]) => (
+        <button key={k} onClick={() => onChange(k)}
+          className={`tap cham-s chip ${value === k ? "chip-on" : ""}`}
+          style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "8px 0", fontSize: 10 }}>
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ComposeTab({ targets, plate, setPlate }) {
+  const [open, setOpen] = useState("Proteine");
+  const items = plate || [];
+
+  const tot = items.reduce((a, it) => {
+    const m = macrosFor(it.food, it.grams);
+    return { p: a.p + m.p, c: a.c + m.c, f: a.f + m.f };
+  }, { p: 0, c: 0, f: 0 });
+  const totKcal = kcalOf(tot);
+
+  const add = (food, cat) => setPlate([...items, { food, cat, grams: portionGrams(food, cat), id: Date.now() + Math.random() }]);
+  const del = (id) => setPlate(items.filter((i) => i.id !== id));
+  const setG = (id, g) => setPlate(items.map((i) => i.id !== id ? i : { ...i, grams: Math.max(0, Number(g) || 0) }));
+
+  const Bar = ({ label, cur, goal, color }) => {
+    const pct = goal ? Math.min(100, (cur / goal) * 100) : 0;
+    const over = goal && cur > goal * 1.05;
+    return (
+      <div style={{ marginBottom: 8 }}>
+        <div className="row between tiny" style={{ marginBottom: 3 }}>
+          <span className="t-dim">{label}</span>
+          <span className={over ? "t-amber" : "t-bright"}>{Math.round(cur)} / {goal} g</span>
+        </div>
+        <div className="cham-s" style={{ height: 6, background: "#0e2233", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: over ? "#ffd76a" : color, transition: "width .3s" }} />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fade-in two-col">
+      {/* SINISTRA: il piatto */}
+      <div className="col stack">
+        <Panel accent>
+          <div className="row between" style={{ marginBottom: 10 }}>
+            <div>
+              <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 24 }}>{totKcal}</div>
+              <div className="micro">{tr("KCAL SELEZIONATE")} {targets ? `/ ${targets.kcal}` : ""}</div>
+            </div>
+            {items.length > 0 && <Btn small onClick={() => setPlate([])}>{tr("Svuota")}</Btn>}
+          </div>
+          {targets && (
+            <>
+              <Bar label={tr("Proteine")} cur={tot.p} goal={targets.p} color="#57c8f2" />
+              <Bar label={tr("Carboidrati")} cur={tot.c} goal={targets.c} color="#9be8ff" />
+              <Bar label={tr("Grassi")} cur={tot.f} goal={targets.f} color="#ffd76a" />
+            </>
+          )}
+          {!targets && <div className="tiny t-faint">{tr("Genera o importa un piano per vedere i target di riferimento.")}</div>}
+        </Panel>
+
+        <Panel>
+          <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Il tuo piatto")}</div>
+          {items.length === 0 && (
+            <div className="tiny t-faint" style={{ padding: "8px 0" }}>
+              {tr("Nessun alimento. Scegli dalle categorie e compone il pasto come preferisci.")}
+            </div>
+          )}
+          {items.map((it) => {
+            const m = macrosFor(it.food, it.grams);
+            return (
+              <div key={it.id} className="row g8" style={{ padding: "7px 0", borderBottom: "1px solid #0a1826", alignItems: "center" }}>
+                <div className="grow">
+                  <div style={{ fontSize: 14 }}>{it.food.n}</div>
+                  <div className="micro t-faint">
+                    P {Math.round(m.p)} · C {Math.round(m.c)} · G {Math.round(m.f)} · {kcalOf(m)} kcal
+                  </div>
+                </div>
+                <input className="hud-input cham-s" type="number" inputMode="numeric" value={it.grams}
+                  onChange={(e) => setG(it.id, e.target.value)}
+                  style={{ width: 68, textAlign: "center", padding: "6px 4px", fontSize: 13 }} />
+                <span className="micro">g</span>
+                <span onClick={() => del(it.id)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={14} /></span>
+              </div>
+            );
+          })}
+        </Panel>
+      </div>
+
+      {/* DESTRA: le fonti */}
+      <div className="col stack">
+        {Object.entries(FOOD_DB).map(([cat, list]) => (
+          <Panel key={cat} style={{ padding: 12 }}>
+            <button onClick={() => setOpen(open === cat ? null : cat)} className="tap row between"
+              style={{ width: "100%", cursor: "pointer" }}>
+              <span className="f-hud t-cyan" style={{ fontSize: 11, letterSpacing: ".2em", fontWeight: 700 }}>{tr(cat).toUpperCase()}</span>
+              <span className="tiny t-faint">{list.length} {open === cat ? "▾" : "▸"}</span>
+            </button>
+            {open === cat && (
+              <div className="fade-in" style={{ marginTop: 10 }}>
+                <div className="micro t-faint" style={{ marginBottom: 8 }}>
+                  {tr("PORZIONE STANDARD")}: ~{PORTION_RULE[cat].target}g {tr(PORTION_RULE[cat].macro === "p" ? "proteine" : PORTION_RULE[cat].macro === "c" ? "carboidrati" : "grassi")}
+                </div>
+                {list.map((f) => {
+                  const g = portionGrams(f, cat);
+                  const m = macrosFor(f, g);
+                  return (
+                    <button key={f.n} onClick={() => add(f, cat)} className="tap row between g8"
+                      style={{ width: "100%", cursor: "pointer", padding: "8px 0", borderBottom: "1px solid #0a1826", textAlign: "left" }}>
+                      <div className="grow">
+                        <div className="t-bright" style={{ fontSize: 14 }}>{tr(f.n)}</div>
+                        <div className="micro t-faint">P {Math.round(m.p)} · C {Math.round(m.c)} · G {Math.round(m.f)}</div>
+                      </div>
+                      <div className="row g8" style={{ alignItems: "center", flexShrink: 0 }}>
+                        <span className="f-hud t-cyan" style={{ fontSize: 13, fontWeight: 700 }}>{g}g</span>
+                        <span className="t-faint" style={{ fontSize: 15 }}>＋</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Panel>
+        ))}
+        <div className="micro">{tr("Valori medi indicativi per 100 g di prodotto crudo.")}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Opzioni pasto: rotazione giornaliera + editor ---------------- */
+/* Struttura: meals["Pranzo"] = [ [cibo,...], [cibo,...] ]  (una lista per opzione).
+   I piani vecchi con una sola lista piatta vengono normalizzati automaticamente. */
+const asOptions = (v) =>
+  Array.isArray(v) && v.length && Array.isArray(v[0]) ? v : [Array.isArray(v) ? v : []];
+/* indice del giorno: fa ruotare le opzioni senza salvare nulla */
+const dayIndex = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
+const optionForToday = (opts, offset = 0) => opts[(dayIndex() + offset) % opts.length] || [];
+
+function MealEditor({ meal, options, todayIdx, onClose, onSave }) {
+  const [opts, setOpts] = useState(() => JSON.parse(JSON.stringify(options)));
+  const [sel, setSel] = useState(todayIdx);
+
+  const upd = (oi, fi, field, val) => setOpts((o) =>
+    o.map((opt, i) => i !== oi ? opt : opt.map((f, j) => j !== fi ? f : { ...f, [field]: val })));
+  const addFood = (oi) => setOpts((o) => o.map((opt, i) => i !== oi ? opt : [...opt, { nome: "", q: "" }]));
+  const delFood = (oi, fi) => setOpts((o) => o.map((opt, i) => i !== oi ? opt : opt.filter((_, j) => j !== fi)));
+  const addOpt = () => { setOpts((o) => [...o, [{ nome: "", q: "" }]]); setSel(opts.length); };
+  const delOpt = (oi) => {
+    if (opts.length <= 1) return;
+    setOpts((o) => o.filter((_, i) => i !== oi));
+    setSel((s) => (s >= opts.length - 1 ? opts.length - 2 : s));
+  };
+
+  return (
+    <Overlay>
+    <div className="modal-back" onClick={onClose}>
+      <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="row between" style={{ marginBottom: 2 }}>
+          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>◈ {meal.toUpperCase()}</div>
+          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
+        </div>
+        <div className="tiny t-faint" style={{ marginBottom: 12 }}>
+          {opts.length} {tr("OPZIONI · RUOTANO OGNI GIORNO")}
+        </div>
+
+        {/* selettore opzioni */}
+        <div className="row wrap g6" style={{ marginBottom: 14 }}>
+          {opts.map((_, i) => (
+            <button key={i} onClick={() => setSel(i)}
+              className={`tap cham-s chip ${sel === i ? "chip-on" : ""}`}
+              style={{ cursor: "pointer", padding: "6px 12px", fontSize: 11 }}>
+              {tr("OPZIONE")} {i + 1}{i === todayIdx ? " ★" : ""}
+            </button>
+          ))}
+          <button onClick={addOpt} className="tap cham-s chip" style={{ cursor: "pointer", padding: "6px 12px", fontSize: 11 }}>＋</button>
+        </div>
+
+        {/* alimenti dell'opzione selezionata */}
+        {(opts[sel] || []).map((f, fi) => (
+          <div key={fi} className="row g6" style={{ marginBottom: 6, alignItems: "center" }}>
+            <input className="hud-input cham-s" value={f.nome} onChange={(e) => upd(sel, fi, "nome", e.target.value)}
+              placeholder={tr("Alimento")} style={{ flex: 2, fontSize: 13, padding: "7px 8px" }} />
+            <input className="hud-input cham-s" value={f.q} onChange={(e) => upd(sel, fi, "q", e.target.value)}
+              placeholder={tr("Quantità")} style={{ flex: 1, fontSize: 13, padding: "7px 8px", textAlign: "center" }} />
+            <span onClick={() => delFood(sel, fi)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={14} /></span>
+          </div>
+        ))}
+        <button onClick={() => addFood(sel)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>＋ {tr("ALIMENTO")}</button>
+
+        <div className="row g8" style={{ marginTop: 16 }}>
+          {opts.length > 1 && (
+            <Btn small onClick={() => delOpt(sel)} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>
+              {tr("Elimina opzione")}
+            </Btn>
+          )}
+          <Btn small primary onClick={() => onSave(opts.map((o) => o.filter((f) => f.nome.trim())))} style={{ flex: 2 }}>
+            {tr("Salva ✓")}
+          </Btn>
+        </div>
+      </div>
+    </div>
+    </Overlay>
+  );
+}
+
+/* ---------------- Import piano nutrizionale (AI) ---------------- */
+function NutriImport({ premium, body, onClose, onSave }) {
+  const [file, setFile] = useState(null);
+  const [drag, setDrag] = useState(false);
+  const [pasted, setPasted] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+  const inputRef = useRef(null);
+
+  const interpret = async () => {
+    setLoading(true); setError(null);
+    try {
+      let content;
+      const prompt = `Il documento/testo sopra è un piano alimentare scritto da un nutrizionista o dall'utente (formato libero).
+Interpretalo e convertilo in JSON. Rispondi SOLO con JSON valido, senza markdown né backtick.
+Schema: {"targets":{"kcal":number,"p":number,"c":number,"f":number},"meals":{"NomePasto":[[{"nome":string,"q":string}]]}}
+Ogni pasto è un ARRAY DI OPZIONI: se il documento propone alternative per lo stesso pasto, mettile come opzioni separate; altrimenti usa un'unica opzione.
+REGOLE:
+- Usa ESATTAMENTE i pasti presenti nel documento, con i loro nomi (es. "Colazione", "Pranzo", "Spuntino", "Cena"). Se il piano prevede il digiuno intermittente e ha solo 2 pasti, restituisci solo quei 2.
+- Se i valori di kcal o macro non sono indicati, stimali dagli alimenti elencati.
+- "q" è la quantità come scritta nel documento (es. "80g", "2 uova", "1 tazza").`;
+
+      if (file) {
+        const b64 = await new Promise((ok, ko) => {
+          const r = new FileReader();
+          r.onload = () => ok(r.result.split(",")[1]);
+          r.onerror = () => ko(new Error("Lettura file fallita"));
+          r.readAsDataURL(file);
+        });
+        const isPdf = file.type === "application/pdf";
+        const isImg = (file.type || "").startsWith("image/");
+        const block = isPdf
+          ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
+          : isImg
+          ? { type: "image", source: { type: "base64", media_type: file.type, data: b64 } }
+          : { type: "text", text: atob(b64) };
+        content = [block, { type: "text", text: prompt }];
+      } else {
+        content = [{ type: "text", text: pasted }, { type: "text", text: prompt }];
+      }
+
+      const data = await aiCall({
+        model: "claude-haiku-4-5-20251001", max_tokens: 1500,
+        messages: [{ role: "user", content }],
+      }, "nutrition");
+
+      if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error(tr("Limite settimanale raggiunto")); }
+      if (data.error) throw new Error(typeof data.error === "string" ? data.error : (data.error.message || "Errore API"));
+
+      const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+      const m = text.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(m ? m[0] : text);
+      const tg = parsed.targets || {};
+      setResult({
+        targets: {
+          kcal: Number(tg.kcal) || 0, p: Number(tg.p) || 0,
+          c: Number(tg.c) || 0, f: Number(tg.f) || 0,
+        },
+        meals: Object.fromEntries(Object.entries(parsed.meals && typeof parsed.meals === "object" ? parsed.meals : {}).map(([k, v]) => [k, asOptions(v)])),
+      });
+    } catch (e) {
+      setError(e.message || "Errore");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fade-in stack" style={{ maxWidth: 560 }}>
+      <div className="row between">
+        <Btn small onClick={onClose}>{tr("‹ Annulla")}</Btn>
+        <span className="hud-title">{tr("Importa piano nutrizionale")}</span>
+        <span style={{ width: 60 }} />
+      </div>
+
+      {!result && (
+        <>
+          <Panel accent>
+            <input ref={inputRef} type="file" accept=".pdf,image/*,.txt,.md,.csv" style={{ display: "none" }}
+              onChange={(e) => setFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)} />
+            <button onClick={() => inputRef.current && inputRef.current.click()}
+              onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) setFile(f); }}
+              className="tap cham"
+              style={{ width: "100%", padding: "32px 16px", cursor: "pointer",
+                border: `1px dashed ${drag ? "#57c8f2" : "#2f6786"}`,
+                background: drag ? "#0c2a3d" : "transparent", transition: "background .15s,border-color .15s",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <Utensils size={26} color="#57c8f2" />
+              <span className="f-hud t-cyan" style={{ fontSize: 12, letterSpacing: ".2em", fontWeight: 700 }}>
+                {file ? file.name.slice(0, 34) : tr("CARICA PIANO ALIMENTARE")}
+              </span>
+              <span className="tiny t-dim">
+                {file ? tr("TOCCA PER SOSTITUIRE") : tr("Trascina qui il file, oppure tocca — PDF · Foto · Testo")}
+              </span>
+            </button>
+            <div className="micro" style={{ textAlign: "center", margin: "12px 0" }}>{tr("— OPPURE —")}</div>
+            <textarea className="hud-input cham-s" value={pasted} onChange={(e) => setPasted(e.target.value)} rows={4}
+              placeholder={tr("Incolla qui il tuo piano alimentare...")}
+              style={{ resize: "none" }} />
+          </Panel>
+
+          {error && (
+            <Panel style={{ borderColor: "#6e3028", padding: 12 }}>
+              <div className="tiny t-red">⚠ {error}</div>
+            </Panel>
+          )}
+
+          <Btn primary full disabled={loading || (!file && !pasted.trim())} onClick={interpret}>
+            {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Analisi in corso...")}</span> : tr("◈ Interpreta con AI")}
+          </Btn>
+        </>
+      )}
+
+      {result && (
+        <>
+          <Panel accent>
+            <div className="row between" style={{ marginBottom: 10 }}>
+              <div>
+                <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 22 }}>{result.targets.kcal}</div>
+                <div className="micro">{tr("KCAL / GIORNO")}</div>
+              </div>
+              <div className="micro t-dim" style={{ textAlign: "right", lineHeight: 1.7 }}>
+                P {result.targets.p}g<br />C {result.targets.c}g<br />G {result.targets.f}g
+              </div>
+            </div>
+            <div className="micro t-faint">{Object.keys(result.meals).length} {tr("PASTI RILEVATI")}</div>
+          </Panel>
+
+          {Object.entries(result.meals).map(([meal, opts]) => (
+            <Panel key={meal}>
+              <div className="hud-label" style={{ marginBottom: 6 }}>▸ {meal} <span className="t-faint">({asOptions(opts).length} {tr("opzioni")})</span></div>
+              {(asOptions(opts)[0] || []).map((f, i) => (
+                <div key={i} className="divider-row">
+                  <span style={{ fontSize: 14 }}>{f.nome}</span>
+                  <span className="tiny t-dim">{f.q}</span>
+                </div>
+              ))}
+            </Panel>
+          ))}
+
+          <div className="row g8">
+            <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Riprova")}</Btn>
+            <Btn primary onClick={() => onSave(result)} style={{ flex: 2 }}>{tr("Salva piano ✓")}</Btn>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) {
   const [goal, setGoal] = useState(nutri ? nutri.goal : (body.obiettivo || "Massa"));
   const [days, setDays] = useState(nutri ? nutri.days : (body.giorniAllenamento || 3));
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
+  const [prefs, setPrefs] = useState(nutri && nutri.prefs ? nutri.prefs : "");  // preferenze / digiuno intermittente
+  const [importing, setImporting] = useState(false);
+  const [stale, setStale] = useState(false);        // target modificati ma pasti non ancora rigenerati
+  const [editMeal, setEditMeal] = useState(null);   // card pasto aperta per modifica
+  const [subTab, setSubTab] = useState("plan");     // "plan" = pasti consigliati · "compose" = pick & place
+  const [plate, setPlate] = useState(nutri && nutri.plate ? nutri.plate : []);
+  const savePlate = (p) => { setPlate(p); if (nutri) setNutri({ ...nutri, plate: p }); };
 
-  const generate = async () => {
+  const generate = async (useCurrentTargets) => {
     setLoading(true);
-    const targets = calcTargets(body, days, goal);
+    /* se i target sono stati modificati a mano, i pasti si rigenerano su QUELLI */
+    const targets = useCurrentTargets && nutri ? nutri.targets : calcTargets(body, days, goal);
     let meals = null;
     try {
       const response = await fetch("/api/ai", {
@@ -3472,8 +3990,12 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
           messages: [{
             role: "user",
             content: `Genera un piano alimentare giornaliero per palestra. Target: ${targets.kcal} kcal, ${targets.p}g proteine, ${targets.c}g carboidrati, ${targets.f}g grassi. Utente: ${body.sesso === "M" ? "uomo" : "donna"}, ${body.peso}kg, obiettivo ${goal.toLowerCase()}, si allena ${days} volte a settimana.
-Alimenti semplici da palestra (pollo, riso, avena, uova, whey, pesce...). 5 pasti: Colazione, Pranzo, Spuntino pre-workout, Post-workout, Cena.
-Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome":string,"q":string (quantità es. "80g" o "2 uova")}],...stessa struttura per gli altri 4 pasti}`,
+Alimenti semplici da palestra (pollo, riso, avena, uova, whey, pesce...).
+${prefs.trim() ? `PREFERENZE E VINCOLI DELL'UTENTE (rispettali sempre): ${prefs.trim()}` : "Nessuna preferenza particolare."}
+NUMERO PASTI: rispetta le preferenze. Se l'utente indica digiuno intermittente o una finestra alimentare, genera SOLO i pasti compatibili (anche 2 soli), distribuendo comunque tutti i macro nella finestra. Altrimenti usa 5 pasti: Colazione, Pranzo, Spuntino pre-workout, Post-workout, Cena.
+VARIETÀ: per OGNI pasto genera 3 OPZIONI alternative diverse tra loro (ingredienti diversi) ma equivalenti nei macro, così da poter ruotare i pasti nei vari giorni.
+Rispondi SOLO con JSON valido senza markdown né backtick. Ogni pasto è un ARRAY DI 3 OPZIONI, e ogni opzione è un array di alimenti:
+{"NomePasto":[[{"nome":string,"q":string (quantità es. "80g" o "2 uova")}],[...],[...]]}`,
           }],
         }),
       });
@@ -3485,7 +4007,10 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
     } catch (e) {
       meals = FALLBACK_PLAN(targets); // offline/errore: piano template scalato
     }
-    setNutri({ goal, days, targets, meals });
+    const normMeals = {};
+    for (const [k, v] of Object.entries(meals || {})) normMeals[k] = asOptions(v);
+    setNutri({ goal, days, targets, meals: normMeals, prefs });
+    setStale(false);
     setLoading(false);
     fireToast({ title: tr("◈ PIANO GENERATO"), sub: `${targets.kcal} kcal · P${targets.p} C${targets.c} G${targets.f}` });
   };
@@ -3497,9 +4022,31 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
       p: Number(draft.p) || 0, c: Number(draft.c) || 0, f: Number(draft.f) || 0,
     };
     setNutri({ ...nutri, targets: t });
+    setStale(true);   // i pasti non riflettono più i nuovi target
     setEditing(false);
     fireToast({ title: tr("◈ TARGET AGGIORNATI"), sub: `${t.kcal} kcal` });
   };
+
+  if (importing) return (
+    <NutriImport premium={premium} body={body}
+      onClose={() => setImporting(false)}
+      onSave={(r) => {
+        setNutri({ goal, days, targets: r.targets, meals: r.meals, prefs, imported: true });
+        setStale(false); setImporting(false);
+        fireToast({ title: tr("◈ PIANO IMPORTATO"), sub: `${r.targets.kcal} kcal` });
+      }} />
+  );
+
+  /* la modalità "componi" non richiede un piano: è indipendente */
+  if (subTab === "compose") return (
+    <div className="fade-in stack">
+      <div className="row between">
+        <h2 className="hud-title">{tr("▸ Componi il pasto")}</h2>
+      </div>
+      <NutriSubTabs value={subTab} onChange={setSubTab} />
+      <ComposeTab targets={nutri ? nutri.targets : null} plate={plate} setPlate={savePlate} />
+    </div>
+  );
 
   /* ---- Dati corporei mancanti: blocca la generazione ---- */
   const missingData = !body.peso || !body.altezza || !body.eta;
@@ -3524,6 +4071,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
   if (!nutri) return (
     <div className="fade-in stack" style={{ maxWidth: 560 }}>
       <h2 className="hud-title">{tr("▸ Piano nutrizionale")}</h2>
+      <NutriSubTabs value={subTab} onChange={setSubTab} />
       <Panel accent className="stack">
         <div className="tiny t-dim" style={{ lineHeight: 1.6 }}>
           L'AI calcola il tuo fabbisogno dai <span className="t-cyan">{tr("dati corporei del profilo")}</span> ({body.peso}kg · {body.altezza}cm · {body.eta} anni)
@@ -3546,10 +4094,29 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           <div className="hud-label" style={{ marginBottom: 6 }}>Allenamenti/settimana · <span className="t-cyan">{days}</span></div>
           <input type="range" min="2" max="6" value={days} onChange={(e) => setDays(Number(e.target.value))} />
         </div>
-        <Btn primary full disabled={loading} onClick={generate}>
-          {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Generazione...")}</span> : "◈ Genera piano AI"}
+        <div>
+          <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Preferenze alimentari")} <span className="t-faint">({tr("opzionale")})</span></div>
+          <textarea className="hud-input cham-s" value={prefs} onChange={(e) => setPrefs(e.target.value)} rows={3}
+            placeholder={tr("Es. vegetariano, niente lattosio, digiuno intermittente 16:8 con 2 pasti, allergia alle noci...")}
+            style={{ resize: "none", fontSize: 13 }} />
+        </div>
+        <Btn primary full disabled={loading} onClick={() => generate(false)}>
+          {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Generazione...")}</span> : tr("◈ Genera piano AI")}
         </Btn>
       </Panel>
+
+      <button onClick={() => setImporting(true)} className="tap" style={{ width: "100%", cursor: "pointer" }}>
+        <Panel accent hover>
+          <div className="row g12">
+            <Upload size={20} color="#9be8ff" />
+            <div className="grow">
+              <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("IMPORTA PIANO NUTRIZIONALE")}</div>
+              <div className="tiny t-dim">{tr("Carica il piano del tuo nutrizionista (PDF, foto, testo) — l'AI lo converte")}</div>
+            </div>
+            <ChevronRight size={16} color="#3f637c" />
+          </div>
+        </Panel>
+      </button>
     </div>
   );
 
@@ -3562,6 +4129,7 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           <h2 className="hud-title">▸ Piano — {nutri.goal}</h2>
           <Btn small onClick={() => setNutri(null)}>{tr("↻ Nuovo")}</Btn>
         </div>
+        <NutriSubTabs value={subTab} onChange={setSubTab} />
 
         <Panel accent>
           <div className="row between" style={{ marginBottom: 12 }}>
@@ -3598,25 +4166,67 @@ Rispondi SOLO con JSON valido senza markdown né backtick: {"Colazione":[{"nome"
           </div>
         </Panel>
 
-        <Btn full onClick={generate} disabled={loading}>
-          {loading ? "Rigenerazione..." : "↻ Rigenera pasti (stessi target)"}
+        {stale && (
+          <Panel accent style={{ borderColor: "#ffd76a" }}>
+            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12 }}>{tr("TARGET MODIFICATI")}</div>
+            <div className="tiny t-dim" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {tr("I pasti mostrati sono ancora quelli dei target precedenti. Rigenerali per allinearli ai nuovi valori.")}
+            </div>
+            <Btn small primary style={{ marginTop: 10 }} disabled={loading} onClick={() => generate(true)}>
+              {loading ? tr("Rigenerazione...") : tr("↻ Rigenera pasti sui nuovi target")}
+            </Btn>
+          </Panel>
+        )}
+
+        <Panel>
+          <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Preferenze alimentari")}</div>
+          <textarea className="hud-input cham-s" value={prefs} onChange={(e) => setPrefs(e.target.value)} rows={2}
+            placeholder={tr("Es. vegetariano, niente lattosio, digiuno intermittente 16:8 con 2 pasti, allergia alle noci...")}
+            style={{ resize: "none", fontSize: 13 }} />
+          <div className="micro t-faint" style={{ marginTop: 6 }}>{tr("VERRANNO APPLICATE ALLA PROSSIMA RIGENERAZIONE")}</div>
+        </Panel>
+
+        <Btn full onClick={() => generate(true)} disabled={loading}>
+          {loading ? tr("Rigenerazione...") : tr("↻ Rigenera pasti (stessi target)")}
         </Btn>
+        <Btn full onClick={() => setImporting(true)}>{tr("⤓ Importa un altro piano")}</Btn>
       </div>
 
       <div className="col stack">
-        {Object.entries(nutri.meals).map(([meal, foods]) => (
-          <Panel key={meal}>
-            <div className="hud-label" style={{ marginBottom: 6 }}>
-              {meal === "Colazione" ? "▸" : meal === "Cena" ? "▸" : "▸"} {meal}
-            </div>
-            {(Array.isArray(foods) ? foods : []).map((f, i) => (
-              <div key={i} className="divider-row">
-                <span style={{ fontSize: 14 }}>{f.nome}</span>
-                <span className="tiny t-dim">{f.q}</span>
-              </div>
-            ))}
-          </Panel>
-        ))}
+        {editMeal && (
+          <MealEditor meal={editMeal} options={asOptions(nutri.meals[editMeal])}
+            todayIdx={dayIndex() % Math.max(1, asOptions(nutri.meals[editMeal]).length)}
+            onClose={() => setEditMeal(null)}
+            onSave={(opts) => {
+              setNutri({ ...nutri, meals: { ...nutri.meals, [editMeal]: opts } });
+              setEditMeal(null);
+              fireToast({ title: tr("◈ PASTO AGGIORNATO"), sub: editMeal });
+            }} />
+        )}
+        {Object.entries(nutri.meals).map(([meal, raw]) => {
+          const opts = asOptions(raw);
+          const idx = dayIndex() % Math.max(1, opts.length);
+          const foods = opts[idx] || [];
+          return (
+            <button key={meal} onClick={() => setEditMeal(meal)} className="tap" style={{ width: "100%", cursor: "pointer", textAlign: "left" }}>
+              <Panel hover>
+                <div className="row between" style={{ marginBottom: 6 }}>
+                  <div className="hud-label">▸ {meal}</div>
+                  <span className="micro t-faint">
+                    {opts.length > 1 ? `${tr("OPZIONE")} ${idx + 1}/${opts.length} · ` : ""}{tr("MODIFICA")} ›
+                  </span>
+                </div>
+                {foods.map((f, i) => (
+                  <div key={i} className="divider-row">
+                    <span style={{ fontSize: 14 }}>{f.nome}</span>
+                    <span className="tiny t-dim">{f.q}</span>
+                  </div>
+                ))}
+                {foods.length === 0 && <div className="tiny t-faint">{tr("Nessun alimento — tocca per aggiungerne")}</div>}
+              </Panel>
+            </button>
+          );
+        })}
         <div className="micro">{tr("Il piano è indicativo: consulta un professionista per esigenze specifiche.")}</div>
       </div>
     </div>
