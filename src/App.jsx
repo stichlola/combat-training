@@ -1085,6 +1085,7 @@ function QBar({ pct, done, animate }) {
 /* ---------------- Popup Quest + Achievements ---------------- */
 function QuestModal({ quests, stats, prs, level, streak, onClose }) {
   const [tab, setTab] = useState("daily");
+  const [selTrophy, setSelTrophy] = useState(null);   // trofeo aperto nel visore 3D
   const midnight = new Date(); midnight.setHours(24, 0, 0, 0);
   const hLeft = Math.max(0, Math.round((midnight - new Date()) / 3600000));
   const achieved = ACHIEVEMENTS.filter((a) => a.check(stats, prs, level));
@@ -1222,7 +1223,9 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
               }}>{RARITY[selTrophy.rarity].label}</span>
 
               <div className="cham-s" style={{ height: 300, marginTop: 12, background: "radial-gradient(ellipse at center, #0b1c2c 0%, #060f18 70%)", border: "1px solid #0e2233", overflow: "hidden" }}>
-                <Trophy3D build={selTrophy.build} glow={RARITY[selTrophy.rarity].color} />
+                <React.Suspense fallback={<div className="row" style={{ justifyContent: "center", height: "100%", alignItems: "center" }}><Loader2 className="spin" size={22} color="#57c8f2" /></div>}>
+                  <Trophy3D model={selTrophy.model} glow={RARITY[selTrophy.rarity].color} />
+                </React.Suspense>
               </div>
               <div className="micro t-faint" style={{ textAlign: "center", marginTop: 6, letterSpacing: ".15em" }}>
                 ⟲ TRASCINA PER RUOTARE
