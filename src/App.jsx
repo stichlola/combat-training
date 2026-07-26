@@ -1822,6 +1822,16 @@ export default function App() {
       <header className="hud-header">
         <div className="hud-header-inner">
           <div className="brand">GYM<span className="t-faint">//</span>QUEST</div>
+          <button onClick={() => setTab("profile")} className="tap row g6"
+            style={{ cursor: "pointer", color: isPremium ? "#ffd76a" : tab === "profile" ? "#9be8ff" : "#7fa8bf", position: "relative", flexShrink: 0 }}>
+            <span style={{ position: "relative", display: "inline-flex" }}>
+              <User size={15} />
+              {isPremium && <span className="f-hud" style={{
+                position: "absolute", top: -6, right: -7, fontSize: 8, fontWeight: 700,
+                color: "#ffd76a", textShadow: "0 0 6px rgba(255,215,106,.8)" }}>P</span>}
+            </span>
+            <span className="f-hud hide-sm" style={{ fontSize: 11, letterSpacing: ".1em" }}>{user.username}</span>
+          </button>
           <div className="xp-wrap">
             <div className="row between" style={{ marginBottom: 4 }}>
               <span className="micro">LV.{level} <span className="t-cyan">{rank}</span></span>
@@ -1835,20 +1845,10 @@ export default function App() {
             )}
           </div>
           <div className="row g8" style={{ flexShrink: 0 }}>
-            <button onClick={() => setTab("profile")} className="tap row g6"
-              style={{ cursor: "pointer", color: isPremium ? "#ffd76a" : tab === "profile" ? "#9be8ff" : "#7fa8bf", position: "relative" }}>
-              <span style={{ position: "relative", display: "inline-flex" }}>
-                <User size={15} />
-                {isPremium && <span className="f-hud" style={{
-                  position: "absolute", top: -6, right: -7, fontSize: 8, fontWeight: 700,
-                  color: "#ffd76a", textShadow: "0 0 6px rgba(255,215,106,.8)" }}>P</span>}
-              </span>
-              <span className="f-hud hide-sm" style={{ fontSize: 11, letterSpacing: ".1em" }}>{user.username}</span>
-            </button>
             <button onClick={() => setQuestsOpen(true)} className="streak-pill cham-s tap" title={tr("Sfide e medaglie")}
-              style={{ cursor: "pointer", borderColor: "#8a6d1f", boxShadow: "0 0 10px rgba(255,215,106,.2)" }}>
-              <Medal size={14} color="#ffd76a" />
-              <span className="f-hud t-amber hide-sm" style={{ fontWeight: 700, fontSize: 11, letterSpacing: ".15em" }}>{tr("SFIDE")}</span>
+              style={{ cursor: "pointer", borderColor: "#8a6d1f", boxShadow: "0 0 10px rgba(255,215,106,.2)", padding: "8px 14px", gap: 8 }}>
+              <Medal size={18} color="#ffd76a" />
+              <span className="f-hud t-amber hide-sm" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".15em" }}>{tr("SFIDE")}</span>
             </button>
           </div>
         </div>
