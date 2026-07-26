@@ -73,3 +73,15 @@ create policy "read own usage" on public.usage
 -- nessuna policy di scrittura per gli utenti: scrive solo il serverless.
 
 alter table public.usage add column if not exists workout_n integer default 0;
+
+-- ============ CODICI DI RISCATTO (acquisto senza account) ============
+create table if not exists public.redeem_codes (
+  code text primary key,
+  product text not null,
+  order_id text,
+  used_by uuid references auth.users(id),
+  used_at timestamptz,
+  created_at timestamptz default now()
+);
+alter table public.redeem_codes enable row level security;
+-- nessuna policy: la tabella è accessibile SOLO dal serverless (service role)

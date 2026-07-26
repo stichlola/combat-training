@@ -17,6 +17,28 @@ const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en"
 const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
+  "Continua senza account ›": "Continue without an account ›",
+  "PROVA SUBITO · I DATI RESTANO SU QUESTO DISPOSITIVO": "TRY IT NOW · DATA STAYS ON THIS DEVICE",
+  "MODALITÀ OSPITE": "GUEST MODE",
+  "Dati solo su questo dispositivo · funzioni AI disattivate": "Data on this device only · AI features disabled",
+  "Crea account": "Create account",
+  "PAGAMENTO RICEVUTO": "PAYMENT RECEIVED",
+  "Conserva questo codice: crea un account quando vuoi e riscattalo dal profilo per attivare l'acquisto.": "Keep this code: create an account whenever you like and redeem it from your profile to activate your purchase.",
+  "Copia codice": "Copy code", "◈ CODICE COPIATO": "◈ CODE COPIED",
+  "Hai un codice di riscatto?": "Have a redeem code?", "Riscatta": "Redeem",
+  "Codice non valido": "Invalid code", "Codice già utilizzato": "Code already used",
+  "PIANO NUTRIZIONALE": "NUTRITION PLAN",
+  "▸ Finestra alimentare & tempistiche": "▸ Eating window & timing",
+  "▸ Il pasto che hai composto": "▸ The meal you built",
+  "Tocca un'opzione per categoria per comporre il pasto.": "Tap one option per category to build your meal.",
+  "▸ Direttive operative": "▸ Operating directives",
+  "⤓ Importa piano": "⤓ Import plan", "◈ Rigenera con AI": "◈ Regenerate with AI",
+  "PASTI GIORNALIERI": "DAILY MEALS", "FONTI E COMPOSIZIONE": "SOURCES & BUILDER",
+  "Fonti proteiche": "Protein sources", "Fonti carboidrati": "Carb sources",
+  "Grassi e fibre": "Fats and fibre", "Snack / Post-workout": "Snack / Post-workout",
+  "CATEGORIE DI FONTI": "SOURCE CATEGORIES",
+  "PIANO A FONTI INTERCAMBIABILI RILEVATO": "INTERCHANGEABLE SOURCE PLAN DETECTED",
+  "fasce orarie": "time slots",
   "▸ Componi il pasto": "▸ Build your meal",
   "PASTI CONSIGLIATI": "SUGGESTED MEALS", "COMPONI TU": "BUILD YOUR OWN",
   "KCAL SELEZIONATE": "KCAL SELECTED", "Svuota": "Clear",
@@ -1208,7 +1230,26 @@ function ResultsScreen({ results, onClose }) {
   );
 }
 
-function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
+function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast }) {
+  const [code, setCode] = useState(null);        // codice emesso per acquisto senza account
+  const [redeem, setRedeem] = useState("");
+  const [redeemMsg, setRedeemMsg] = useState(null);
+  const doRedeem = async () => {
+    setRedeemMsg(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const r = await fetch("/api/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+        body: JSON.stringify({ code: redeem }),
+      });
+      const d = await r.json();
+      if (d.premium_until) { fireToast({ title: tr("◈ PREMIUM ATTIVO") }); onUnlocked(d.premium_until); }
+      else if (d.credits != null) { fireToast({ title: tr("◈ CREDITI AGGIUNTI"), sub: `${d.credits}` }); onCredits && onCredits(d.credits); onClose(); }
+      else setRedeemMsg(d.error === "code_not_found" ? tr("Codice non valido")
+        : d.error === "code_already_used" ? tr("Codice già utilizzato") : (d.error || "Errore"));
+    } catch (e) { setRedeemMsg(e.message || "Errore"); }
+  };
   const [err, setErr] = useState(null);
   const [usage, setUsage] = useState(null);
   const [product, setProduct] = useState(premium.is ? "pack30" : "premium");
@@ -1253,6 +1294,8 @@ function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
           if (d.premium_until) {
             fireToast({ title: tr("◈ PREMIUM ATTIVO"), sub: tr("Benvenuto tra gli Spartan") });
             onUnlocked(d.premium_until); onClose();
+          } else if (d.code) {
+            setCode(d.code);   // acquisto senza account: mostra il codice da riscattare
           } else if (d.credits != null) {
             fireToast({ title: tr("◈ CREDITI AGGIUNTI"), sub: `Saldo: ${d.credits} crediti` });
             if (onCredits) onCredits(d.credits);
@@ -1320,6 +1363,35 @@ function StoreModal({ premium, onClose, onUnlocked, onCredits, fireToast }) {
         ) : (
           <div className="tiny t-red" style={{ textAlign: "center" }}>{tr("⚠ VITE_PAYPAL_CLIENT_ID non configurato")}</div>
         )}
+        {code && (
+          <Panel accent style={{ borderColor: "#ffd76a", marginTop: 12 }}>
+            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12 }}>{tr("PAGAMENTO RICEVUTO")}</div>
+            <div className="tiny t-dim" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {tr("Conserva questo codice: crea un account quando vuoi e riscattalo dal profilo per attivare l'acquisto.")}
+            </div>
+            <div className="f-hud t-bright cham-s" style={{ marginTop: 10, padding: "12px 10px", background: "#04101b",
+              border: "1px solid #ffd76a", textAlign: "center", fontSize: 20, fontWeight: 700, letterSpacing: ".12em" }}>
+              {code}
+            </div>
+            <Btn small full style={{ marginTop: 8 }}
+              onClick={() => { try { navigator.clipboard.writeText(code); fireToast({ title: tr("◈ CODICE COPIATO") }); } catch {} }}>
+              {tr("Copia codice")}
+            </Btn>
+          </Panel>
+        )}
+
+        {!isGuest && (
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #0e2233" }}>
+            <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Hai un codice di riscatto?")}</div>
+            <div className="row g8">
+              <input className="hud-input cham-s" value={redeem} onChange={(e) => setRedeem(e.target.value)}
+                placeholder="XXXX-XXXX-XXXX" style={{ flex: 1, textAlign: "center", letterSpacing: ".1em" }} />
+              <Btn small primary onClick={doRedeem} disabled={!redeem.trim()}>{tr("Riscatta")}</Btn>
+            </div>
+            {redeemMsg && <div className="tiny t-red" style={{ marginTop: 6 }}>⚠ {redeemMsg}</div>}
+          </div>
+        )}
+
         {err && <div className="tiny t-red" style={{ marginTop: 8, textAlign: "center" }}>⚠ {err}</div>}
         <div className="micro t-faint" style={{ marginTop: 12, textAlign: "center", lineHeight: 1.6 }}>
           PAGAMENTI SICURI PAYPAL · I CREDITI NON SCADONO · I LIMITI SETTIMANALI SI AZZERANO OGNI LUNEDÌ
@@ -1340,6 +1412,8 @@ export default function App() {
 
   /* --- auth & persistenza via Supabase --- */
   const [user, setUser] = useState(null);
+  const GUEST_KEY = "gq_guest_v1";
+  const isGuest = !!(user && user.guest);
   const [hydrated, setHydrated] = useState(false);
   const [booting, setBooting] = useState(true);      // splash finché il check sessione non è concluso
   const [bootProg, setBootProg] = useState(0);
@@ -1356,7 +1430,9 @@ export default function App() {
   const [premiumUntil, setPremiumUntil] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
   const isPremium = !!premiumUntil && new Date(premiumUntil) > new Date();
-  const premium = { is: isPremium, until: premiumUntil, open: () => setGateOpen(true) };
+  const premium = { is: isPremium, until: premiumUntil, guest: isGuest,
+    open: () => setGateOpen(true),
+    needAccount: () => { setGateOpen(true); } };
   const [session, setSession] = useState(null);   // sessione attiva: persiste su Supabase, si riprende al rientro
   const [history, setHistory] = useState([]);
   const [quests, setQuests] = useState(() => freshQuests(QUEST_POOL_DAILY, QUEST_POOL_WEEKLY));
@@ -1468,13 +1544,37 @@ export default function App() {
       });
       setHydrated(true);
     };
+    /* ospite: nessun account, dati solo su questo dispositivo */
+    const hydrateGuest = () => {
+      try {
+        const raw = localStorage.getItem(GUEST_KEY);
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (d.body) setBody(d.body);
+          if (d.nutrition) setNutri(d.nutrition);
+          if (d.routines) setRoutines(d.routines);
+          if (d.prs) setPrs(d.prs);
+          if (d.session) setSession(d.session);
+          if (d.history) setHistory(d.history);
+          if (d.quests) setQuests(rolledQuests(d.quests));
+          if (d.stats) setStats({ ...EMPTY_STATS, ...d.stats });
+          if (d.xp != null) setXp(d.xp);
+          if (d.level != null) setLevel(d.level);
+        }
+      } catch {}
+      setUser({ guest: true, username: "Ospite" });
+      setHydrated(true);
+    };
+    window.__gqHydrateGuest = hydrateGuest;
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) await hydrate(session.user);
+      else if (localStorage.getItem(GUEST_KEY)) hydrateGuest(); // ospite già avviato: rientra diretto
       authDone.current = true; // splash: può chiudersi (utente ripristinato o assente)
     }).catch(() => { authDone.current = true; });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) hydrate(session.user);
-      else { setUser(null); setHydrated(false); }
+      else if (!window.__gqKeepGuest) { setUser(null); setHydrated(false); }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -1499,6 +1599,16 @@ export default function App() {
   useEffect(() => {
     if (!user || !hydrated) return;
     clearTimeout(saveRef2.current);
+    if (user.guest) {
+      saveRef2.current = setTimeout(() => {
+        try {
+          localStorage.setItem(GUEST_KEY, JSON.stringify({
+            body, nutrition: nutri, routines, prs, session, history, quests, stats, xp, level,
+          }));
+        } catch {}
+      }, 800);
+      return;
+    }
     saveRef2.current = setTimeout(() => {
       supabase.from("user_data").upsert({
         user_id: user.id, body, nutrition: nutri, routines, prs,
@@ -1558,7 +1668,7 @@ export default function App() {
       <div className="hud-root">
         <style>{CSS}</style>
         <HudToast toast={toast} />
-        <AuthScreen fireToast={fireToast} />
+        <AuthScreen fireToast={fireToast} onGuest={() => { window.__gqKeepGuest = true; window.__gqHydrateGuest && window.__gqHydrateGuest(); }} />
       </div>
     );
   }
@@ -1578,9 +1688,23 @@ export default function App() {
       <style>{CSS}</style>
       <HudToast toast={toast} />
 
+      {isGuest && (
+        <div className="cham-s" style={{ margin: "0 14px 10px", padding: "8px 12px",
+          background: "#0c2233", border: "1px solid #2f6786" }}>
+          <div className="row between g8" style={{ alignItems: "center" }}>
+            <div className="grow">
+              <div className="f-hud t-cyan" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em" }}>{tr("MODALITÀ OSPITE")}</div>
+              <div className="micro t-faint" style={{ marginTop: 2 }}>{tr("Dati solo su questo dispositivo · funzioni AI disattivate")}</div>
+            </div>
+            <Btn small primary onClick={() => { window.__gqKeepGuest = false; setUser(null); setHydrated(false); }}>
+              {tr("Crea account")}
+            </Btn>
+          </div>
+        </div>
+      )}
       <InstallBanner ip={ip} />
       {questsOpen && <QuestModal quests={quests} stats={stats} prs={prs} level={level} streak={streak} onClose={() => setQuestsOpen(false)} />}
-      {gateOpen && <StoreModal premium={premium} fireToast={fireToast} onClose={() => setGateOpen(false)}
+      {gateOpen && <StoreModal premium={premium} isGuest={isGuest} fireToast={fireToast} onClose={() => setGateOpen(false)}
         onUnlocked={(until) => setPremiumUntil(until)} />}
 
       {/* TOP HUD BAR */}
@@ -2130,6 +2254,7 @@ function ExerciseInfoModal({ name, group, ex, onClose }) {
 
 /* chiamata AI via proxy serverless (la chiave resta sul server).
    feature "nutrition"/"scan" allegano il JWT: il server verifica il premium */
+/* le funzioni AI richiedono un account: senza sessione si segnala subito */
 const featHeaders = async (feature) => {
   const h = { "Content-Type": "application/json" };
   if (feature) {
@@ -3127,7 +3252,7 @@ const AuthField = ({ icon: Icon, ...props }) => (
   </div>
 );
 
-function AuthScreen({ fireToast }) {
+function AuthScreen({ fireToast, onGuest }) {
   const [mode, setMode] = useState("login"); // login | register | forgot
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -3240,6 +3365,12 @@ function AuthScreen({ fireToast }) {
               </div>
             </>
           )}
+        </div>
+        <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid #0e2233" }}>
+          <Btn full onClick={onGuest}>{tr("Continua senza account ›")}</Btn>
+          <div className="micro t-faint" style={{ textAlign: "center", marginTop: 8, lineHeight: 1.6 }}>
+            {tr("PROVA SUBITO · I DATI RESTANO SU QUESTO DISPOSITIVO")}
+          </div>
         </div>
       </div>
     </div>
@@ -3508,228 +3639,176 @@ function MacroBar({ label, grams, kcalPerG, totalKcal, color }) {
 
 
 
-/* ================================ COMPONI PASTO ================================ */
-/* Modalità "pick & place": niente pasti preconfezionati, ma fonti divise per
-   categoria con la grammatura già calcolata per una porzione standard.
-   Macro per 100 g di prodotto (crudo salvo diverso indicato). */
-const FOOD_DB = {
-  Proteine: [
-    { n: "Petto di pollo", p: 23, c: 0, f: 2 },
-    { n: "Tacchino (fesa)", p: 24, c: 0, f: 1 },
-    { n: "Manzo magro", p: 21, c: 0, f: 5 },
-    { n: "Merluzzo", p: 18, c: 0, f: 1 },
-    { n: "Salmone", p: 20, c: 0, f: 13 },
-    { n: "Tonno al naturale", p: 25, c: 0, f: 1 },
-    { n: "Uova intere", p: 13, c: 1, f: 11 },
-    { n: "Albume", p: 11, c: 1, f: 0 },
-    { n: "Skyr / Greco 0%", p: 10, c: 4, f: 0 },
-    { n: "Fiocchi di latte", p: 12, c: 3, f: 4 },
-    { n: "Whey in polvere", p: 78, c: 8, f: 6 },
-    { n: "Tofu", p: 12, c: 2, f: 7 },
-    { n: "Tempeh", p: 19, c: 9, f: 11 },
-    { n: "Lenticchie secche", p: 25, c: 50, f: 1 },
-    { n: "Seitan", p: 24, c: 14, f: 2 },
+/* ============================ PIANO A FONTI (unificato) ============================ */
+/* Un solo piano, due letture: la finestra alimentare (quando mangi) e le fonti
+   intercambiabili divise per categoria (cosa scegli). Componi il pasto scegliendo
+   un'opzione per categoria, come nelle schede dei nutrizionisti. */
+const CAT_COLORS = {
+  "Fonti proteiche": "#57c8f2",
+  "Fonti carboidrati": "#ffd76a",
+  "Grassi e fibre": "#7ee0a8",
+  "Snack / Post-workout": "#9be8ff",
+};
+const CAT_ORDER = ["Fonti proteiche", "Fonti carboidrati", "Grassi e fibre", "Snack / Post-workout"];
+
+/* piano di esempio: usato finché non se ne genera o importa uno */
+const DEFAULT_SOURCE_PLAN = {
+  protocol: "PROTOCOLLO BASE",
+  window: [
+    { time: "07:30 - 08:30", label: "Colazione", note: "" },
+    { time: "12:30 - 13:30", label: "Pranzo", note: "Pasto A — modello interscambiabile" },
+    { time: "16:30 - 17:00", label: "Snack / Post-workout", note: "" },
+    { time: "19:30 - 20:30", label: "Cena", note: "Pasto B — modello interscambiabile" },
   ],
-  Carboidrati: [
-    { n: "Riso bianco", p: 7, c: 78, f: 1 },
-    { n: "Riso basmati", p: 8, c: 77, f: 1 },
-    { n: "Pasta di semola", p: 12, c: 72, f: 2 },
-    { n: "Patate", p: 2, c: 17, f: 0 },
-    { n: "Patate dolci", p: 2, c: 20, f: 0 },
-    { n: "Avena", p: 13, c: 62, f: 7 },
-    { n: "Pane integrale", p: 9, c: 45, f: 3 },
-    { n: "Couscous", p: 12, c: 72, f: 1 },
-    { n: "Quinoa", p: 14, c: 64, f: 6 },
-    { n: "Gallette di riso", p: 8, c: 81, f: 3 },
-    { n: "Banana", p: 1, c: 23, f: 0 },
-    { n: "Mela", p: 0, c: 14, f: 0 },
-    { n: "Frutti di bosco", p: 1, c: 8, f: 0 },
+  categories: [
+    { name: "Fonti proteiche", rule: "SCEGLI 1", items: [
+      { q: "200g", n: "Petto di pollo / tacchino" },
+      { q: "3 uova intere + 100g", n: "albumi", alt: "o 3 uova + 30g parmigiano" },
+      { q: "220g", n: "Pesce bianco (merluzzo, orata)" },
+      { q: "180g", n: "Salmone" },
+      { q: "160g", n: "Tonno al naturale" },
+    ] },
+    { name: "Fonti carboidrati", rule: "SCEGLI 1", items: [
+      { q: "100g", n: "Riso (basmati, venere, integrale)" },
+      { q: "100g", n: "Pasta (integrale o semola)" },
+      { q: "100g", n: "Polenta (peso a secco)" },
+      { q: "400g", n: "Patate dolci o bianche" },
+    ] },
+    { name: "Grassi e fibre", rule: "A PASTO", items: [
+      { q: "A volontà", n: "Verdure a foglia verde o di stagione" },
+      { q: "12-15g", n: "Olio EVO (1 cucchiaio abbondante)", alt: "1 cucchiaino se scegli 3 uova intere" },
+    ] },
+    { name: "Snack / Post-workout", rule: "", items: [
+      { q: "150g", n: "Yogurt greco 0%" },
+      { q: "30g", n: "Proteine in polvere (whey)" },
+      { q: "1", n: "Banana o mela grande (~180-200g)" },
+      { q: "15g", n: "Frutta secca (mandorle / noci)" },
+    ] },
   ],
-  Grassi: [
-    { n: "Olio EVO", p: 0, c: 0, f: 100 },
-    { n: "Mandorle", p: 21, c: 9, f: 50 },
-    { n: "Noci", p: 15, c: 7, f: 65 },
-    { n: "Arachidi", p: 26, c: 16, f: 49 },
-    { n: "Burro d'arachidi", p: 25, c: 20, f: 50 },
-    { n: "Avocado", p: 2, c: 9, f: 15 },
-    { n: "Semi di chia", p: 17, c: 42, f: 31 },
-    { n: "Parmigiano", p: 33, c: 0, f: 29 },
-    { n: "Cioccolato fondente 85%", p: 10, c: 22, f: 46 },
-  ],
-  "Fibre e verdure": [
-    { n: "Broccoli", p: 3, c: 7, f: 0 },
-    { n: "Spinaci", p: 3, c: 4, f: 0 },
-    { n: "Zucchine", p: 1, c: 3, f: 0 },
-    { n: "Insalata mista", p: 1, c: 3, f: 0 },
-    { n: "Pomodori", p: 1, c: 4, f: 0 },
-    { n: "Peperoni", p: 1, c: 6, f: 0 },
-    { n: "Carote", p: 1, c: 10, f: 0 },
-    { n: "Melanzane", p: 1, c: 6, f: 0 },
-    { n: "Funghi", p: 3, c: 3, f: 0 },
-  ],
-  "Snack e post-workout": [
-    { n: "Barretta proteica", p: 33, c: 40, f: 13 },
-    { n: "Whey + acqua", p: 78, c: 8, f: 6 },
-    { n: "Yogurt greco + miele", p: 8, c: 18, f: 0 },
-    { n: "Gallette + bresaola", p: 22, c: 45, f: 4 },
-    { n: "Frullato banana + whey", p: 20, c: 30, f: 2 },
-    { n: "Maltodestrine", p: 0, c: 95, f: 0 },
-    { n: "Riso + tonno", p: 16, c: 40, f: 2 },
-    { n: "Toast integrale + albumi", p: 14, c: 40, f: 3 },
-  ],
+  directives: "Pranzo e Cena sono totalmente interscambiabili. Mantenere l'idratazione a 2.5-3 litri d'acqua al giorno.",
 };
 
-/* macro-guida di una porzione standard per categoria */
-const PORTION_RULE = {
-  Proteine: { macro: "p", target: 25 },
-  Carboidrati: { macro: "c", target: 40 },
-  Grassi: { macro: "f", target: 10 },
-  "Fibre e verdure": { macro: "c", target: 8 },
-  "Snack e post-workout": { macro: "p", target: 20 },
-};
-const kcalOf = (m) => Math.round(m.p * 4 + m.c * 4 + m.f * 9);
-/* grammi che forniscono la quota-macro della porzione (arrotondati a 5 g) */
-const portionGrams = (food, cat) => {
-  const rule = PORTION_RULE[cat];
-  const per100 = food[rule.macro];
-  if (!per100) return 100;
-  return Math.max(5, Math.round((rule.target * 100 / per100) / 5) * 5);
-};
-const macrosFor = (food, grams) => ({
-  p: (food.p * grams) / 100, c: (food.c * grams) / 100, f: (food.f * grams) / 100,
-});
+function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRegen, loading }) {
+  const cats = plan.categories || [];
+  const toggle = (cat, idx) => setPicks({ ...picks, [cat]: picks[cat] === idx ? undefined : idx });
+  const chosen = cats.filter((c) => picks[c.name] != null);
+
+  return (
+    <div className="fade-in stack" style={{ maxWidth: 780 }}>
+      {/* intestazione in stile scheda */}
+      <Panel accent style={{ borderColor: "#ffd76a" }}>
+        <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 15 }}>
+          {tr("PIANO NUTRIZIONALE")}
+        </div>
+        <div className="micro t-cyan" style={{ marginTop: 3 }}>{plan.protocol || ""}</div>
+        {targets && (
+          <div className="micro t-faint" style={{ marginTop: 6 }}>
+            TARGET {targets.kcal} KCAL · P{targets.p} C{targets.c} G{targets.f}
+            {body && body.peso ? ` · ${body.peso} KG` : ""}
+          </div>
+        )}
+      </Panel>
+
+      {/* finestra alimentare */}
+      {(plan.window || []).length > 0 && (
+        <Panel>
+          <div className="hud-label" style={{ marginBottom: 10 }}>{tr("▸ Finestra alimentare & tempistiche")}</div>
+          {plan.window.map((w, i) => (
+            <div key={i} className="row g12" style={{ padding: "8px 0", borderBottom: "1px solid #0a1826", alignItems: "flex-start" }}>
+              <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, width: 106, flexShrink: 0,
+                borderLeft: `2px solid ${w.fasting ? "#3f637c" : "#ffd76a"}`, paddingLeft: 8 }}>
+                {w.time}
+              </div>
+              <div className="grow">
+                <div className={w.fasting ? "t-faint" : "t-bright"} style={{ fontSize: 14, fontWeight: 700 }}>{w.label}</div>
+                {w.note && <div className="tiny t-faint">{w.note}</div>}
+              </div>
+            </div>
+          ))}
+        </Panel>
+      )}
+
+      {/* categorie di fonti: si sceglie un'opzione per categoria */}
+      <div className="two-col">
+        {cats.map((c) => {
+          const color = CAT_COLORS[c.name] || "#57c8f2";
+          return (
+            <Panel key={c.name} style={{ borderLeft: `3px solid ${color}` }}>
+              <div className="row between" style={{ marginBottom: 8 }}>
+                <span className="f-hud" style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
+                  {c.name.toUpperCase()}
+                </span>
+                {c.rule && <span className="micro t-faint">({c.rule})</span>}
+              </div>
+              {(c.items || []).map((it, i) => {
+                const on = picks[c.name] === i;
+                return (
+                  <button key={i} onClick={() => toggle(c.name, i)} className="tap cham-s"
+                    style={{ width: "100%", textAlign: "left", cursor: "pointer", padding: "9px 10px", marginBottom: 5,
+                      border: `1px solid ${on ? color : "#0e2233"}`, background: on ? "#0c2233" : "#060f18" }}>
+                    <div style={{ fontSize: 14, lineHeight: 1.4 }}>
+                      <span className="f-hud" style={{ color: on ? color : "#c9e8f7", fontWeight: 700 }}>{it.q}</span>
+                      <span className={on ? "t-bright" : "t-dim"}> {it.n}</span>
+                    </div>
+                    {it.alt && <div className="micro t-faint" style={{ marginTop: 2 }}>({it.alt})</div>}
+                  </button>
+                );
+              })}
+            </Panel>
+          );
+        })}
+      </div>
+
+      {/* riepilogo della composizione */}
+      <Panel accent>
+        <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Il pasto che hai composto")}</div>
+        {chosen.length === 0 && (
+          <div className="tiny t-faint">{tr("Tocca un'opzione per categoria per comporre il pasto.")}</div>
+        )}
+        {chosen.map((c) => {
+          const it = c.items[picks[c.name]];
+          return (
+            <div key={c.name} className="divider-row">
+              <span style={{ fontSize: 14 }}>
+                <span className="f-hud t-cyan" style={{ fontWeight: 700 }}>{it.q}</span> {it.n}
+              </span>
+              <span className="micro t-faint">{c.name}</span>
+            </div>
+          );
+        })}
+        {chosen.length > 0 && (
+          <Btn small style={{ marginTop: 10 }} onClick={() => setPicks({})}>{tr("Svuota")}</Btn>
+        )}
+      </Panel>
+
+      {plan.directives && (
+        <Panel>
+          <div className="hud-label" style={{ marginBottom: 6 }}>{tr("▸ Direttive operative")}</div>
+          <div className="tiny t-dim" style={{ lineHeight: 1.7 }}>{plan.directives}</div>
+        </Panel>
+      )}
+
+      <div className="row g8">
+        <Btn onClick={onImport} style={{ flex: 1 }}>{tr("⤓ Importa piano")}</Btn>
+        <Btn primary onClick={onRegen} disabled={loading} style={{ flex: 1 }}>
+          {loading ? tr("Generazione...") : tr("◈ Rigenera con AI")}
+        </Btn>
+      </div>
+      <div className="micro">{tr("Il piano è indicativo: consulta un professionista per esigenze specifiche.")}</div>
+    </div>
+  );
+}
 
 function NutriSubTabs({ value, onChange }) {
   return (
     <div className="row g6">
-      {[["plan", tr("PASTI CONSIGLIATI")], ["compose", tr("COMPONI TU")]].map(([k, l]) => (
+      {[["plan", tr("PASTI GIORNALIERI")], ["compose", tr("FONTI E COMPOSIZIONE")]].map(([k, l]) => (
         <button key={k} onClick={() => onChange(k)}
           className={`tap cham-s chip ${value === k ? "chip-on" : ""}`}
           style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "8px 0", fontSize: 10 }}>
           {l}
         </button>
       ))}
-    </div>
-  );
-}
-
-function ComposeTab({ targets, plate, setPlate }) {
-  const [open, setOpen] = useState("Proteine");
-  const items = plate || [];
-
-  const tot = items.reduce((a, it) => {
-    const m = macrosFor(it.food, it.grams);
-    return { p: a.p + m.p, c: a.c + m.c, f: a.f + m.f };
-  }, { p: 0, c: 0, f: 0 });
-  const totKcal = kcalOf(tot);
-
-  const add = (food, cat) => setPlate([...items, { food, cat, grams: portionGrams(food, cat), id: Date.now() + Math.random() }]);
-  const del = (id) => setPlate(items.filter((i) => i.id !== id));
-  const setG = (id, g) => setPlate(items.map((i) => i.id !== id ? i : { ...i, grams: Math.max(0, Number(g) || 0) }));
-
-  const Bar = ({ label, cur, goal, color }) => {
-    const pct = goal ? Math.min(100, (cur / goal) * 100) : 0;
-    const over = goal && cur > goal * 1.05;
-    return (
-      <div style={{ marginBottom: 8 }}>
-        <div className="row between tiny" style={{ marginBottom: 3 }}>
-          <span className="t-dim">{label}</span>
-          <span className={over ? "t-amber" : "t-bright"}>{Math.round(cur)} / {goal} g</span>
-        </div>
-        <div className="cham-s" style={{ height: 6, background: "#0e2233", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: over ? "#ffd76a" : color, transition: "width .3s" }} />
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="fade-in two-col">
-      {/* SINISTRA: il piatto */}
-      <div className="col stack">
-        <Panel accent>
-          <div className="row between" style={{ marginBottom: 10 }}>
-            <div>
-              <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 24 }}>{totKcal}</div>
-              <div className="micro">{tr("KCAL SELEZIONATE")} {targets ? `/ ${targets.kcal}` : ""}</div>
-            </div>
-            {items.length > 0 && <Btn small onClick={() => setPlate([])}>{tr("Svuota")}</Btn>}
-          </div>
-          {targets && (
-            <>
-              <Bar label={tr("Proteine")} cur={tot.p} goal={targets.p} color="#57c8f2" />
-              <Bar label={tr("Carboidrati")} cur={tot.c} goal={targets.c} color="#9be8ff" />
-              <Bar label={tr("Grassi")} cur={tot.f} goal={targets.f} color="#ffd76a" />
-            </>
-          )}
-          {!targets && <div className="tiny t-faint">{tr("Genera o importa un piano per vedere i target di riferimento.")}</div>}
-        </Panel>
-
-        <Panel>
-          <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Il tuo piatto")}</div>
-          {items.length === 0 && (
-            <div className="tiny t-faint" style={{ padding: "8px 0" }}>
-              {tr("Nessun alimento. Scegli dalle categorie e compone il pasto come preferisci.")}
-            </div>
-          )}
-          {items.map((it) => {
-            const m = macrosFor(it.food, it.grams);
-            return (
-              <div key={it.id} className="row g8" style={{ padding: "7px 0", borderBottom: "1px solid #0a1826", alignItems: "center" }}>
-                <div className="grow">
-                  <div style={{ fontSize: 14 }}>{it.food.n}</div>
-                  <div className="micro t-faint">
-                    P {Math.round(m.p)} · C {Math.round(m.c)} · G {Math.round(m.f)} · {kcalOf(m)} kcal
-                  </div>
-                </div>
-                <input className="hud-input cham-s" type="number" inputMode="numeric" value={it.grams}
-                  onChange={(e) => setG(it.id, e.target.value)}
-                  style={{ width: 68, textAlign: "center", padding: "6px 4px", fontSize: 13 }} />
-                <span className="micro">g</span>
-                <span onClick={() => del(it.id)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={14} /></span>
-              </div>
-            );
-          })}
-        </Panel>
-      </div>
-
-      {/* DESTRA: le fonti */}
-      <div className="col stack">
-        {Object.entries(FOOD_DB).map(([cat, list]) => (
-          <Panel key={cat} style={{ padding: 12 }}>
-            <button onClick={() => setOpen(open === cat ? null : cat)} className="tap row between"
-              style={{ width: "100%", cursor: "pointer" }}>
-              <span className="f-hud t-cyan" style={{ fontSize: 11, letterSpacing: ".2em", fontWeight: 700 }}>{tr(cat).toUpperCase()}</span>
-              <span className="tiny t-faint">{list.length} {open === cat ? "▾" : "▸"}</span>
-            </button>
-            {open === cat && (
-              <div className="fade-in" style={{ marginTop: 10 }}>
-                <div className="micro t-faint" style={{ marginBottom: 8 }}>
-                  {tr("PORZIONE STANDARD")}: ~{PORTION_RULE[cat].target}g {tr(PORTION_RULE[cat].macro === "p" ? "proteine" : PORTION_RULE[cat].macro === "c" ? "carboidrati" : "grassi")}
-                </div>
-                {list.map((f) => {
-                  const g = portionGrams(f, cat);
-                  const m = macrosFor(f, g);
-                  return (
-                    <button key={f.n} onClick={() => add(f, cat)} className="tap row between g8"
-                      style={{ width: "100%", cursor: "pointer", padding: "8px 0", borderBottom: "1px solid #0a1826", textAlign: "left" }}>
-                      <div className="grow">
-                        <div className="t-bright" style={{ fontSize: 14 }}>{tr(f.n)}</div>
-                        <div className="micro t-faint">P {Math.round(m.p)} · C {Math.round(m.c)} · G {Math.round(m.f)}</div>
-                      </div>
-                      <div className="row g8" style={{ alignItems: "center", flexShrink: 0 }}>
-                        <span className="f-hud t-cyan" style={{ fontSize: 13, fontWeight: 700 }}>{g}g</span>
-                        <span className="t-faint" style={{ fontSize: 15 }}>＋</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </Panel>
-        ))}
-        <div className="micro">{tr("Valori medi indicativi per 100 g di prodotto crudo.")}</div>
-      </div>
     </div>
   );
 }
@@ -3826,8 +3905,12 @@ function NutriImport({ premium, body, onClose, onSave }) {
       let content;
       const prompt = `Il documento/testo sopra è un piano alimentare scritto da un nutrizionista o dall'utente (formato libero).
 Interpretalo e convertilo in JSON. Rispondi SOLO con JSON valido, senza markdown né backtick.
-Schema: {"targets":{"kcal":number,"p":number,"c":number,"f":number},"meals":{"NomePasto":[[{"nome":string,"q":string}]]}}
-Ogni pasto è un ARRAY DI OPZIONI: se il documento propone alternative per lo stesso pasto, mettile come opzioni separate; altrimenti usa un'unica opzione.
+Schema: {"targets":{"kcal":number,"p":number,"c":number,"f":number},
+ "meals":{"NomePasto":[[{"nome":string,"q":string}]]},
+ "sourcePlan":{"protocol":string,"window":[{"time":string,"label":string,"note":string,"fasting":boolean}],
+   "categories":[{"name":string,"rule":string,"items":[{"q":string,"n":string,"alt":string}]}],"directives":string}}
+IMPORTANTE: molte schede sono organizzate per FONTI INTERCAMBIABILI (es. "FONTI PROTEICHE — SCEGLI 1: 200g pollo / 220g pesce bianco / 160g tonno") con una finestra alimentare e gli orari dei pasti. In quel caso compila "sourcePlan" fedelmente: categorie con i loro nomi e regole ("SCEGLI 1", "A PASTO"), ogni opzione con quantità in "q" e alimento in "n", eventuali alternative fra parentesi in "alt", e la fascia di digiuno con "fasting":true.
+Compila "meals" con una proposta di pasto già composto per ciascun pasto della finestra (scegliendo una combinazione valida delle fonti). Se il documento elenca solo pasti fissi, lascia "sourcePlan" a null.
 REGOLE:
 - Usa ESATTAMENTE i pasti presenti nel documento, con i loro nomi (es. "Colazione", "Pranzo", "Spuntino", "Cena"). Se il piano prevede il digiuno intermittente e ha solo 2 pasti, restituisci solo quei 2.
 - Se i valori di kcal o macro non sono indicati, stimali dagli alimenti elencati.
@@ -3865,6 +3948,7 @@ REGOLE:
       const parsed = JSON.parse(m ? m[0] : text);
       const tg = parsed.targets || {};
       setResult({
+        sourcePlan: parsed.sourcePlan || null,
         targets: {
           kcal: Number(tg.kcal) || 0, p: Number(tg.p) || 0,
           c: Number(tg.c) || 0, f: Number(tg.f) || 0,
@@ -3937,8 +4021,26 @@ REGOLE:
                 P {result.targets.p}g<br />C {result.targets.c}g<br />G {result.targets.f}g
               </div>
             </div>
-            <div className="micro t-faint">{Object.keys(result.meals).length} {tr("PASTI RILEVATI")}</div>
+            <div className="micro t-faint">
+              {Object.keys(result.meals).length} {tr("PASTI RILEVATI")}
+              {result.sourcePlan ? ` · ${(result.sourcePlan.categories || []).length} ${tr("CATEGORIE DI FONTI")}` : ""}
+            </div>
           </Panel>
+
+          {result.sourcePlan && (
+            <Panel accent style={{ borderColor: "#ffd76a" }}>
+              <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12 }}>
+                {tr("PIANO A FONTI INTERCAMBIABILI RILEVATO")}
+              </div>
+              <div className="tiny t-dim" style={{ marginTop: 6, lineHeight: 1.6 }}>
+                {result.sourcePlan.protocol || ""}
+                {(result.sourcePlan.window || []).length > 0 && ` · ${result.sourcePlan.window.length} ${tr("fasce orarie")}`}
+              </div>
+              <div className="micro t-faint" style={{ marginTop: 6 }}>
+                {(result.sourcePlan.categories || []).map((c) => c.name).join(" · ")}
+              </div>
+            </Panel>
+          )}
 
           {Object.entries(result.meals).map(([meal, opts]) => (
             <Panel key={meal}>
@@ -3980,7 +4082,7 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
     setLoading(true);
     /* se i target sono stati modificati a mano, i pasti si rigenerano su QUELLI */
     const targets = useCurrentTargets && nutri ? nutri.targets : calcTargets(body, days, goal);
-    let meals = null;
+    let meals = null, sourcePlan = null;
     try {
       const response = await fetch("/api/ai", {
         method: "POST",
@@ -3994,8 +4096,20 @@ Alimenti semplici da palestra (pollo, riso, avena, uova, whey, pesce...).
 ${prefs.trim() ? `PREFERENZE E VINCOLI DELL'UTENTE (rispettali sempre): ${prefs.trim()}` : "Nessuna preferenza particolare."}
 NUMERO PASTI: rispetta le preferenze. Se l'utente indica digiuno intermittente o una finestra alimentare, genera SOLO i pasti compatibili (anche 2 soli), distribuendo comunque tutti i macro nella finestra. Altrimenti usa 5 pasti: Colazione, Pranzo, Spuntino pre-workout, Post-workout, Cena.
 VARIETÀ: per OGNI pasto genera 3 OPZIONI alternative diverse tra loro (ingredienti diversi) ma equivalenti nei macro, così da poter ruotare i pasti nei vari giorni.
-Rispondi SOLO con JSON valido senza markdown né backtick. Ogni pasto è un ARRAY DI 3 OPZIONI, e ogni opzione è un array di alimenti:
-{"NomePasto":[[{"nome":string,"q":string (quantità es. "80g" o "2 uova")}],[...],[...]]}`,
+Rispondi SOLO con JSON valido senza markdown né backtick, con QUESTE DUE CHIAVI:
+{"meals":{"NomePasto":[[{"nome":string,"q":string}],[...],[...]]},
+ "sourcePlan":{
+   "protocol": string (es. "RICOMPOSIZIONE | DIGIUNO INTERMITTENTE 16/8" oppure "PROTOCOLLO MASSA"),
+   "window":[{"time":"12:00 - 13:00","label":"Pranzo","note":"Pasto A — modello interscambiabile","fasting":false}],
+   "categories":[
+     {"name":"Fonti proteiche","rule":"SCEGLI 1","items":[{"q":"200g","n":"Petto di pollo / tacchino","alt":""}]},
+     {"name":"Fonti carboidrati","rule":"SCEGLI 1","items":[...]},
+     {"name":"Grassi e fibre","rule":"A PASTO","items":[...]},
+     {"name":"Snack / Post-workout","rule":"","items":[...]}
+   ],
+   "directives": string (1-2 frasi operative)
+ }}
+In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'utente e le opzioni della stessa categoria equivalenti tra loro nei macro. Se c'è digiuno intermittente inserisci la fascia di digiuno in "window" con "fasting":true.`,
           }],
         }),
       });
@@ -4003,13 +4117,19 @@ Rispondi SOLO con JSON valido senza markdown né backtick. Ogni pasto è un ARRA
       let data; try { data = JSON.parse(_txt); } catch { throw new Error(`Errore server (${response.status})`); }
       if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error("Limite settimanale raggiunto"); }
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-      meals = JSON.parse(text.replace(/```json|```/g, "").trim());
+      const mm = text.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(mm ? mm[0] : text);
+      if (parsed.meals || parsed.sourcePlan) {
+        meals = parsed.meals || {};
+        sourcePlan = parsed.sourcePlan || null;
+      } else meals = parsed; // compatibilità con la vecchia risposta
     } catch (e) {
       meals = FALLBACK_PLAN(targets); // offline/errore: piano template scalato
     }
     const normMeals = {};
     for (const [k, v] of Object.entries(meals || {})) normMeals[k] = asOptions(v);
-    setNutri({ goal, days, targets, meals: normMeals, prefs });
+    setNutri({ goal, days, targets, meals: normMeals, prefs,
+      sourcePlan: sourcePlan || (nutri && nutri.sourcePlan) || null });
     setStale(false);
     setLoading(false);
     fireToast({ title: tr("◈ PIANO GENERATO"), sub: `${targets.kcal} kcal · P${targets.p} C${targets.c} G${targets.f}` });
@@ -4031,7 +4151,8 @@ Rispondi SOLO con JSON valido senza markdown né backtick. Ogni pasto è un ARRA
     <NutriImport premium={premium} body={body}
       onClose={() => setImporting(false)}
       onSave={(r) => {
-        setNutri({ goal, days, targets: r.targets, meals: r.meals, prefs, imported: true });
+        setNutri({ goal, days, targets: r.targets, meals: r.meals, prefs, imported: true, sourcePlan: r.sourcePlan || null });
+        if (r.sourcePlan) setSubTab("compose");
         setStale(false); setImporting(false);
         fireToast({ title: tr("◈ PIANO IMPORTATO"), sub: `${r.targets.kcal} kcal` });
       }} />
@@ -4040,11 +4161,16 @@ Rispondi SOLO con JSON valido senza markdown né backtick. Ogni pasto è un ARRA
   /* la modalità "componi" non richiede un piano: è indipendente */
   if (subTab === "compose") return (
     <div className="fade-in stack">
-      <div className="row between">
-        <h2 className="hud-title">{tr("▸ Componi il pasto")}</h2>
-      </div>
       <NutriSubTabs value={subTab} onChange={setSubTab} />
-      <ComposeTab targets={nutri ? nutri.targets : null} plate={plate} setPlate={savePlate} />
+      <SourcePlanView
+        plan={(nutri && nutri.sourcePlan) || DEFAULT_SOURCE_PLAN}
+        targets={nutri ? nutri.targets : null}
+        body={body}
+        picks={plate && !Array.isArray(plate) ? plate : {}}
+        setPicks={savePlate}
+        loading={loading}
+        onImport={() => setImporting(true)}
+        onRegen={() => generate(!!nutri)} />
     </div>
   );
 
@@ -4315,6 +4441,22 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
         </div>
 
         <div className="panel panel-accent cham stack" style={{ padding: 24 }}>
+          {step === 1 && (
+            <>
+              <div className="hud-title" style={{ fontSize: 12 }}>{tr("Lingua")}</div>
+              <div className="tiny t-faint">{tr("Scegli la lingua dell'app")}</div>
+              <div className="stack-s">
+                {LANG_OPTS.map((o) => (
+                  <button key={o.id} onClick={() => { setLang(o.id); setLangGlobal(o.id); }}
+                    className="tap cham-s" style={{ cursor: "pointer", width: "100%", padding: "12px 14px", textAlign: "left",
+                      border: "1px solid " + (lang === o.id ? "#57c8f2" : "#1b3a52"),
+                      background: lang === o.id ? "#0c2a3d" : "#060f18" }}>
+                    <div className={lang === o.id ? "t-cyan" : "t-bright"} style={{ fontSize: 15, fontWeight: 700 }}>{o.flag} {o.label}</div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           {step === 2 && (
             <>
               <div className="hud-title" style={{ fontSize: 12 }}>{tr("Dati base")}</div>
@@ -4384,7 +4526,36 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
             </>
           )}
 
-          {err && <div className="tiny t-red">⚠ {err}</div>}
+          {code && (
+          <Panel accent style={{ borderColor: "#ffd76a", marginTop: 12 }}>
+            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12 }}>{tr("PAGAMENTO RICEVUTO")}</div>
+            <div className="tiny t-dim" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {tr("Conserva questo codice: crea un account quando vuoi e riscattalo dal profilo per attivare l'acquisto.")}
+            </div>
+            <div className="f-hud t-bright cham-s" style={{ marginTop: 10, padding: "12px 10px", background: "#04101b",
+              border: "1px solid #ffd76a", textAlign: "center", fontSize: 20, fontWeight: 700, letterSpacing: ".12em" }}>
+              {code}
+            </div>
+            <Btn small full style={{ marginTop: 8 }}
+              onClick={() => { try { navigator.clipboard.writeText(code); fireToast({ title: tr("◈ CODICE COPIATO") }); } catch {} }}>
+              {tr("Copia codice")}
+            </Btn>
+          </Panel>
+        )}
+
+        {!isGuest && (
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #0e2233" }}>
+            <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Hai un codice di riscatto?")}</div>
+            <div className="row g8">
+              <input className="hud-input cham-s" value={redeem} onChange={(e) => setRedeem(e.target.value)}
+                placeholder="XXXX-XXXX-XXXX" style={{ flex: 1, textAlign: "center", letterSpacing: ".1em" }} />
+              <Btn small primary onClick={doRedeem} disabled={!redeem.trim()}>{tr("Riscatta")}</Btn>
+            </div>
+            {redeemMsg && <div className="tiny t-red" style={{ marginTop: 6 }}>⚠ {redeemMsg}</div>}
+          </div>
+        )}
+
+        {err && <div className="tiny t-red">⚠ {err}</div>}
 
           <div className="row g8">
             {step > 1 && <Btn onClick={() => setStep(step - 1)} style={{ flex: 1 }}>{tr("‹ Indietro")}</Btn>}

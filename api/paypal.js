@@ -2,7 +2,7 @@
 // SICUREZZA: l'ordine viene CREATO e CATTURATO lato server; il premium viene
 // concesso SOLO dopo verifica che PayPal confermi COMPLETED con importo 20.00 EUR.
 // Il client non può né fissare il prezzo né scrivere lo stato premium.
-import { getUserFromToken, grantPremium, addCredits } from "./_premium.js";
+import { getUserFromToken, grantPremium, addCredits, createRedeemCode } from "./_premium.js";
 
 const PP_BASE = process.env.PAYPAL_ENV === "live"
   ? "https://api-m.paypal.com"
@@ -56,8 +56,7 @@ export default async function handler(req, res) {
     if (action === "capture") {
       // 1) chi sta pagando? (JWT Supabase verificato server-side)
       const jwt = (req.headers.authorization || "").replace("Bearer ", "");
-      const user = await getUserFromToken(jwt);
-      if (!user) return res.status(401).json({ error: "Non autenticato" });
+      const user = await getUserFromToken(jwt); // può essere null: acquisto senza account
 
       // 2) cattura su PayPal
       const r = await fetch(`${PP_BASE}/v2/checkout/orders/${orderID}/capture`, {
@@ -75,7 +74,13 @@ export default async function handler(req, res) {
         cap?.amount?.currency_code === "EUR" && cap?.amount?.value === prod.amount;
       if (!ok) return res.status(400).json({ error: "Pagamento non completato", detail: d.status });
 
-      // 4) concedi il prodotto (service role, unico punto di scrittura)
+      // 4) concedi il prodotto (service role, unico punto di scrittura).
+      //    Senza account si emette un CODICE DI RISCATTO da usare dopo la registrazione:
+      //    così il pagamento non richiede attrito di iscrizione.
+      if (!user) {
+        const code = await createRedeemCode(prodId, orderID);
+        return res.status(200).json({ code, product: prodId });
+      }
       if (prod.credits) {
         const credits = await addCredits(user.id, prod.credits, orderID);
         return res.status(200).json({ credits });

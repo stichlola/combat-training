@@ -100,3 +100,38 @@ export async function addCredits(userId, n, orderId) {
   await saveUsage(u);
   return u.credits;
 }
+
+/* ---------------- Acquisto senza account: codice di riscatto ---------------- */
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export async function createRedeemCode(product, orderId) {
+  let code = "";
+  for (let i = 0; i < 12; i++) code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  code = code.replace(/(.{4})(.{4})(.{4})/, "$1-$2-$3");
+  const r = await fetch(`${SB_URL}/rest/v1/redeem_codes`, {
+    method: "POST", headers: { ...H(), Prefer: "return=minimal" },
+    body: JSON.stringify({ code, product, order_id: orderId, created_at: new Date().toISOString() }),
+  });
+  if (!r.ok) throw new Error("Creazione codice fallita");
+  return code;
+}
+
+/* Riscatta un codice su un account: applica premium o crediti, poi lo marca usato */
+export async function redeemCode(userId, rawCode) {
+  const code = String(rawCode || "").trim().toUpperCase();
+  const r = await fetch(`${SB_URL}/rest/v1/redeem_codes?code=eq.${encodeURIComponent(code)}&select=*`, { headers: H() });
+  const rows = await r.json();
+  const row = rows && rows[0];
+  if (!row) return { ok: false, error: "code_not_found" };
+  if (row.used_by) return { ok: false, error: "code_already_used" };
+  const out = {};
+  if (row.product === "premium") out.premium_until = await grantPremium(userId, row.order_id);
+  else {
+    const n = row.product === "pack100" ? 100 : 30;
+    out.credits = await addCredits(userId, n, row.order_id);
+  }
+  await fetch(`${SB_URL}/rest/v1/redeem_codes?code=eq.${encodeURIComponent(code)}`, {
+    method: "PATCH", headers: { ...H(), Prefer: "return=minimal" },
+    body: JSON.stringify({ used_by: userId, used_at: new Date().toISOString() }),
+  });
+  return { ok: true, ...out };
+}

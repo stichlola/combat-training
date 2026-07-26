@@ -72,6 +72,12 @@ Importa la repo su Vercel, aggiungi le variabili d'ambiente sopra, Deploy. Dopo 
 
 Ogni modifica (allenamenti, dati corporei, piano nutrizionale, XP, quest, premium, crediti) viene salvata su Supabase con un debounce di 800ms. Al login, tutti i dati vengono ricaricati (`hydrate`) e popolano lo stato dell'app.
 
+## Modalità ospite e acquisto senza account
+
+L'app è utilizzabile **senza registrazione**: dalla schermata di accesso, "Continua senza account" avvia la modalità ospite, che salva tutto in `localStorage` sul dispositivo. In quella modalità sono disponibili allenamenti, schede, quest, medaglie, timer e composizione pasti manuale; le funzioni AI richiedono un account (il server le rifiuta senza JWT valido).
+
+L'**acquisto può avvenire prima della registrazione**: se la cattura PayPal arriva senza JWT, il server emette un **codice di riscatto** (tabella `redeem_codes`, accessibile solo dal serverless) che l'utente conserva e riscatta dallo store dopo aver creato l'account (`api/redeem.js`). Questo elimina l'attrito dell'iscrizione obbligatoria prima del pagamento.
+
 ## Sicurezza
 
 - La chiave `ANTHROPIC_API_KEY` resta sempre lato server (`api/ai.js`), mai esposta al frontend
