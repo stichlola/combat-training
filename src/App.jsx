@@ -17,6 +17,8 @@ const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en"
 const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
+  "SERVE UN ACCOUNT": "AN ACCOUNT IS REQUIRED",
+  "In modalità ospite puoi allenarti e comporre i pasti a mano. Le funzioni AI richiedono un account gratuito; con Premium hai limiti ampi su tutto.": "In guest mode you can train and build meals by hand. AI features require a free account; Premium gives you generous limits on everything.",
   "(SCEGLI 1)": "(PICK 1)", "(SCELTA MULTIPLA)": "(MULTIPLE CHOICE)",
   "SCEGLI QUANTI VUOI": "PICK AS MANY AS YOU LIKE",
   "AGGIUNGI ALIMENTO": "ADD FOOD", "Aggiungi": "Add",
@@ -2355,6 +2357,7 @@ function MachineScan({ premium, variant, currentNames, onAdd, fireToast }) {
   const camRef = useRef(null);
 
   const analyze = async (f) => {
+    if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
     setBusy(true); setRes(null); setOpenEx(null);
     try {
       const { b64, type } = await resizeImage(f, 1024);
@@ -2972,6 +2975,7 @@ function DocImport({ premium, onClose, onSave }) {
   });
 
   const interpret = async () => {
+    if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
     setLoading(true); setError(null);
     try {
       const content = [];
@@ -3162,6 +3166,7 @@ function AIWorkout({ premium, onClose, onSave }) {
   /* La generazione passa dal server per applicare il limite settimanale;
      se la chiamata fallisce si usa comunque il generatore locale. */
   const generate = async () => {
+    if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
     setLoading(true); setError(null);
     try {
       const data = await aiCall({
@@ -3650,6 +3655,27 @@ function MacroBar({ label, grams, kcalPerG, totalKcal, color }) {
 
 
 
+
+/* ordine cronologico dei pasti: usa la finestra alimentare se presente,
+   altrimenti una classifica per nome (digiuno → colazione → ... → cena) */
+const MEAL_RANK = [
+  [/digiun|fasting/i, 0], [/colazione|breakfast/i, 10], [/spuntino.*mattin|mid.?morning/i, 20],
+  [/pre.?workout|pre.?allenamento/i, 30], [/pranzo|lunch/i, 40],
+  [/post.?workout|post.?allenamento/i, 50], [/merenda|spuntino.*pomeri/i, 60],
+  [/snack|spuntino/i, 65], [/cena|dinner/i, 80], [/spuntino.*ser|prima di dormire|notte/i, 90],
+];
+const mealRank = (name, window) => {
+  if (window && window.length) {
+    const i = window.findIndex((w) => (w.label || "").toLowerCase() === (name || "").toLowerCase());
+    if (i >= 0) return i;                       // rispetta l'ordine della finestra alimentare
+    const j = window.findIndex((w) => (name || "").toLowerCase().includes((w.label || "").toLowerCase()));
+    if (j >= 0) return j;
+  }
+  for (const [re, r] of MEAL_RANK) if (re.test(name || "")) return 100 + r;
+  return 999;
+};
+const sortMeals = (entries, window) =>
+  [...entries].sort((a, b) => mealRank(a[0], window) - mealRank(b[0], window));
 
 /* ---------------- Parsing tollerante delle risposte AI ---------------- */
 /* I modelli possono troncare il JSON se lo spazio finisce: qui si recupera
@@ -4179,6 +4205,7 @@ function NutriImport({ premium, body, onClose, onSave }) {
   const inputRef = useRef(null);
 
   const interpret = async () => {
+    if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
     setLoading(true); setError(null);
     try {
       let content;
@@ -4320,7 +4347,7 @@ REGOLE:
             </Panel>
           )}
 
-          {Object.entries(result.meals).map(([meal, opts]) => (
+          {sortMeals(Object.entries(result.meals), result.sourcePlan && result.sourcePlan.window).map(([meal, opts]) => (
             <Panel key={meal}>
               <div className="hud-label" style={{ marginBottom: 6 }}>▸ {meal} <span className="t-faint">({asOptions(opts).length} {tr("opzioni")})</span></div>
               {(asOptions(opts)[0] || []).map((f, i) => (
@@ -4357,6 +4384,7 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
   const savePlate = (p) => { setPlate(p); if (nutri) setNutri({ ...nutri, plate: p }); };
 
   const generate = async (useCurrentTargets) => {
+    if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
     setLoading(true);
     /* se i target sono stati modificati a mano, i pasti si rigenerano su QUELLI */
     const targets = useCurrentTargets && nutri ? nutri.targets : calcTargets(body, days, goal);
@@ -4606,7 +4634,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
               fireToast({ title: tr("◈ PASTO AGGIORNATO"), sub: editMeal });
             }} />
         )}
-        {Object.entries(nutri.meals).map(([meal, raw]) => {
+        {sortMeals(Object.entries(nutri.meals), nutri.sourcePlan && nutri.sourcePlan.window).map(([meal, raw]) => {
           const opts = asOptions(raw);
           const idx = dayIndex() % Math.max(1, opts.length);
           const foods = opts[idx] || [];
