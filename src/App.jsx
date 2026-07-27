@@ -847,8 +847,26 @@ button.btn{text-align:center}
 @keyframes spin{to{transform:rotate(360deg)}}
 .float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c2a3d;border:1px solid #57c8f2;cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
 .float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:#071523;border:1px solid #ffd76a;box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;max-width:340px;box-sizing:border-box}
-.set-grid-t{display:grid;grid-template-columns:42px 1fr 64px 48px;gap:10px;align-items:center}
+.set-grid-t{display:grid;grid-template-columns:18px 42px 1fr 64px 48px;gap:8px;align-items:center}
 .icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer}
+
+/* --- info esercizio: pulsante ben visibile --- */
+.info-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border:1px solid var(--line);
+  background:#0c1c2b;color:var(--cyan-hi);font-family:'Chakra Petch',sans-serif;
+  font-size:9px;letter-spacing:.18em;cursor:pointer;flex-shrink:0}
+.info-btn:hover{border-color:var(--cyan);box-shadow:0 0 8px rgba(87,200,242,.25)}
+
+/* --- riordino trascinando (card e serie) --- */
+.drag-handle{display:inline-flex;align-items:center;justify-content:center;padding:6px 3px;
+  margin:-2px 0;color:var(--faint);cursor:grab;touch-action:none;flex-shrink:0;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.drag-handle, .drag-handle *{touch-action:none}
+.drag-handle:active{cursor:grabbing;color:var(--cyan)}
+.drag-live{opacity:.5}
+body.dragging{user-select:none;-webkit-user-select:none}
+body.dragging *{cursor:grabbing!important}
+/* cella numero+X della serie: impilati e centrati nella colonna */
+.set-meta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .toast-in{animation:ti .35s cubic-bezier(.34,1.4,.64,1)}
@@ -2445,8 +2463,14 @@ function dlStart(ev, onMove) {
   ev.preventDefault();
   let idx = [...list.children].indexOf(row);
   if (idx < 0) return;
+  /* pointer capture: su mobile garantisce che gli eventi seguano il dito
+     anche se esce dall'handle; contextmenu: evita che la pressione lunga
+     Android interrompa il trascinamento */
+  try { handle.setPointerCapture(ev.pointerId); } catch (_) {}
   row.classList.add("drag-live");
   document.body.classList.add("dragging");
+  const noMenu = (e) => e.preventDefault();
+  window.addEventListener("contextmenu", noMenu, true);
   const move = (e) => {
     const rows = [...list.children];
     const y = e.clientY;
