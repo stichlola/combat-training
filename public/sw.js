@@ -1,4 +1,4 @@
-const CACHE = "gymquest-v1";
+const CACHE = "combat-training-v2";
 const ASSETS = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
