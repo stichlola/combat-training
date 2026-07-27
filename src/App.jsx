@@ -5,7 +5,7 @@ import {
   Dumbbell, Flame, Timer, Plus, Check, ChevronRight, Play, Square,
   Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search,
   User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save,
-  Pencil, Info, Pause, Camera, Medal, Gamepad2
+  Pencil, Info, Pause, Camera, Medal, Gamepad2, GripVertical
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -348,6 +348,8 @@ const EN_UI = {
   "◈ INSTALLA COMBAT TRAINING": "◈ INSTALL COMBAT TRAINING",
   "Aggiungila alla schermata home come app": "Add it to your home screen as an app",
   "Installa": "Install",
+  "Trascina per riordinare": "Drag to reorder",
+  "Info esercizio": "Exercise info",
 
   /* --- gruppi muscolari --- */
   "Dorso": "Back", "Gambe": "Legs", "Spalle": "Shoulders",
@@ -388,6 +390,37 @@ const EN_UI = {
   "Corsa": "Running", "Camminata Veloce": "Brisk Walking", "Tapis Roulant": "Treadmill",
   "Cyclette": "Stationary Bike", "Ellittica": "Elliptical", "Vogatore": "Rowing Machine",
   "Salto della Corda": "Jump Rope", "Stepper": "Stair Stepper",
+  "Panca Piana Smith Machine": "Smith Machine Bench Press", "Panca Inclinata Smith Machine": "Smith Machine Incline Press",
+  "Croci Cavi dal Basso": "Low Cable Flyes", "Croci Cavi dall'Alto": "High Cable Flyes",
+  "Croci Manubri su Inclinata": "Incline Dumbbell Flyes", "Dip Machine": "Dip Machine",
+  "Push-Up Zavorrati": "Weighted Push-Ups", "Chest Press Presa Stretta": "Close-Grip Chest Press",
+  "Panca Piana con Fermi": "Bench Press with Safety Pins", "Pull-Up Assistito": "Assisted Pull-Ups",
+  "Lat Machine Presa Inversa": "Underhand Lat Pulldown", "Rematore Chest Support": "Chest-Supported Row",
+  "Rematore Smith Machine": "Smith Machine Row", "Rematore Pendlay": "Pendlay Row",
+  "Pullover Manubrio": "Dumbbell Pullover", "Pullover ai Cavi": "Cable Pullover",
+  "Rack Pull": "Rack Pull", "Good Morning": "Good Morning", "Trazioni Presa Larga": "Wide-Grip Pull-Ups",
+  "Squat Smith Machine": "Smith Machine Squat", "Goblet Squat": "Goblet Squat",
+  "Stacco Sumo": "Sumo Deadlift", "Affondi in Camminata": "Walking Lunges",
+  "Leg Curl in Piedi": "Standing Leg Curl", "Adductor Machine": "Adductor Machine",
+  "Abductor Machine": "Abductor Machine", "Glute Bridge": "Glute Bridge",
+  "Box Step-Up": "Box Step-Up", "Calf Raise alla Pressa": "Leg Press Calf Raise",
+  "Squat con Fermi": "Squat with Safety Pins", "Military Press Seduto": "Seated Military Press",
+  "Shoulder Press Machine": "Shoulder Press Machine", "Alzate Laterali Macchina": "Lateral Raise Machine",
+  "Alzate Laterali Seduto": "Seated Lateral Raises", "Reverse Pec Deck": "Reverse Pec Deck",
+  "Tirate al Mento": "Upright Row", "Alzate Frontali ai Cavi": "Cable Front Raises",
+  "Shrug Manubri": "Dumbbell Shrug", "Curl Bilanciere EZ": "EZ-Bar Curl",
+  "Curl su Panca Inclinata": "Incline Dumbbell Curl", "Curl Macchina": "Curl Machine",
+  "Curl Presa Inversa": "Reverse Curl", "Zottman Curl": "Zottman Curl",
+  "Hammer Curl ai Cavi": "Cable Hammer Curl", "French Press Manubri": "Dumbbell Skull Crusher",
+  "Pushdown Presa Inversa": "Reverse-Grip Pushdown", "Pushdown Braccio Singolo": "Single-Arm Pushdown",
+  "Kickback ai Cavi": "Cable Kickback", "Estensione Singola Sopra la Testa": "Single-Arm Overhead Extension",
+  "Dip Machine Tricipiti": "Triceps Dip Machine", "Crunch Inverso": "Reverse Crunch",
+  "Crunch su Panca Declinata": "Decline Bench Crunch", "Sit-Up": "Sit-Up",
+  "Mountain Climbers": "Mountain Climbers", "Dead Bug": "Dead Bug", "Hollow Hold": "Hollow Hold",
+  "Toes to Bar": "Toes to Bar", "Pallof Press": "Pallof Press", "Ab Crunch Machine": "Ab Crunch Machine",
+  "V-Up": "V-Up", "Camminata in Salita": "Incline Walking", "Sprint": "Sprint",
+  "Nuoto": "Swimming", "Assault Bike": "Assault Bike", "Spin Bike": "Spin Bike",
+  "Burpees": "Burpees", "Jumping Jack": "Jumping Jacks", "Sacco da Boxe": "Heavy Bag", "Battle Ropes": "Battle Ropes",
 
   /* --- macchinari --- */
   "Panca Piana": "Flat Bench", "Panca Inclinata": "Incline Bench",
@@ -560,14 +593,14 @@ Object.assign(EN_UI, EN_CONTENT, EN_DESC);
 
 /* ====================== EXERCISE LIBRARY (pre-loaded) ====================== */
 const EXERCISE_DB = {
-  Petto: ["Panca Piana Bilanciere", "Panca Piana Manubri", "Panca Inclinata Bilanciere", "Panca Inclinata Manubri", "Panca Declinata", "Chest Press", "Croci Manubri", "Croci ai Cavi", "Pectoral Machine", "Push-Up", "Dip alle Parallele"],
-  Dorso: ["Trazioni", "Trazioni Presa Inversa", "Lat Machine Avanti", "Lat Machine Presa Stretta", "Rematore Bilanciere", "Rematore Manubrio", "Rematore T-Bar", "Pulley Basso", "Pull-Down Braccia Tese", "Hyperextension", "Stacco da Terra"],
-  Gambe: ["Squat Bilanciere", "Front Squat", "Leg Press", "Hack Squat", "Affondi Manubri", "Affondi Bulgari", "Stacco Rumeno", "Leg Extension", "Leg Curl Sdraiato", "Leg Curl Seduto", "Hip Thrust", "Calf Raise in Piedi", "Calf Raise Seduto"],
-  Spalle: ["Military Press", "Shoulder Press Manubri", "Arnold Press", "Alzate Laterali", "Alzate Laterali ai Cavi", "Alzate Frontali", "Alzate Posteriori", "Face Pull", "Shrug Bilanciere"],
-  Bicipiti: ["Curl Bilanciere", "Curl Manubri Alternato", "Curl Panca Scott", "Hammer Curl", "Curl ai Cavi", "Curl Concentrato", "Spider Curl"],
-  Tricipiti: ["Pushdown Tricipiti", "Pushdown Corda", "French Press", "Estensioni Sopra la Testa", "Panca Presa Stretta", "Dip tra Panche", "Kickback Manubrio"],
-  Core: ["Plank", "Crunch", "Crunch ai Cavi", "Russian Twist", "Leg Raise", "Hanging Leg Raise", "Ab Wheel", "Side Plank"],
-  Cardio: ["Corsa", "Camminata Veloce", "Tapis Roulant", "Cyclette", "Ellittica", "Vogatore", "Salto della Corda", "Stepper"],
+  Petto: ["Panca Piana Bilanciere", "Panca Piana Manubri", "Panca Inclinata Bilanciere", "Panca Inclinata Manubri", "Panca Declinata", "Chest Press", "Croci Manubri", "Croci ai Cavi", "Pectoral Machine", "Push-Up", "Dip alle Parallele", "Panca Piana Smith Machine", "Panca Inclinata Smith Machine", "Croci Cavi dal Basso", "Croci Cavi dall'Alto", "Croci Manubri su Inclinata", "Dip Machine", "Push-Up Zavorrati", "Chest Press Presa Stretta", "Panca Piana con Fermi"],
+  Dorso: ["Trazioni", "Trazioni Presa Inversa", "Lat Machine Avanti", "Lat Machine Presa Stretta", "Rematore Bilanciere", "Rematore Manubrio", "Rematore T-Bar", "Pulley Basso", "Pull-Down Braccia Tese", "Hyperextension", "Stacco da Terra", "Pull-Up Assistito", "Lat Machine Presa Inversa", "Rematore Chest Support", "Rematore Smith Machine", "Rematore Pendlay", "Pullover Manubrio", "Pullover ai Cavi", "Rack Pull", "Good Morning", "Trazioni Presa Larga"],
+  Gambe: ["Squat Bilanciere", "Front Squat", "Leg Press", "Hack Squat", "Affondi Manubri", "Affondi Bulgari", "Stacco Rumeno", "Leg Extension", "Leg Curl Sdraiato", "Leg Curl Seduto", "Hip Thrust", "Calf Raise in Piedi", "Calf Raise Seduto", "Squat Smith Machine", "Goblet Squat", "Stacco Sumo", "Affondi in Camminata", "Leg Curl in Piedi", "Adductor Machine", "Abductor Machine", "Glute Bridge", "Box Step-Up", "Calf Raise alla Pressa", "Squat con Fermi"],
+  Spalle: ["Military Press", "Shoulder Press Manubri", "Arnold Press", "Alzate Laterali", "Alzate Laterali ai Cavi", "Alzate Frontali", "Alzate Posteriori", "Face Pull", "Shrug Bilanciere", "Military Press Seduto", "Shoulder Press Machine", "Alzate Laterali Macchina", "Alzate Laterali Seduto", "Reverse Pec Deck", "Tirate al Mento", "Alzate Frontali ai Cavi", "Shrug Manubri"],
+  Bicipiti: ["Curl Bilanciere", "Curl Manubri Alternato", "Curl Panca Scott", "Hammer Curl", "Curl ai Cavi", "Curl Concentrato", "Spider Curl", "Curl Bilanciere EZ", "Curl su Panca Inclinata", "Curl Macchina", "Curl Presa Inversa", "Zottman Curl", "Hammer Curl ai Cavi"],
+  Tricipiti: ["Pushdown Tricipiti", "Pushdown Corda", "French Press", "Estensioni Sopra la Testa", "Panca Presa Stretta", "Dip tra Panche", "Kickback Manubrio", "French Press Manubri", "Pushdown Presa Inversa", "Pushdown Braccio Singolo", "Kickback ai Cavi", "Estensione Singola Sopra la Testa", "Dip Machine Tricipiti"],
+  Core: ["Plank", "Crunch", "Crunch ai Cavi", "Russian Twist", "Leg Raise", "Hanging Leg Raise", "Ab Wheel", "Side Plank", "Crunch Inverso", "Crunch su Panca Declinata", "Sit-Up", "Mountain Climbers", "Dead Bug", "Hollow Hold", "Toes to Bar", "Pallof Press", "Ab Crunch Machine", "V-Up"],
+  Cardio: ["Corsa", "Camminata Veloce", "Tapis Roulant", "Cyclette", "Ellittica", "Vogatore", "Salto della Corda", "Stepper", "Camminata in Salita", "Sprint", "Nuoto", "Assault Bike", "Spin Bike", "Burpees", "Jumping Jack", "Sacco da Boxe", "Battle Ropes"],
 };
 const GROUPS = Object.keys(EXERCISE_DB);
 const findGroup = (name) => {
@@ -618,6 +651,75 @@ const EXERCISE_INFO = {
   "Cyclette": "Regola la sella all'altezza dell'anca: gamba quasi distesa nel punto più basso. Cadenza fluida 70-90 rpm, resistenza tale da mantenere lo sforzo costante.",
   "Vogatore": "Sequenza: spinta gambe → apertura busto → tirata braccia; ritorno in ordine inverso. La forza viene per il 60% dalle gambe. Schiena neutra sempre.",
   "Salto della Corda": "Salta basso sull'avampiede, polsi che ruotano la corda, gomiti vicini al corpo. Ottimo per condizionamento: alterna round da 1-3 minuti a pause brevi.",
+  "Panca Piana Smith Machine": "Il bilanciere guidato stabilizza la traiettoria: posiziona la panca in modo che la barra scenda a metà petto. Scendi controllato e spingi senza bloccare i gomiti. Inserisci i fermi di sicurezza.",
+  "Panca Inclinata Smith Machine": "Panca a 30-45° sotto la barra guidata, che deve scendere verso la parte alta del petto. Traiettoria fissa: concentrati sulla spinta e sul controllo della discesa.",
+  "Croci Cavi dal Basso": "Cavi in basso, presa alle maniglie, busto leggermente avanti. Porta le mani in alto e verso il centro come ad abbracciare, stringendo il petto in alto. Enfatizza la porzione clavicolare.",
+  "Croci Cavi dall'Alto": "Cavi in alto, passo avanti con un piede. Porta le mani in basso e verso il centro con gomiti semiflessi, stringendo il petto a fine movimento. Torna lento in apertura.",
+  "Croci Manubri su Inclinata": "Su panca a 30-45°, apri i manubri ad arco con gomiti semiflessi fino ad allungare la parte alta del petto, poi richiudi. Carichi moderati e discesa controllata.",
+  "Dip Machine": "Regola il sedile e le imbottiture. Spingi le maniglie verso il basso fino a estendere quasi i gomiti, controlla la risalita. Busto leggermente avanti per il petto, più verticale per i tricipiti.",
+  "Push-Up Zavorrati": "Come il push-up classico ma con un disco sulla schiena (o zaino carico). Corpo sempre in linea, scendi completo e spingi senza inarcare la zona lombare.",
+  "Chest Press Presa Stretta": "Alla chest press con presa stretta e gomiti vicini al corpo: sposta il lavoro su tricipiti e parte interna del petto. Non bloccare i gomiti a fine spinta.",
+  "Panca Piana con Fermi": "Configura i fermi di sicurezza all'altezza del petto: ti permettono di spingere al limite in sicurezza anche da solo. Esecuzione identica alla panca piana classica.",
+  "Pull-Up Assistito": "Alla macchina (o con elastico), il contrappeso riduce il peso da sollevare. Esecuzione come le trazioni: petto alla sbarra, gomiti in basso, discesa completa controllata.",
+  "Lat Machine Presa Inversa": "Presa supina alla larghezza spalle. Tira la sbarra verso la parte alta del petto portando i gomiti in basso lungo i fianchi: maggiore enfasi su bicipiti e gran dorsale basso.",
+  "Rematore Chest Support": "Petto appoggiato alla panca inclinata, manubri sospesi. Tira verso i fianchi stringendo le scapole: il supporto elimina lo slancio e scarica la zona lombare.",
+  "Rematore Smith Machine": "Busto inclinato ~45°, tira la barra guidata verso l'ombelico con gomiti vicini al corpo. La traiettoria fissa aiuta a isolare il dorso: stringi le scapole a fine tirata.",
+  "Rematore Pendlay": "Come il rematore ma esplosivo e senza appoggio: ogni ripetizione riparte da fermo a terra, schiena parallela al pavimento. Carichi più bassi, tecnica rigorosa.",
+  "Pullover Manubrio": "Sdraiato traverso sulla panca, manubrio sopra il petto a braccia quasi tese. Scendi dietro la testa ad arco fino ad allungare il gran dorsale, risali usando il dorso, non le braccia.",
+  "Pullover ai Cavi": "Alla poulie alta, a qualche passo di distanza, braccia quasi tese. Porta la sbarra verso le anche ad arco contraendo il gran dorsale, torna lento in allungamento.",
+  "Rack Pull": "Stacco accorciato dai fermi del rack (sotto o sopra il ginocchio). Schiena neutra, spingi il pavimento con le gambe e chiudi le anche. Sovraccarica la parte alta dello stacco.",
+  "Good Morning": "Bilanciere sui trapezi, gambe quasi tese. Scendi spingendo le anche indietro con schiena neutra fino al busto quasi parallelo, risali contraendo glutei e femorali. Carichi leggeri.",
+  "Trazioni Presa Larga": "Presa prona molto larga. Tira il petto verso la sbarra pensando a portare i gomiti verso i fianchi: massima enfasi sul gran dorsale, meno coinvolgimento dei bicipiti.",
+  "Squat Smith Machine": "Bilanciere guidato sui trapezi, piedi leggermente avanti rispetto alla barra. Scendi fino a cosce parallele spingendo le anche indietro, risali spingendo con tutto il piede.",
+  "Goblet Squat": "Manubrio o kettlebell tenuto al petto. Scendi profondo tra le ginocchia tenendo il busto eretto e i talloni a terra. Ottimo per imparare lo schema dello squat.",
+  "Stacco Sumo": "Stacco con piedi molto larghi e punte in fuori, mani tra le gambe. Busto più verticale: più enfasi su glutei e adduttori, meno sulla zona lombare. Spingi il pavimento in fuori.",
+  "Affondi in Camminata": "Affondo dinamico in avanzamento: passo lungo, scendi in verticale finché il ginocchio posteriore sfiora terra, poi spingi e porta avanti l'altra gamba. Core attivo e busto eretto.",
+  "Leg Curl in Piedi": "Alla macchina in piedi, un arto alla volta: fletti il tallone verso il gluteo senza muovere l'anca, stringi il femorale in alto e scendi controllato.",
+  "Adductor Machine": "Seduto, gambe divaricate contro le imbottiture. Chiudi le gambe contraendo gli adduttori, riapri frenando il carico senza far sbattere il pacco pesi.",
+  "Abductor Machine": "Seduto, gambe chiuse. Spingi le ginocchia in fuori contraendo glutei medi, torna controllato. Busto fermo, niente slanci.",
+  "Glute Bridge": "Sdraiato, piedi a terra vicino ai glutei. Spingi il bacino in alto contraendo forte i glutei fino ad allineare spalle-anche-ginocchia, pausa in cima, scendi lento. Si può caricare con un disco.",
+  "Box Step-Up": "Un piede intero sul box, spingi con il tallone fino a estendere la gamba senza darti slancio con l'altra. Scendi controllato. Più alto il box, più lavorano glutei e femorali.",
+  "Calf Raise alla Pressa": "Alla leg press con le punte dei piedi sul bordo della pedana. Estendi le caviglie spingendo sulle punte, pausa in alto, scendi in massimo allungamento. Gambe ferme.",
+  "Squat con Fermi": "Squat dentro il rack con fermi di sicurezza regolati appena sotto la tua profondità: puoi spingere al limite in sicurezza senza partner. Esecuzione come lo squat classico.",
+  "Military Press Seduto": "Seduto su panca con schienale, bilanciere alle clavicole. Spingi in verticale senza inarcare la zona lombare (lo schienale aiuta) e scendi controllato.",
+  "Shoulder Press Machine": "Regola il sedile con le maniglie all'altezza delle spalle. Spingi in alto senza bloccare i gomiti e scendi lento fino a ~90°. Traiettoria guidata, ottima per spingere al limite.",
+  "Alzate Laterali Macchina": "Avambracci contro le imbottiture, gomiti che guidano il movimento. Solleva lateralmente fino all'altezza delle spalle e scendi frenando. Tensione costante sui deltoidi.",
+  "Alzate Laterali Seduto": "Seduto, manubri ai fianchi. Solleva lateralmente guidando con i gomiti fino all'altezza delle spalle: la posizione seduta elimina lo slancio delle gambe.",
+  "Reverse Pec Deck": "Seduto di fronte alla macchina, petto contro l'imbottitura. Apri le braccia all'indietro contraendo i deltoidi posteriori e le scapole, torna lento. Carichi leggeri.",
+  "Tirate al Mento": "Presa stretta sul bilanciere, tira in alto lungo il corpo guidando con i gomiti fino al petto. Fermati se avverti fastidio alle spalle; alternativa più sicura: presa più larga.",
+  "Alzate Frontali ai Cavi": "Alla poulie bassa, di spalle al cavo. Solleva la corda o la maniglia davanti a te fino all'altezza delle spalle, braccio quasi teso, scendi controllato.",
+  "Shrug Manubri": "Manubri ai fianchi, braccia tese. Solleva le spalle verso le orecchie contraendo i trapezi, pausa in alto, scendi lento. Niente rotazioni delle spalle.",
+  "Curl Bilanciere EZ": "Come il curl con bilanciere ma con la barra sagomata EZ: polsi in posizione più naturale, meno stress articolare. Gomiti fermi ai fianchi, discesa in 2-3 secondi.",
+  "Curl su Panca Inclinata": "Seduto su panca a 45-60°, braccia che pendono dietro il busto. Fletti i manubri senza muovere le spalle: massimo allungamento del bicipite in basso.",
+  "Curl Macchina": "Avambracci sulla imbottitura, impugna le maniglie. Fletti completamente contraendo il bicipite e torna lento quasi a braccia distese. La macchina mantiene tensione costante.",
+  "Curl Presa Inversa": "Curl con presa prona (dorso delle mani in alto). Carichi molto più leggeri del solito: colpisce brachioradiale e avambracci. Gomiti fermi, polsi dritti.",
+  "Zottman Curl": "Sali in curl con presa supina, in alto ruota i polsi in prono e scendi lento con presa inversa. Combina bicipite in salita e avambracci in discesa.",
+  "Hammer Curl ai Cavi": "Alla poulie bassa con la corda, presa neutra. Fletti portando le estremità della corda verso le spalle, gomiti fermi. Tensione continua su brachiale e avambraccio.",
+  "French Press Manubri": "Sdraiato o seduto, un manubrio a due mani sopra la testa. Piega solo i gomiti scendendo dietro la nuca e riestendi contraendo il tricipite. Gomiti stretti e fermi.",
+  "Pushdown Presa Inversa": "Alla poulie alta con presa supina. Estendi gli avambracci in basso tenendo i gomiti bloccati ai fianchi: enfasi sul capo mediale del tricipite. Carichi leggeri.",
+  "Pushdown Braccio Singolo": "Pushdown con una maniglia, un braccio alla volta. Gomito bloccato al fianco, estendi completamente e stringi un secondo in basso. Correggi eventuali squilibri tra i lati.",
+  "Kickback ai Cavi": "Alla poulie bassa, busto inclinato avanti, gomito alto e fermo. Estendi il braccio all'indietro fino a contrarre il tricipite, torna controllato. Niente oscillazioni.",
+  "Estensione Singola Sopra la Testa": "Un manubrio tenuto a una mano sopra la testa, gomito vicino all'orecchio e fermo. Scendi dietro la nuca piegando solo il gomito e riestendi. Massimo allungamento del capo lungo.",
+  "Dip Machine Tricipiti": "Alla dip machine con busto verticale e gomiti stretti: spingi le maniglie in basso concentrandoti sull'estensione del gomito per isolare i tricipiti.",
+  "Crunch Inverso": "Sdraiato, gambe piegate sollevate. Arrotola il bacino verso il petto sollevando i glutei da terra contraendo l'addome, scendi lento. Non dondolare le gambe.",
+  "Crunch su Panca Declinata": "Sulla panca declinata con le gambe bloccate. Solleva le scapole arrotondando la schiena alta, espira in contrazione. Rom aumentato: attenzione al controllo della discesa.",
+  "Sit-Up": "Sdraiato, gambe piegate e piedi fermi. Sali con tutto il busto arrotolando la schiena, espira in cima, scendi controllato vertebra dopo vertebra. Non tirare il collo con le mani.",
+  "Mountain Climbers": "In plank sulle mani, porta le ginocchia al petto alternando le gambe a ritmo sostenuto. Bacino basso e stabile, addome contratto. Core e condizionamento insieme.",
+  "Dead Bug": "Sdraiato, braccia in verticale e gambe a tavolino. Distendi braccio e gamba opposti verso terra tenendo la zona lombare incollata al pavimento, torna e cambia lato.",
+  "Hollow Hold": "Sdraiato, solleva scapole e gambe tenendo la zona lombare a terra, corpo a 'banana'. Addome contratto forte, respira. Mantieni la posizione per il tempo previsto.",
+  "Toes to Bar": "Appeso alla sbarra, porta le punte dei piedi alla sbarra sollevando le gambe con l'addome, scendi controllato senza slancio. Versione ridotta: ginocchia al petto.",
+  "Pallof Press": "Alla poulie (o con elastico) laterale al busto, mani al petto. Spingi le mani in avanti resistendo alla rotazione del busto, pausa, torna. Anti-rotazione per il core.",
+  "Ab Crunch Machine": "Seduto, avambracci o spalle contro l'imbottitura. Fletti il busto arrotolando la schiena contraendo l'addome, torna frenando il carico. Espira in contrazione.",
+  "V-Up": "Sdraiato, braccia oltre la testa. Solleva contemporaneamente busto e gambe tese formando una V, tocca le punte, scendi controllato. Addome sempre contratto.",
+  "Camminata in Salita": "Su tapis roulant a pendenza 5-15%: ottimo cardio a basso impatto che attiva glutei e polpacci. Non aggrapparti ai corrimano, mantieni un passo sostenuto.",
+  "Sprint": "Scatti brevi ad alta intensità (10-30 secondi) alternati a recupero camminato. Riscaldati bene prima: il lavoro si svolge negli intervalli, non a ritmo continuo.",
+  "Nuoto": "Ottimo cardio a impatto zero su tutto il corpo. Alterna stili e ritmi: serie a ritmo moderato con recuperi brevi per lavoro aerobico continuo.",
+  "Assault Bike": "Bike con ventola: più spingi forte, più la resistenza aumenta. Ideale per intervalli intensi (es. 20\" sprint / 40\" facile). Gambe e braccia spingono insieme.",
+  "Spin Bike": "Bike da spinning con resistenza regolabile. Cadenza 80-100 rpm, alterna tratti seduti e in piedi. Regola sella e manubrio prima di partire.",
+  "Burpees": "Da in piedi: piegati, mani a terra, salto in plank, piegamento, ritorno e salto in alto. Cardio a corpo libero totale: gestisci il ritmo per non bruciarti subito.",
+  "Jumping Jack": "Saltelli aprendo e chiudendo gambe e braccia. Semplice ed efficace per alzare la frequenza cardiaca: usalo a blocchi da 1-3 minuti.",
+  "Sacco da Boxe": "Combinazioni di pugni al sacco a round da 2-3 minuti con 1 minuto di recupero. Colpisci con tecnica, resta leggero sulle gambe e continua a muoverti tra un colpo e l'altro.",
+  "Battle Ropes": "Onde con le funi: braccia alternate o insieme, busto stabile e core contratto. Round da 20-40 secondi ad alta intensità con recuperi brevi.",
 };
 const INFO_FALLBACK = {
   Petto: "Esercizio per il pettorale: scapole addotte, movimento controllato in discesa e spinta senza bloccare i gomiti. Concentrati sul sentire lavorare il petto, non solo braccia e spalle.",
@@ -808,7 +910,7 @@ button.btn{text-align:center}
 .grow{flex:1;min-width:0}
 .wrap{flex-wrap:wrap}
 
-.set-grid{display:grid;grid-template-columns:42px 1fr 1fr 48px;gap:10px;align-items:center}
+.set-grid{display:grid;grid-template-columns:18px 42px 1fr 1fr 48px;gap:8px;align-items:center}
 .divider-row{display:flex;justify-content:space-between;align-items:center;
   padding:7px 0;border-bottom:1px solid #0e2233}
 .divider-row:last-child{border-bottom:none}
@@ -2328,6 +2430,45 @@ const EXERCISE_MEDIA = {
 };
 const Overlay = ({ children }) => createPortal(children, document.body);
 
+/* ---------------- Riordino trascinando (mouse + touch) ---------------- */
+/* Il puntatore parte da un handle .drag-handle dentro un contenitore [data-dl];
+   onMove(from, to) riordina lo stato mentre trascini. Funziona anche con
+   contenitori annidati (serie dentro card): vale il [data-dl] più vicino. */
+function dlStart(ev, onMove) {
+  if (ev.pointerType === "mouse" && ev.button !== 0) return;
+  const handle = ev.currentTarget;
+  const list = handle.closest("[data-dl]");
+  if (!list) return;
+  let row = handle.parentElement;
+  while (row && row.parentElement !== list) row = row.parentElement;
+  if (!row) return;
+  ev.preventDefault();
+  let idx = [...list.children].indexOf(row);
+  if (idx < 0) return;
+  row.classList.add("drag-live");
+  document.body.classList.add("dragging");
+  const move = (e) => {
+    const rows = [...list.children];
+    const y = e.clientY;
+    let to = rows.length - 1;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) { to = i; break; }
+    }
+    if (to !== idx) { onMove(idx, to); idx = to; }
+  };
+  const up = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    window.removeEventListener("pointercancel", up);
+    row.classList.remove("drag-live");
+    document.body.classList.remove("dragging");
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+  window.addEventListener("pointercancel", up);
+}
+
 const GROUP_ICONS = { Petto: "▣", Dorso: "◈", Gambe: "▼", Spalle: "▲", Bicipiti: "◐", Tricipiti: "◑", Cardio: "♥", Core: "◆", Altro: "◇" };
 
 function ExerciseInfoModal({ name, group, ex, onClose }) {
@@ -2447,7 +2588,7 @@ const findExGroup = (name) => {
   return "Altro";
 };
 
-function MachineScan({ premium, variant, currentNames, onAdd, fireToast }) {
+function MachineScan({ premium, variant, currentNames, onAdd, fireToast, fabBottom = 142 }) {
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState(null);   // { machine, exercises } | { unknown, guess } | { error }
   const [openEx, setOpenEx] = useState(null);
@@ -2714,6 +2855,31 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
     }));
   };
 
+  /* Riordino trascinando: mette in pausa l'eventuale cronometro attivo */
+  const moveEx = (from, to) => {
+    if (runKey) setRunKey(null);
+    upd((s) => {
+      const exs = [...s.exercises];
+      const [m] = exs.splice(from, 1);
+      exs.splice(to, 0, m);
+      return { ...s, exercises: exs };
+    });
+  };
+
+  const moveSet = (ei, from, to) => {
+    if (runKey) setRunKey(null);
+    upd((s) => ({
+      ...s,
+      exercises: s.exercises.map((e, i) => {
+        if (i !== ei) return e;
+        const sets = [...e.sets];
+        const [m] = sets.splice(from, 1);
+        sets.splice(to, 0, m);
+        return { ...e, sets };
+      }),
+    }));
+  };
+
   const fmt = (sec) => `${Math.floor((sec || 0) / 60)}:${String((sec || 0) % 60).padStart(2, "0")}`;
 
   const volume = session.exercises.reduce((v, e) => e.mode === "time" ? v :
@@ -2854,13 +3020,16 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
         </div>
       </Panel>
 
+      <div data-dl className="stack" style={{ marginTop: 0 }}>
       {session.exercises.map((ex, ei) => (
         <Panel key={ei}>
           <div className="row between g8" style={{ marginBottom: 4 }}>
+            <span className="drag-handle" title={tr("Trascina per riordinare")}
+              onPointerDown={(e) => dlStart(e, moveEx)}><GripVertical size={15} /></span>
             <div className="grow">
               <div className="row g6">
                 <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{tr(ex.name)}</span>
-                <span onClick={() => setInfo(ex)} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={14} /></span>
+                <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
               </div>
               <div className="micro">{tr(ex.group || "").toUpperCase()}{ex.mode !== "time" && ` · PR ${prs[ex.name] || "—"} KG`}</div>
             </div>
@@ -2872,11 +3041,14 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
           {ex.mode === "time" ? (
             <>
               <div className="set-grid-t micro" style={{ marginBottom: 4, padding: "0 4px" }}>
-                <span>{tr("SET")}</span><span>{tr("TEMPO")}</span><span>{tr("KM")}</span><span></span>
+                <span></span><span>{tr("SET")}</span><span>{tr("TEMPO")}</span><span>{tr("KM")}</span><span></span>
               </div>
+              <div data-dl>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid-t cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-                  <div className="col" style={{ alignItems: "center", gap: 5 }}>
+                  <span className="drag-handle" title={tr("Trascina per riordinare")}
+                    onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
+                  <div className="set-meta">
                     <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
                     <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={13} /></span>
                   </div>
@@ -2898,15 +3070,19 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
                   </button>
                 </div>
               ))}
+              </div>
             </>
           ) : (
             <>
               <div className="set-grid micro" style={{ marginBottom: 4, padding: "0 4px" }}>
-                <span>{tr("SET")}</span><span>{tr("KG")}</span><span>{tr("REPS")}</span><span></span>
+                <span></span><span>{tr("SET")}</span><span>{tr("KG")}</span><span>{tr("REPS")}</span><span></span>
               </div>
+              <div data-dl>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-                  <div className="col" style={{ alignItems: "center", gap: 5 }}>
+                  <span className="drag-handle" title={tr("Trascina per riordinare")}
+                    onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
+                  <div className="set-meta">
                     <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
                     <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={13} /></span>
                   </div>
@@ -2919,11 +3095,13 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
                   </button>
                 </div>
               ))}
+              </div>
             </>
           )}
           <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>{tr("+ SERIE")}</button>
         </Panel>
       ))}
+      </div>
     </div>
   );
 }
@@ -2969,6 +3147,25 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
     }),
   }));
 
+  /* Riordino: card esercizi e serie trascinabili su/giù dalle maniglie */
+  const moveEx = (from, to) => upd((d) => {
+    const exs = [...d.exercises];
+    const [m] = exs.splice(from, 1);
+    exs.splice(to, 0, m);
+    return { ...d, exercises: exs };
+  });
+
+  const moveSet = (ei, from, to) => upd((d) => ({
+    ...d,
+    exercises: d.exercises.map((e, i) => {
+      if (i !== ei) return e;
+      const sets = [...e.sets];
+      const [m] = sets.splice(from, 1);
+      sets.splice(to, 0, m);
+      return { ...e, sets };
+    }),
+  }));
+
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
@@ -2981,22 +3178,28 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
       <input className="hud-input cham-s" value={draft.name}
         onChange={(e) => upd((d) => ({ ...d, name: e.target.value }))} placeholder={tr("Nome scheda (es. LEG DAY)")} />
 
-      {/* Esercizi nel modello: serie modificabili ed eliminabili, note sotto il titolo */}
+      {/* Esercizi nel modello: card e serie trascinabili per riordinare, pulsante INFO visibile */}
+      <div data-dl className="stack" style={{ marginTop: 0 }}>
       {draft.exercises.map((ex, ei) => (
         <Panel key={tr(ex.name)} accent style={{ padding: 12 }}>
           <div className="row between g8" style={{ marginBottom: 4 }}>
             <div className="row g6">
+              <span className="drag-handle" title={tr("Trascina per riordinare")}
+                onPointerDown={(e) => dlStart(e, moveEx)}><GripVertical size={15} /></span>
               <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
               <span className="micro t-cyan" style={{ alignSelf: "center" }}>{tr(ex.group || "").toUpperCase()}</span>
-              <span onClick={() => setInfo(ex)} className="tap icon-tap" style={{ color: "#3f637c" }}><Info size={13} /></span>
+              <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
             </div>
             <span onClick={() => toggleEx(ex.name, ex.group)} className="tap" style={{ cursor: "pointer", color: "#6e3028" }}><Trash2 size={14} /></span>
           </div>
           <input className="hud-input cham-s" value={ex.note || ""}
             onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, note: e.target.value }) }))}
             placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 8, color: "#8fb2c9" }} />
+          <div data-dl>
           {ex.sets.map((s, si) => (
             <div key={si} className="row g8" style={{ marginBottom: 5, alignItems: "center" }}>
+              <span className="drag-handle" title={tr("Trascina per riordinare")}
+                onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={13} /></span>
               <span className="f-hud t-faint" style={{ fontSize: 11, width: 18, textAlign: "center" }}>{si + 1}</span>
               {ex.mode === "time" ? (
                 <>
@@ -3024,12 +3227,14 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
               <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#523030", marginLeft: "auto" }}><X size={13} /></span>
             </div>
           ))}
+          </div>
           <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>{tr("+ SERIE")}</button>
         </Panel>
       ))}
+      </div>
 
       <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("Filtra esercizi...")} />
-      <MachineScan premium={premium} variant="float" fireToast={fireToast}
+      <MachineScan premium={premium} variant="float" fabBottom={92} fireToast={fireToast}
         currentNames={draft.exercises.map((e) => e.name)}
         onAdd={(name, group) => toggleEx(name, group)} />
       {Object.entries(EXERCISE_DB).map(([group, list]) => {
@@ -3042,8 +3247,10 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
               {shown.map((ex) => (
                 <button key={ex} onClick={() => toggleEx(ex, group)}
                   className={`tap cham-s chip ${hasEx(ex) ? "chip-on" : ""}`}
-                  style={{ cursor: "pointer", fontSize: 12, letterSpacing: ".02em", padding: "6px 12px", fontFamily: "'Rajdhani',sans-serif", textTransform: "none" }}>
+                  style={{ cursor: "pointer", fontSize: 12, letterSpacing: ".02em", padding: "6px 12px", fontFamily: "'Rajdhani',sans-serif", textTransform: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
                   {ex}
+                  <span onClick={(e) => { e.stopPropagation(); setInfo({ name: ex, group }); }}
+                    className="tap icon-tap" style={{ color: hasEx(ex) ? "#04121d" : "#3f637c" }} title={tr("Info esercizio")}><Info size={12} /></span>
                 </button>
               ))}
             </div>

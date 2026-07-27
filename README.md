@@ -1,4 +1,4 @@
-# GymQuest
+# Combat Training
 
 App di fitness gamificata: gestisci allenamenti e nutrizione con un sistema di progressione a punti esperienza, livelli e sfide giornaliere/settimanali, in un'interfaccia ispirata all'estetica tattico-militare della saga Halo.
 
