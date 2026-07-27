@@ -1189,7 +1189,7 @@ const ACHIEVEMENTS = [
   { id: "lv10", name: "Ufficiale di Grado", desc: "Raggiungi il livello 10", tier: "easy", check: (s, prs, lvl) => lvl >= 10 },
   { id: "lv25", name: "Hyper Lethal", desc: "Raggiungi il livello 25", tier: "hard", check: (s, prs, lvl) => lvl >= 25 },
 ];
-const EMPTY_STATS = { workouts: 0, setsDone: 0, volume: 0, cardioMin: 0, questsDone: 0 };
+const EMPTY_STATS = { workouts: 0, setsDone: 0, volume: 0, cardioMin: 0, questsDone: 0, hints: [] };
 
 /* ---------------- Barra di avanzamento quest ---------------- */
 function QBar({ pct, done, animate }) {
@@ -1312,12 +1312,13 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
                       }}>
                       <Trophy size={26} color={ok ? r.color : "#1d3448"}
                         style={{ filter: ok ? `drop-shadow(0 0 6px ${r.color}66)` : "none" }} />
-                      <div className={ok ? "t-bright" : "t-faint"}
-                        style={{ fontSize: 10, fontWeight: 700, marginTop: 6, lineHeight: 1.3 }}>
-                        {ok ? t.name : "???"}
+                      <div className={ok || (stats.hints || []).includes(t.id) ? "t-bright" : "t-faint"}
+                        style={{ fontSize: ok ? 10 : ((stats.hints || []).includes(t.id) ? 8.5 : 10), fontWeight: 700, marginTop: 6, lineHeight: 1.3 }}>
+                        {/* sbloccato → nome; indizio trovato col radar → indizio al posto di "???" */}
+                        {ok ? t.name : (stats.hints || []).includes(t.id) ? t.how : "???"}
                       </div>
-                      <div className="micro" style={{ color: ok ? r.color : "#1d3448", marginTop: 3, fontSize: 8 }}>
-                        {ok ? r.label : "BLOCCATO"}
+                      <div className="micro" style={{ color: ok || (stats.hints || []).includes(t.id) ? r.color : "#1d3448", marginTop: 3, fontSize: 8 }}>
+                        {ok ? r.label : (stats.hints || []).includes(t.id) ? "INDIZIO TROVATO" : "BLOCCATO"}
                       </div>
                     </div>
                   );
@@ -2003,7 +2004,11 @@ export default function App() {
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
-          {tab === "game" && <GameTab level={level} stats={stats} prs={prs} />}
+          {tab === "game" && (
+            <GameTab level={level} stats={stats} prs={prs}
+              /* radar dei trofei: registra l'indizio trovato (persiste in stats, niente migrazioni DB) */
+              onFindHint={(id) => setStats((s) => ({ ...s, hints: [...new Set([...(s.hints || []), id])] }))} />
+          )}
           {tab === "profile" && (
             <ProfileTab user={user} body={body} setBody={setBody}
               fireToast={fireToast} onLogout={async () => { await supabase.auth.signOut(); setTab("training"); }}
