@@ -448,8 +448,8 @@ function drawRecruitFace(ctx, s) {
   ctx.lineWidth = 4;
   ctx.beginPath(); ctx.arc(c, c, c * 0.62, 0, Math.PI * 2); ctx.stroke();
   // nome dell'app lungo l'arco superiore
-  arcText(ctx, "GYMQUEST", c, c, c * 0.74, -Math.PI * 0.82, -Math.PI * 0.18,
-    `900 ${s * 0.095}px Arial`, "#5e4a10");
+  arcText(ctx, "COMBAT TRAINING", c, c, c * 0.74, -Math.PI * 0.82, -Math.PI * 0.18,
+    `900 ${s * 0.048}px Arial`, "#5e4a10");
   // motto lungo l'arco inferiore
   arcText(ctx, "· PRECURSOR LEGACY ·", c, c, c * 0.74, Math.PI * 0.85, Math.PI * 0.15,
     `700 ${s * 0.052}px Arial`, "#5e4a10");
@@ -525,7 +525,7 @@ function scouterHudTexture() {
     ctx.font = "700 30px monospace";
     ctx.fillText("PWR", 660, 160);
     ctx.font = "600 24px monospace";
-    ctx.fillText("◈ GYMQUEST · PROPERTY OF D.S.", 90, 80);
+    ctx.fillText("◈ COMBAT TRAINING · PROPERTY OF D.S.", 90, 80);
   });
 }
 

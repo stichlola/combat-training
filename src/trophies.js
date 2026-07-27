@@ -12,7 +12,7 @@ export const TROPHIES = [
     name: "Medaglia del Fuoritempo",
     rarity: "comune",
     how: "Si ottiene all'iscrizione: il primo passo nel programma.",
-    lore: "Medaglia d'oro antico con il sigillo di GYMQUEST inciso ad arco, corona d'alloro e stella centrale. Al cuore pulsa un frammento d'Eco verde: si dice si risvegli a ogni passo del portatore. Non è una ricompensa — è un giuramento.",
+    lore: "Medaglia d'oro antico con il sigillo di COMBAT TRAINING inciso ad arco, corona d'alloro e stella centrale. Al cuore pulsa un frammento d'Eco verde: si dice si risvegli a ogni passo del portatore. Non è una ricompensa — è un giuramento.",
     check: () => true,
     model: "recruit",
   },

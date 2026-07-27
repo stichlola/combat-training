@@ -11,9 +11,9 @@ const PP_BASE = process.env.PAYPAL_ENV === "live"
    custom_id viaggia dentro l'ordine PayPal: alla cattura leggiamo il prodotto
    dalla risposta di PayPal, non da ciò che dichiara il client. */
 const PRODUCTS = {
-  premium: { amount: "20.00", desc: "GymQuest Premium — 12 mesi" },
-  pack30:  { amount: "3.00",  desc: "GymQuest — 30 crediti extra", credits: 30 },
-  pack100: { amount: "8.00",  desc: "GymQuest — 100 crediti extra", credits: 100 },
+  premium: { amount: "20.00", desc: "Combat Training Premium — 12 mesi" },
+  pack30:  { amount: "3.00",  desc: "Combat Training — 30 crediti extra", credits: 30 },
+  pack100: { amount: "8.00",  desc: "Combat Training — 100 crediti extra", credits: 100 },
 };
 
 async function ppToken() {

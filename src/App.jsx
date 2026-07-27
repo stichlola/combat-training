@@ -296,7 +296,7 @@ const EN_UI = {
 
   /* --- store / crediti --- */
   "◈ STORE": "◈ STORE",
-  "◈ GYMQUEST PREMIUM": "◈ GYMQUEST PREMIUM",
+  "◈ COMBAT TRAINING PREMIUM": "◈ COMBAT TRAINING PREMIUM",
   "SBLOCCA LE FUNZIONI AI AVANZATE": "UNLOCK ADVANCED AI FEATURES",
   "◆ Premium — 12 mesi": "◆ Premium — 12 months",
   "Pacchetto 30 crediti": "30 credits pack",
@@ -345,7 +345,7 @@ const EN_UI = {
     "No details available for this workout (recorded with an earlier version).",
 
   /* --- PWA --- */
-  "◈ INSTALLA GYMQUEST": "◈ INSTALL GYMQUEST",
+  "◈ INSTALLA COMBAT TRAINING": "◈ INSTALL COMBAT TRAINING",
   "Aggiungila alla schermata home come app": "Add it to your home screen as an app",
   "Installa": "Install",
 
@@ -921,7 +921,7 @@ function BootScreen({ progress, fact }) {
     <div className="hud-root" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
       <div className="fade-in" style={{ width: "min(420px, 86vw)", textAlign: "center" }}>
         <Dumbbell size={34} color="#57c8f2" style={{ margin: "0 auto 10px", filter: "drop-shadow(0 0 8px rgba(87,200,242,.6))" }} />
-        <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".35em" }}>GYMQUEST</div>
+        <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".35em" }}>COMBAT TRAINING</div>
         <div className="micro" style={{ marginTop: 4, marginBottom: 26 }}>{tr("INIZIALIZZAZIONE SISTEMA")}</div>
 
         {/* barra segmentata stile scudo */}
@@ -4992,7 +4992,7 @@ function InstallBanner({ ip }) {
     }}>
       <div className="row between g12">
         <div className="grow">
-          <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".12em" }}>{tr("◈ INSTALLA GYMQUEST")}</div>
+          <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".12em" }}>{tr("◈ INSTALLA COMBAT TRAINING")}</div>
           <div className="tiny t-dim" style={{ marginTop: 2, lineHeight: 1.5 }}>
             {ip.canInstall
               ? "Aggiungila alla schermata home come app"

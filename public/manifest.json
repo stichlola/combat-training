@@ -1,6 +1,6 @@
 {
-  "name": "GymQuest — Training HUD",
-  "short_name": "GymQuest",
+  "name": "Combat Training — Training HUD",
+  "short_name": "Combat Training",
   "description": "Fitness tracker gamificato in stile HUD",
   "start_url": "/",
   "display": "standalone",
