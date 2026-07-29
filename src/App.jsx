@@ -3282,11 +3282,11 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {session.exercises.map((ex, ei) => (
         <Panel key={ei}>
-          <div className="row between g8" style={{ marginBottom: 4 }}>
+          <div className="row between g8" style={{ marginBottom: 10, alignItems: "flex-start" }}>
             <span className="drag-handle" title={tr("Trascina per riordinare")}
-              onPointerDown={(e) => dlStart(e, moveEx)}><GripVertical size={15} /></span>
+              onPointerDown={(e) => dlStart(e, moveEx)} style={{ marginTop: 4 }}><GripVertical size={15} /></span>
             <div className="grow">
-              <div className="row g6">
+              <div className="row g6" style={{ marginBottom: 5 }}>
                 <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{tr(ex.name)}</span>
                 <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
               </div>
@@ -3294,19 +3294,23 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
             </div>
             {confirmExDel === ei ? (
               <button onClick={() => { removeExercise(ei); setConfirmExDel(null); }}
-                className="info-btn cham-s tap" style={{ color: "#ff8f7d", borderColor: "#6e3028", flexShrink: 0 }}>
+                className="info-btn cham-s tap" style={{ color: "#ff8f7d", borderColor: "#6e3028", flexShrink: 0, marginTop: 2 }}>
                 {tr("Conferma eliminazione")}</button>
             ) : (
-              <div className="row g8" style={{ flexShrink: 0, alignSelf: "flex-start" }}>
+              <div className="row" style={{ gap: 18, flexShrink: 0, paddingTop: 4 }}>
                 <span onClick={() => { setReplaceIdx(replaceIdx === ei ? null : ei); setShowPicker(true); }}
                   className="tap icon-tap" title={tr("Sostituisci esercizio")}
                   style={{ cursor: "pointer", color: replaceIdx === ei ? "#ffd76a" : "#5d87a3" }}>
-                  <ArrowLeftRight size={15} /></span>
+                  <ArrowLeftRight size={16} /></span>
                 <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
-                  style={{ cursor: "pointer", color: "#6e4038" }}><Trash2 size={15} /></span>
+                  style={{ cursor: "pointer", color: "#6e4038" }}><Trash2 size={16} /></span>
+                {prs[ex.name] && ex.mode !== "time" && (
+                  <span style={{ marginLeft: 6, paddingLeft: 14, borderLeft: "1px solid #1b3a52", display: "inline-flex", alignItems: "center" }}>
+                    <Trophy size={16} color="#ffd76a" />
+                  </span>
+                )}
               </div>
             )}
-            {prs[ex.name] && ex.mode !== "time" && <Trophy size={15} color="#ffd76a" />}
           </div>
           <input className="hud-input cham-s" value={ex.note || ""} onChange={(e) => updateNote(ei, e.target.value)}
             placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9" }} />
@@ -3445,6 +3449,7 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
   const [info, setInfo] = useState(null);
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
+  const [showPicker, setShowPicker] = useState(true); // elenco esercizi: aperto di default in modifica
 
   const upd = (fn) => setDraft((d) => fn(d));
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
@@ -3625,7 +3630,11 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
           </div>
         </Panel>
       )}
-      <ExercisePicker activeNames={draft.exercises.map((e) => e.name)} onPick={pickEx} />
+      <button onClick={() => setShowPicker(!showPicker)}
+        className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
+        {showPicker ? tr("‹ CHIUDI ELENCO") : <><Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}</>}
+      </button>
+      {showPicker && <ExercisePicker activeNames={draft.exercises.map((e) => e.name)} onPick={pickEx} />}
       <MachineScan premium={premium} variant="float" fabBottom={92} fireToast={fireToast}
         currentNames={draft.exercises.map((e) => e.name)}
         onAdd={(name, group) => pickEx(name, group)} />
