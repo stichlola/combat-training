@@ -350,6 +350,9 @@ const EN_UI = {
   "Installa": "Install",
   "Trascina per riordinare": "Drag to reorder",
   "Info esercizio": "Exercise info",
+  "Opzioni serie": "Set options",
+  "Serie di riscaldamento": "Warm-up set",
+  "Elimina serie": "Delete set",
 
   /* --- gruppi muscolari --- */
   "Dorso": "Back", "Gambe": "Legs", "Spalle": "Shoulders",
@@ -868,8 +871,26 @@ body.dragging [data-dl] > *{transition:opacity .12s}
 body.dragging [data-dl] > *:not(.drag-live){opacity:.75}
 body.dragging{user-select:none;-webkit-user-select:none}
 body.dragging *{cursor:grabbing!important}
-/* cella numero+X della serie: impilati e centrati nella colonna */
-.set-meta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+/* chip serie: numero progressivo o "W" (riscaldamento); il tap apre il menu azioni */
+.set-chip{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:34px;
+  padding:0 5px;border:1px solid var(--line);background:#0c1c2b;color:var(--faint);
+  font-family:'Chakra Petch',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  user-select:none;-webkit-user-select:none;flex-shrink:0}
+.set-chip:active{border-color:var(--cyan);color:var(--cyan-hi)}
+.set-chip.warmup{color:#ffd76a;border-color:#8a6d2f;background:#241c0a}
+.set-warmup{background:rgba(255,215,106,.05);box-shadow:inset 2px 0 0 #8a6d2f}
+/* mini menu azioni della serie (riscaldamento / elimina) */
+.setmenu-back{position:fixed;inset:0;z-index:120;background:rgba(2,8,14,.45)}
+.setmenu{position:fixed;min-width:190px;background:#071523;border:1px solid #57c8f2;
+  box-shadow:0 0 24px rgba(87,200,242,.25);padding:6px;z-index:121}
+.setmenu button{display:flex;align-items:center;gap:9px;width:100%;padding:11px 10px;
+  background:none;border:none;color:#8fb2c9;font-family:'Rajdhani',sans-serif;font-size:13px;
+  font-weight:700;letter-spacing:.08em;text-align:left;cursor:pointer}
+.setmenu button:hover{background:#0c2a3d;color:#eaf7ff}
+.setmenu button.danger{color:#ff8f7d}
+/* testata sessione sticky: comandi (Esci/nome/Termina) e statistiche sempre visibili nello scroll */
+.sticky-hud{position:sticky;top:0;z-index:60;background:var(--bg);padding:8px 0;
+  box-shadow:0 16px 16px -12px rgba(4,9,15,.95)}
 
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .toast-in{animation:ti .35s cubic-bezier(.34,1.4,.64,1)}
@@ -2056,6 +2077,17 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
     fireToast({ title: msg || "◈ SCHEDA SALVATA", sub: r.name });
   };
 
+  /* Riordino delle schede trascinando l'handle: stesso sistema drag (dlStart)
+     usato per esercizi e serie in "allenamento in corso" e "modifica" */
+  const moveRoutine = (from, to) => {
+    setRoutines((rs) => {
+      const arr = [...rs];
+      const [m] = arr.splice(from, 1);
+      arr.splice(to, 0, m);
+      return arr;
+    });
+  };
+
   /* Inizia Allenamento: crea una sessione attiva e persistente (copia del modello) */
   const startSession = (r) => {
     setSession({
@@ -2130,9 +2162,12 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
             </div>
           </Panel>
         )}
+        <div data-dl className="stack">
         {routines.map((r) => (
           <Panel key={r.id} hover>
-            <div>
+            <div className="row g8" style={{ alignItems: "flex-start" }}>
+              <span className="drag-handle" title={tr("Trascina per riordinare")}
+                onPointerDown={(e) => dlStart(e, moveRoutine)} style={{ marginTop: 2 }}><GripVertical size={15} /></span>
               <div className="grow">
                 <div className="f-hud t-bright" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 15 }}>{r.name}</div>
                 <div className="tiny t-dim" style={{ marginTop: 2 }}>
@@ -2169,6 +2204,7 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
             </div>
           </Panel>
         ))}
+        </div>
 
         <button onClick={() => setView("import")} className="tap" style={{ width: "100%", cursor: "pointer" }}>
           <Panel accent hover>
@@ -2897,6 +2933,31 @@ function FloatingTimer() {
   );
 }
 
+/* ---------------- Mini menu azioni di una serie (riscaldamento / elimina) ----------------
+   Si apre al tap sul chip numero/"W" della serie, posizionato vicino al punto toccato. */
+function SetMenu({ pos, isTime, warmup, onToggleWarmup, onDelete, onClose }) {
+  const W = 200, H = isTime ? 56 : 100;
+  const left = Math.min(Math.max(8, pos.x - W / 2), window.innerWidth - W - 8);
+  const top = Math.min(Math.max(8, pos.y + 10), window.innerHeight - H - 8);
+  return (
+    <>
+      <div className="setmenu-back" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
+      <div className="setmenu cham" style={{ left, top }}>
+        {!isTime && (
+          <button onClick={() => { onToggleWarmup(); onClose(); }}>
+            <Flame size={13} color="#ffd76a" />
+            <span className="grow">{tr("Serie di riscaldamento")}</span>
+            {warmup && <Check size={13} color="#ffd76a" />}
+          </button>
+        )}
+        <button className="danger" onClick={() => { onDelete(); onClose(); }}>
+          <Trash2 size={13} /> {tr("Elimina serie")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 /* ---------------- Sessione di allenamento attiva ---------------- */
 function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
   const [info, setInfo] = useState(null);
@@ -2905,6 +2966,15 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
   const [sessionPrCount, setSessionPrCount] = useState(0);
   const [results, setResults] = useState(null); // rapporto missione animato
   const [runKey, setRunKey] = useState(null); // cronometro attivo per esercizi a tempo: "ei-si"
+  const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
+
+  /* Marca la serie come riscaldamento (W) o normale */
+  const toggleWarmup = (ei, si) => upd((s) => ({
+    ...s,
+    exercises: s.exercises.map((e, i) => i !== ei ? e : {
+      ...e, sets: e.sets.map((x, j) => j !== si ? x : { ...x, warmup: !x.warmup }),
+    }),
+  }));
 
   /* Cronometro cardio: incrementa elapsed della riga attiva */
   useEffect(() => {
@@ -2947,7 +3017,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
     if (!st.done) {
       addXp(10);
       if (runKey === `${ei}-${si}`) setRunKey(null);
-      if (ex.mode !== "time" && (st.w || 0) > (prs[ex.name] || 0)) {
+      if (ex.mode !== "time" && !st.warmup && (st.w || 0) > (prs[ex.name] || 0)) {
         setPrs((p) => ({ ...p, [ex.name]: st.w }));
         setSessionPrCount((c) => c + 1);
         fireToast({ title: tr("▲ NEW RECORD"), sub: `${tr(ex.name)} — ${st.w} KG`, color: "#ffd76a" });
@@ -3003,7 +3073,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
   const fmt = (sec) => `${Math.floor((sec || 0) / 60)}:${String((sec || 0) % 60).padStart(2, "0")}`;
 
   const volume = session.exercises.reduce((v, e) => e.mode === "time" ? v :
-    v + e.sets.filter((s) => s.done).reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0), 0);
+    v + e.sets.filter((s) => s.done && !s.warmup).reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0), 0);
   const cardioSec = session.exercises.reduce((v, e) => e.mode !== "time" ? v :
     v + e.sets.reduce((a, s) => a + (s.elapsed || 0), 0), 0);
   const totalSets = session.exercises.reduce((a, e) => a + e.sets.length, 0);
@@ -3050,6 +3120,13 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
+      {setMenu && (
+        <SetMenu pos={setMenu} isTime={session.exercises[setMenu.ei].mode === "time"}
+          warmup={!!session.exercises[setMenu.ei].sets[setMenu.si].warmup}
+          onToggleWarmup={() => toggleWarmup(setMenu.ei, setMenu.si)}
+          onDelete={() => removeSet(setMenu.ei, setMenu.si)}
+          onClose={() => setSetMenu(null)} />
+      )}
       {results && <ResultsScreen results={results} onClose={() => { setSession(null); exitToHome(); }} />}
       <FloatingTimer />
       <MachineScan premium={premium} variant="float" fireToast={fireToast}
@@ -3115,6 +3192,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
         </Overlay>
       )}
 
+      <div className="sticky-hud stack">
       <div className="row between g8">
         <Btn small onClick={() => setConfirmExit(true)}>{tr("‹ Esci")}</Btn>
         <input className="hud-input cham-s f-hud" value={session.name}
@@ -3139,6 +3217,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
           </div>
         </div>
       </Panel>
+      </div>
 
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {session.exercises.map((ex, ei) => (
@@ -3168,10 +3247,10 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
                 <div key={si} className={`set-grid-t cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
                   <span className="drag-handle" title={tr("Trascina per riordinare")}
                     onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
-                  <div className="set-meta">
-                    <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
-                    <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={13} /></span>
-                  </div>
+                  <button className="set-chip cham-s" title={tr("Opzioni serie")}
+                    onClick={(e) => { e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
+                    {si + 1}
+                  </button>
                   <div className="row g8" style={{ alignItems: "center" }}>
                     <button onClick={() => setRunKey(runKey === `${ei}-${si}` ? null : `${ei}-${si}`)}
                       className={`check-btn cham-s tap ${runKey === `${ei}-${si}` ? "check-on" : ""}`}
@@ -3199,13 +3278,13 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
               </div>
               <div data-dl>
               {ex.sets.map((s, si) => (
-                <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
+                <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""} ${s.warmup ? "set-warmup" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
                   <span className="drag-handle" title={tr("Trascina per riordinare")}
                     onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
-                  <div className="set-meta">
-                    <span className="f-hud t-faint" style={{ fontSize: 12 }}>{si + 1}</span>
-                    <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={13} /></span>
-                  </div>
+                  <button className={`set-chip cham-s ${s.warmup ? "warmup" : ""}`} title={tr("Opzioni serie")}
+                    onClick={(e) => { e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
+                    {s.warmup ? "W" : ex.sets.slice(0, si + 1).filter((x) => !x.warmup).length}
+                  </button>
                   <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
                     onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
                   <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r}
@@ -3222,6 +3301,9 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
         </Panel>
       ))}
       </div>
+
+      {/* Termina anche in fondo: niente scroll fino in cima a fine allenamento */}
+      <Btn primary full onClick={() => setFinishing(true)} style={{ padding: 14 }}>{tr("Termina ✓")}</Btn>
     </div>
   );
 }
@@ -3233,9 +3315,18 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
     : { id: Date.now(), name: "", exercises: [] });
   const [q, setQ] = useState("");
   const [info, setInfo] = useState(null);
+  const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
 
   const upd = (fn) => setDraft((d) => fn(d));
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
+
+  /* Marca la serie come riscaldamento (W) o normale */
+  const toggleWarmup = (ei, si) => upd((d) => ({
+    ...d,
+    exercises: d.exercises.map((e, i) => i !== ei ? e : {
+      ...e, sets: e.sets.map((x, j) => j !== si ? x : { ...x, warmup: !x.warmup }),
+    }),
+  }));
 
   const toggleEx = (name, group) => upd((d) => hasEx(name)
     ? { ...d, exercises: d.exercises.filter((e) => e.name !== name) }
@@ -3289,6 +3380,13 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
+      {setMenu && (
+        <SetMenu pos={setMenu} isTime={draft.exercises[setMenu.ei].mode === "time"}
+          warmup={!!draft.exercises[setMenu.ei].sets[setMenu.si].warmup}
+          onToggleWarmup={() => toggleWarmup(setMenu.ei, setMenu.si)}
+          onDelete={() => removeSet(setMenu.ei, setMenu.si)}
+          onClose={() => setSetMenu(null)} />
+      )}
       <div className="row between">
         <Btn small onClick={onClose}>{tr("‹ Annulla")}</Btn>
         <span className="hud-title">{initial ? "Modifica modello" : "Nuova scheda"}</span>
@@ -3317,10 +3415,14 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
             placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 8, color: "#8fb2c9" }} />
           <div data-dl>
           {ex.sets.map((s, si) => (
-            <div key={si} className="row g8" style={{ marginBottom: 5, alignItems: "center" }}>
+            <div key={si} className={`row g8 ${s.warmup ? "set-warmup cham-s" : ""}`}
+              style={{ marginBottom: 5, alignItems: "center", ...(s.warmup ? { padding: "4px 6px" } : {}) }}>
               <span className="drag-handle" title={tr("Trascina per riordinare")}
                 onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={13} /></span>
-              <span className="f-hud t-faint" style={{ fontSize: 11, width: 18, textAlign: "center" }}>{si + 1}</span>
+              <button className={`set-chip cham-s ${s.warmup ? "warmup" : ""}`} title={tr("Opzioni serie")}
+                onClick={(e) => { e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
+                {ex.mode !== "time" && s.warmup ? "W" : ex.mode !== "time" ? ex.sets.slice(0, si + 1).filter((x) => !x.warmup).length : si + 1}
+              </button>
               {ex.mode === "time" ? (
                 <>
                   <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec ? Math.round(s.sec / 60) : ""}
@@ -3344,7 +3446,6 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
                   <span className="micro">{tr("REPS")}</span>
                 </>
               )}
-              <span onClick={() => removeSet(ei, si)} className="tap icon-tap" style={{ color: "#523030", marginLeft: "auto" }}><X size={13} /></span>
             </div>
           ))}
           </div>
