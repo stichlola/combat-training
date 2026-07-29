@@ -362,6 +362,9 @@ const EN_UI = {
   "Conferma eliminazione": "Confirm delete",
   "+ ESERCIZIO": "+ EXERCISE",
   "‹ CHIUDI ELENCO": "‹ CLOSE LIST",
+  "Inserisci il peso del singolo manubrio — il totale è calcolato da sé": "Enter the weight of one dumbbell — the total is calculated automatically",
+  "A TEMPO": "TIMED",
+  "Obiettivo secondi": "Target seconds",
 
   /* --- gruppi muscolari --- */
   "Dorso": "Back", "Gambe": "Legs", "Spalle": "Shoulders",
@@ -2971,6 +2974,16 @@ function SetMenu({ pos, isTime, warmup, onToggleWarmup, onDelete, onClose }) {
   );
 }
 
+/* Esercizi isometrici "a tenuta": si misurano in secondi, non in ripetizioni.
+   Copre tutti i plank e le tenute statiche; exMode() risolve la modalità anche
+   per schede create prima dell'introduzione di mode:"hold". */
+const HOLD_RE = /plank|hollow hold|wall sit/i;
+const isHold = (name) => HOLD_RE.test(name || "");
+const exMode = (ex) => ex.mode || (isHold(ex.name) ? "hold" : undefined);
+const holdSets = (n = 3, sec = 60) => Array.from({ length: n }, () => ({ sec, elapsed: 0, done: false }));
+/* Esercizi con manubri: il peso inserito e' quello del SINGOLO manubrio */
+const isDumbbell = (name) => /manubri|manubrio/i.test(name || "");
+
 /* ---------------- Sessione di allenamento attiva ---------------- */
 function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
   const [info, setInfo] = useState(null);
@@ -2999,7 +3012,9 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
       ...s,
       exercises: [...s.exercises, group === "Cardio"
         ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
-        : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+        : isHold(name)
+          ? { name, group, mode: "hold", note: "", sets: holdSets() }
+          : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
     }));
     fireToast({ title: tr("◈ ESERCIZIO AGGIUNTO"), sub: tr(name) });
   };
@@ -3012,18 +3027,21 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
   /* Sostituisce l'esercizio ei: conserva serie e flag done se resta forza→forza,
      converte le serie se cambia modalità (forza↔cardio) */
   const replaceExercise = (ei, name, group) => {
-    const cardio = group === "Cardio";
+    const target = group === "Cardio" ? "time" : isHold(name) ? "hold" : undefined;
     if (runKey && Number(runKey.split("-")[0]) === ei) setRunKey(null);
     upd((s) => ({
       ...s,
       exercises: s.exercises.map((e, i) => {
         if (i !== ei) return e;
-        const sets = cardio
+        const prevTimed = ["time", "hold"].includes(exMode(e));
+        const sets = target === "time"
           ? e.sets.map(() => ({ sec: 600, dist: "", elapsed: 0, done: false }))
-          : e.mode === "time"
-            ? e.sets.map(() => ({ w: 20, r: 10, done: false }))
-            : e.sets;
-        return { ...e, name, group, mode: cardio ? "time" : undefined, sets };
+          : target === "hold"
+            ? e.sets.map(() => ({ sec: 60, elapsed: 0, done: false }))
+            : prevTimed
+              ? e.sets.map(() => ({ w: 20, r: 10, done: false }))
+              : e.sets;
+        return { ...e, name, group, mode: target, sets };
       }),
     }));
     setReplaceIdx(null);
@@ -3089,9 +3107,11 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
     ...s,
     exercises: s.exercises.map((e, i) => i !== ei ? e : {
       ...e,
-      sets: [...e.sets, e.mode === "time"
+      sets: [...e.sets, exMode(e) === "time"
         ? { sec: 600, dist: "", elapsed: 0, done: false }
-        : { ...e.sets[e.sets.length - 1], done: false }],
+        : exMode(e) === "hold"
+          ? { sec: e.sets[e.sets.length - 1]?.sec || 60, elapsed: 0, done: false }
+          : { ...e.sets[e.sets.length - 1], done: false }],
     }),
   }));
 
@@ -3181,7 +3201,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       {setMenu && (
-        <SetMenu pos={setMenu} isTime={session.exercises[setMenu.ei].mode === "time"}
+        <SetMenu pos={setMenu} isTime={["time", "hold"].includes(exMode(session.exercises[setMenu.ei]))}
           warmup={!!session.exercises[setMenu.ei].sets[setMenu.si].warmup}
           onToggleWarmup={() => toggleWarmup(setMenu.ei, setMenu.si)}
           onDelete={() => removeSet(setMenu.ei, setMenu.si)}
@@ -3195,7 +3215,9 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
           ...s,
           exercises: [...s.exercises, group === "Cardio"
             ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
-            : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+            : isHold(name)
+              ? { name, group, mode: "hold", note: "", sets: holdSets() }
+              : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
         }))} />
 
       {/* Conferma uscita: la sessione resta attiva */}
@@ -3290,7 +3312,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
                 <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{tr(ex.name)}</span>
                 <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
               </div>
-              <div className="micro">{tr(ex.group || "").toUpperCase()}{ex.mode !== "time" && ` · PR ${prs[ex.name] || "—"} KG`}</div>
+              <div className="micro">{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</div>
             </div>
             {confirmExDel === ei ? (
               <button onClick={() => { removeExercise(ei); setConfirmExDel(null); }}
@@ -3304,7 +3326,7 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
                   <ArrowLeftRight size={16} /></span>
                 <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
                   style={{ cursor: "pointer", color: "#6e4038" }}><Trash2 size={16} /></span>
-                {prs[ex.name] && ex.mode !== "time" && (
+                {prs[ex.name] && !exMode(ex) && (
                   <span style={{ marginLeft: 6, paddingLeft: 14, borderLeft: "1px solid #1b3a52", display: "inline-flex", alignItems: "center" }}>
                     <Trophy size={16} color="#ffd76a" />
                   </span>
@@ -3315,10 +3337,10 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
           <input className="hud-input cham-s" value={ex.note || ""} onChange={(e) => updateNote(ei, e.target.value)}
             placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9" }} />
 
-          {ex.mode === "time" ? (
+          {exMode(ex) === "time" || exMode(ex) === "hold" ? (
             <>
               <div className="set-grid-t micro" style={{ marginBottom: 4, padding: "0 4px" }}>
-                <span></span><span>{tr("SET")}</span><span>{tr("TEMPO")}</span><span>{tr("KM")}</span><span></span>
+                <span></span><span>{tr("SET")}</span><span>{tr("TEMPO")}</span><span>{exMode(ex) === "time" ? tr("KM") : tr("SEC")}</span><span></span>
               </div>
               <div data-dl>
               {ex.sets.map((s, si) => (
@@ -3339,9 +3361,16 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
                       {fmt(s.elapsed)}
                     </span>
                   </div>
-                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist}
-                    placeholder="—" onChange={(e) => updateSet(ei, si, "dist", e.target.value)}
-                    style={{ textAlign: "center", padding: "8px 4px" }} />
+                  {exMode(ex) === "time" ? (
+                    <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist}
+                      placeholder="—" onChange={(e) => updateSet(ei, si, "dist", e.target.value)}
+                      style={{ textAlign: "center", padding: "8px 4px" }} />
+                  ) : (
+                    <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec || ""}
+                      placeholder="60" title={tr("Obiettivo secondi")}
+                      onChange={(e) => updateSet(ei, si, "sec", e.target.value)}
+                      style={{ textAlign: "center", padding: "8px 4px" }} />
+                  )}
                   <button onClick={() => toggleSet(ei, si)} className={`check-btn cham-s tap ${s.done ? "check-on" : ""}`}>
                     <Check size={15} strokeWidth={3} />
                   </button>
@@ -3351,6 +3380,9 @@ function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs,
             </>
           ) : (
             <>
+              {isDumbbell(ex.name) && (
+                <div className="micro t-faint" style={{ marginBottom: 6, lineHeight: 1.5 }}>ⓘ {tr("Inserisci il peso del singolo manubrio — il totale è calcolato da sé")}</div>
+              )}
               <div className="set-grid micro" style={{ marginBottom: 4, padding: "0 4px" }}>
                 <span></span><span>{tr("SET")}</span><span>{tr("KG")}</span><span>{tr("REPS")}</span><span></span>
               </div>
@@ -3468,23 +3500,28 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
       ...d,
       exercises: [...d.exercises, group === "Cardio"
         ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
-        : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+        : isHold(name)
+          ? { name, group, mode: "hold", note: "", sets: holdSets() }
+          : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
     });
 
   /* Sostituisce l'esercizio ei con uno nuovo: conserva le serie se resta
      forza→forza, le converte se cambia modalità (forza↔cardio) */
   const replaceExercise = (ei, name, group) => {
-    const cardio = group === "Cardio";
+    const target = group === "Cardio" ? "time" : isHold(name) ? "hold" : undefined;
     upd((d) => ({
       ...d,
       exercises: d.exercises.map((e, i) => {
         if (i !== ei) return e;
-        const sets = cardio
+        const prevTimed = ["time", "hold"].includes(exMode(e));
+        const sets = target === "time"
           ? e.sets.map(() => ({ sec: 600, dist: "", elapsed: 0, done: false }))
-          : e.mode === "time"
-            ? e.sets.map(() => ({ w: 20, r: 10, done: false }))
-            : e.sets;
-        return { ...e, name, group, mode: cardio ? "time" : undefined, sets };
+          : target === "hold"
+            ? e.sets.map(() => ({ sec: 60, elapsed: 0, done: false }))
+            : prevTimed
+              ? e.sets.map(() => ({ w: 20, r: 10, done: false }))
+              : e.sets;
+        return { ...e, name, group, mode: target, sets };
       }),
     }));
     setReplaceIdx(null);
@@ -3513,7 +3550,9 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
     ...d,
     exercises: d.exercises.map((e, i) => i !== ei ? e : {
       ...e,
-      sets: [...e.sets, e.mode === "time" ? { sec: 600, dist: "", elapsed: 0, done: false } : { ...e.sets[e.sets.length - 1], done: false }],
+      sets: [...e.sets, exMode(e) === "time" ? { sec: 600, dist: "", elapsed: 0, done: false }
+        : exMode(e) === "hold" ? { sec: e.sets[e.sets.length - 1]?.sec || 60, elapsed: 0, done: false }
+        : { ...e.sets[e.sets.length - 1], done: false }],
     }),
   }));
 
@@ -3578,6 +3617,9 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
           <input className="hud-input cham-s" value={ex.note || ""}
             onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, note: e.target.value }) }))}
             placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 8, color: "#8fb2c9" }} />
+          {isDumbbell(ex.name) && !exMode(ex) && (
+            <div className="micro t-faint" style={{ marginBottom: 8, lineHeight: 1.5 }}>ⓘ {tr("Inserisci il peso del singolo manubrio — il totale è calcolato da sé")}</div>
+          )}
           <div data-dl>
           {ex.sets.map((s, si) => (
             <div key={si} className={`row g8 ${s.warmup ? "set-warmup cham-s" : ""}`}
@@ -3588,7 +3630,7 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
                 onClick={(e) => { e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
                 {ex.mode !== "time" && s.warmup ? "W" : ex.mode !== "time" ? ex.sets.slice(0, si + 1).filter((x) => !x.warmup).length : si + 1}
               </button>
-              {ex.mode === "time" ? (
+              {exMode(ex) === "time" ? (
                 <>
                   <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec ? Math.round(s.sec / 60) : ""}
                     onChange={(e) => updateSet(ei, si, "sec", e.target.value === "" ? "" : Number(e.target.value) * 60)}
@@ -3598,6 +3640,13 @@ function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
                     onChange={(e) => updateSet(ei, si, "dist", e.target.value)} placeholder="—"
                     style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
                   <span className="micro">{tr("KM")}</span>
+                </>
+              ) : exMode(ex) === "hold" ? (
+                <>
+                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec || ""}
+                    onChange={(e) => updateSet(ei, si, "sec", e.target.value)} placeholder="60"
+                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                  <span className="micro">{tr("SEC")}</span>
                 </>
               ) : (
                 <>
