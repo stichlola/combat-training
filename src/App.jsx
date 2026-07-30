@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical
+  Dumbbell, Flame, Plus, ChevronRight, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -775,7 +775,7 @@ export default function App() {
           <div className="row g8" style={{ flexShrink: 0 }}>
             <button onClick={() => setQuestsOpen(true)} className="streak-pill cham-s tap" title={tr("Sfide e medaglie")}
               style={{ cursor: "pointer", borderColor: "#8a6d1f", boxShadow: "0 0 10px rgba(255,215,106,.2)", padding: "8px 14px", gap: 8 }}>
-              <Medal size={18} color="#ffd76a" />
+              <Target size={18} color="#ffd76a" />
               <span className="f-hud t-amber hide-sm" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".15em" }}>{tr("SFIDE")}</span>
             </button>
           </div>
