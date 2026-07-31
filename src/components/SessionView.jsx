@@ -338,6 +338,12 @@ export function SessionView({ onWorkoutDone, premium, session, setSession, prs, 
               <div className="row g6" style={{ marginBottom: 5 }}>
                 <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{tr(ex.name)}</span>
                 <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
+                {ex.progWeek && (
+                  <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a" }}
+                    title={tr("Progressione settimanale attiva")}>
+                    {tr("SETTIMANA")} {ex.progWeek}{ex.progTotal ? `/${ex.progTotal}` : ""}
+                  </span>
+                )}
               </div>
               <div className="micro">{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</div>
             </div>

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Info, GripVertical, ArrowLeftRight } from "lucide-react";
+import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
+import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePicker } from "./ExercisePicker";
 import { MachineScan } from "./MachineScan";
 import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
+import { todayISO } from "../lib/progression";
 import { exMode, holdSets, isDumbbell, isHold } from "../lib/exercises";
 import { tr } from "../lib/i18n";
 import { Btn, Panel } from "../ui";
@@ -18,6 +20,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) 
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [showPicker, setShowPicker] = useState(true); // elenco esercizi: aperto di default in modifica
+  const [progIdx, setProgIdx] = useState(null); // esercizio con modale progressione aperta
 
   const upd = (fn) => setDraft((d) => fn(d));
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
@@ -114,6 +117,11 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) 
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
+      {progIdx != null && draft.exercises[progIdx] && (
+        <ProgressionModal ex={draft.exercises[progIdx]}
+          onSave={(p) => { upd((d) => ({ ...d, exercises: d.exercises.map((e, i) => i !== progIdx ? e : { ...e, progression: p }) })); setProgIdx(null); }}
+          onClose={() => setProgIdx(null)} />
+      )}
       {setMenu && (
         <SetMenu pos={setMenu} isTime={draft.exercises[setMenu.ei].mode === "time"}
           warmup={!!draft.exercises[setMenu.ei].sets[setMenu.si].warmup}
@@ -130,6 +138,41 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) 
       <input className="hud-input cham-s" value={draft.name}
         onChange={(e) => upd((d) => ({ ...d, name: e.target.value }))} placeholder={tr("Nome scheda (es. LEG DAY)")} />
 
+      {/* Progressione settimanale: interruttore e inizio valgono per TUTTA la scheda;
+          le settimane dei singoli esercizi si gestiscono dall'icona 📈 su ogni card */}
+      <div className="cham-s" style={{
+        padding: "10px 12px",
+        background: draft.progression?.enabled ? "rgba(255,215,106,.08)" : "#060f18",
+        border: `1px solid ${draft.progression?.enabled ? "#ffd76a" : "#0e2233"}`,
+      }}>
+        <button onClick={() => upd((d) => ({ ...d, progression: { enabled: !d.progression?.enabled, startDate: d.progression?.startDate || todayISO() } }))}
+          className="tap" style={{ width: "100%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", padding: 0 }}>
+          <span className={`f-hud ${draft.progression?.enabled ? "t-amber" : "t-dim"}`} style={{ fontWeight: 700, fontSize: 12, letterSpacing: ".12em" }}>
+            <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {draft.progression?.enabled ? tr("▸ PROGRESSIONE ATTIVA") : tr("▸ PROGRESSIONE DISATTIVATA")}
+          </span>
+          <span style={{
+            width: 38, height: 20, borderRadius: 10, position: "relative", flexShrink: 0,
+            background: draft.progression?.enabled ? "#ffd76a" : "#1b3a52", transition: "background .2s",
+          }}>
+            <span style={{
+              position: "absolute", top: 2, left: draft.progression?.enabled ? 20 : 2, width: 16, height: 16,
+              borderRadius: "50%", background: draft.progression?.enabled ? "#04090f" : "#5d87a3", transition: "left .2s",
+            }} />
+          </span>
+        </button>
+        {draft.progression?.enabled && (
+          <div className="row g8" style={{ marginTop: 10, alignItems: "center" }}>
+            <span className="micro" style={{ flexShrink: 0 }}>{tr("INIZIO SETTIMANA 1")}</span>
+            <input type="date" className="hud-input cham-s" value={draft.progression.startDate}
+              onChange={(e) => upd((d) => ({ ...d, progression: { ...d.progression, startDate: e.target.value } }))}
+              style={{ padding: "6px 8px", fontSize: 12 }} />
+          </div>
+        )}
+        <div className="micro t-faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
+          {tr("Se attiva, aggiungi le settimane dall'icona 📈 su ogni esercizio: la scheda userà i valori della settimana corrente.")}
+        </div>
+      </div>
+
       {/* Esercizi nel modello: card e serie trascinabili per riordinare, pulsante INFO visibile */}
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {draft.exercises.map((ex, ei) => (
@@ -141,8 +184,15 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) 
               <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
               <span className="micro t-cyan" style={{ alignSelf: "center" }}>{tr(ex.group || "").toUpperCase()}</span>
               <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
+              {ex.progression?.enabled && (
+                <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", alignSelf: "center" }}>PROG ×{ex.progression.weeks?.length || 1}</span>
+              )}
             </div>
             <div className="row g8" style={{ flexShrink: 0 }}>
+              <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
+                title={tr("Progressione settimanale")}
+                style={{ cursor: "pointer", color: draft.progression?.enabled && ex.progression?.weeks?.length ? "#ffd76a" : "#5d87a3" }}>
+                <TrendingUp size={14} /></span>
               <span onClick={() => setReplaceIdx(replaceIdx === ei ? null : ei)} className="tap icon-tap"
                 title={tr("Sostituisci esercizio")} style={{ cursor: "pointer", color: replaceIdx === ei ? "#ffd76a" : "#5d87a3" }}>
                 <ArrowLeftRight size={14} /></span>

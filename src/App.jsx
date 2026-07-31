@@ -11,6 +11,7 @@ import { ExerciseInfoModal } from "./components/ExerciseInfoModal";
 import { RoutineEditor } from "./components/RoutineEditor";
 import { SessionView } from "./components/SessionView";
 import { dlStart } from "./lib/dnd";
+import { applyProgression } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb } from "./lib/exercises";
 import { ACHIEVEMENTS, BASE_FACTS, DEFAULT_PRS, DEFAULT_ROUTINES, EMPTY_STATS, LEVEL_TITLES, QUEST_METRICS, QUEST_POOL_DAILY, QUEST_POOL_WEEKLY, dayKey, freshQuests, weekKey, xpForLevel } from "./lib/game";
 import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
@@ -871,16 +872,23 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
     });
   };
 
-  /* Inizia Allenamento: crea una sessione attiva e persistente (copia del modello) */
+  /* Inizia Allenamento: crea una sessione attiva e persistente (copia del modello).
+     Se un esercizio ha la progressione settimanale attiva, usa le serie della
+     settimana corrente al posto di quelle base della scheda. */
   const startSession = (r) => {
     setSession({
       routineId: r.id,
       name: r.name,
       startedAt: Date.now(),
-      exercises: r.exercises.map((e) => ({
-        ...e,
-        sets: e.sets.map((s) => ({ ...s, done: false, elapsed: 0 })),
-      })),
+      exercises: r.exercises.map((e) => {
+        const prog = applyProgression(e, r.progression);
+        return {
+          ...e,
+          sets: (prog ? prog.sets : e.sets.map((s) => ({ ...s }))).map((s) => ({ ...s, done: false, elapsed: 0 })),
+          progWeek: prog ? prog.week : undefined,
+          progTotal: prog ? prog.total : undefined,
+        };
+      }),
     });
     setView("session");
   };
@@ -938,6 +946,15 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
           <Btn small onClick={() => setView("builder")}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
         </div>
 
+        <div className="row g8">
+          <Btn small onClick={() => setView("import")} style={{ flex: 1, opacity: .85 }} title={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}>
+            <Upload size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("IMPORTA SCHEDA PT")}
+          </Btn>
+          <Btn small onClick={() => setView("ai")} style={{ flex: 1, opacity: .85 }} title={tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")}>
+            <Bot size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("GENERA SCHEDA CON AI")}
+          </Btn>
+        </div>
+
         {routines.length === 0 && (
           <Panel>
             <div className="tiny t-faint" style={{ textAlign: "center", padding: "12px 0" }}>
@@ -989,31 +1006,6 @@ function Training({ onWorkoutDone, premium, addXp, fireToast, routines, setRouti
         ))}
         </div>
 
-        <button onClick={() => setView("import")} className="tap" style={{ width: "100%", cursor: "pointer" }}>
-          <Panel accent hover>
-            <div className="row g12">
-              <Upload size={20} color="#9be8ff" />
-              <div className="grow">
-                <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("IMPORTA SCHEDA PT")}</div>
-                <div className="tiny t-dim">{tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}</div>
-              </div>
-              <ChevronRight size={16} color="#3f637c" />
-            </div>
-          </Panel>
-        </button>
-
-        <button onClick={() => setView("ai")} className="tap" style={{ width: "100%", cursor: "pointer" }}>
-          <Panel accent hover>
-            <div className="row g12">
-              <Bot size={20} color="#9be8ff" />
-              <div className="grow">
-                <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("GENERA SCHEDA CON AI")}</div>
-                <div className="tiny t-dim">{tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")}</div>
-              </div>
-              <ChevronRight size={16} color="#3f637c" />
-            </div>
-          </Panel>
-        </button>
       </div>
 
       {/* RIGHT: history + library + PR */}
@@ -2674,6 +2666,18 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
   /* la modalità "componi" non richiede un piano: è indipendente */
   if (subTab === "compose") return (
     <div className="fade-in stack">
+      {nutri && (
+        <div className="row between">
+          <h2 className="hud-title">▸ Piano — {nutri.goal}</h2>
+          <Btn small onClick={() => setNutri(null)}>{tr("↻ Nuovo")}</Btn>
+        </div>
+      )}
+      <div className="row g8">
+        <Btn small onClick={() => generate(!!nutri)} disabled={loading} style={{ flex: 1, opacity: .85 }}>
+          {loading ? tr("Rigenerazione...") : tr("◈ Rigenera con AI")}
+        </Btn>
+        <Btn small onClick={() => setImporting(true)} style={{ flex: 1, opacity: .85 }}>{tr("⤓ Importa piano")}</Btn>
+      </div>
       <NutriSubTabs value={subTab} onChange={setSubTab} />
       <SourcePlanView
         plan={(nutri && nutri.sourcePlan) || DEFAULT_SOURCE_PLAN}
@@ -2768,6 +2772,14 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
           <h2 className="hud-title">▸ Piano — {nutri.goal}</h2>
           <Btn small onClick={() => setNutri(null)}>{tr("↻ Nuovo")}</Btn>
         </div>
+
+        <div className="row g8">
+          <Btn small onClick={() => generate(true)} disabled={loading} style={{ flex: 1, opacity: .85 }}>
+            {loading ? tr("Rigenerazione...") : tr("◈ Rigenera con AI")}
+          </Btn>
+          <Btn small onClick={() => setImporting(true)} style={{ flex: 1, opacity: .85 }}>{tr("⤓ Importa piano")}</Btn>
+        </div>
+
         <NutriSubTabs value={subTab} onChange={setSubTab} />
 
         <Panel accent>
@@ -2825,10 +2837,6 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
           <div className="micro t-faint" style={{ marginTop: 6 }}>{tr("VERRANNO APPLICATE ALLA PROSSIMA RIGENERAZIONE")}</div>
         </Panel>
 
-        <Btn full onClick={() => generate(true)} disabled={loading}>
-          {loading ? tr("Rigenerazione...") : tr("↻ Rigenera pasti (stessi target)")}
-        </Btn>
-        <Btn full onClick={() => setImporting(true)}>{tr("⤓ Importa un altro piano")}</Btn>
       </div>
 
       <div className="col stack">
