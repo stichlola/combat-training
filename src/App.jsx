@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target
+  Dumbbell, Flame, Plus, ChevronRight, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -10,6 +10,9 @@ import { aiCall, featHeaders, parseLoose, resizeImage } from "./lib/ai";
 import { ExerciseInfoModal } from "./components/ExerciseInfoModal";
 import { RoutineEditor } from "./components/RoutineEditor";
 import { SessionView } from "./components/SessionView";
+import { TrainerView, TrainerProfile } from "./components/TrainerView";
+import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
+import { captureInviteHash, clearInvite, fetchMyRole, isAdminUser, linkToTrainer, pendingInvite } from "./lib/trainer";
 import { dlStart } from "./lib/dnd";
 import { applyProgression } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb } from "./lib/exercises";
@@ -440,8 +443,10 @@ export default function App() {
 
   /* --- auth & persistenza via Supabase --- */
   const [user, setUser] = useState(null);
+  const [pendingPt, setPendingPt] = useState(null); // invito PT da confermare (id trainer)
   const GUEST_KEY = "gq_guest_v1";
   const isGuest = !!(user && user.guest);
+  const isPT = !!(user && user.role === "pt");
   const [hydrated, setHydrated] = useState(false);
   const [booting, setBooting] = useState(true);      // splash finché il check sessione non è concluso
   const [bootProg, setBootProg] = useState(0);
@@ -564,11 +569,18 @@ export default function App() {
       const { data: prem } = await supabase.from("premium")
         .select("premium_until").eq("user_id", authUser.id).maybeSingle();
       if (prem) setPremiumUntil(prem.premium_until);
+      const role = await fetchMyRole(authUser); // "user" | "pt"
       setUser({
         id: authUser.id,
         email: authUser.email,
         username: (authUser.user_metadata && authUser.user_metadata.username) || authUser.email.split("@")[0],
+        role,
       });
+      if (role === "pt") setTab("clients");
+      /* invito PT in sospeso (link #pt=...): chiedi conferma dopo il login */
+      const pt = pendingInvite();
+      if (pt && pt !== authUser.id && role !== "pt") setPendingPt(pt);
+      else if (pt) clearInvite();
       setHydrated(true);
     };
     /* ospite: nessun account, dati solo su questo dispositivo */
@@ -593,6 +605,8 @@ export default function App() {
       setHydrated(true);
     };
     window.__gqHydrateGuest = hydrateGuest;
+
+    captureInviteHash(); // link invito PT (#pt=...): parcheggia l'id per dopo il login
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) await hydrate(session.user);
@@ -685,7 +699,11 @@ export default function App() {
   const need = xpForLevel(level);
   const rank = LEVEL_TITLES[Math.min(4, Math.floor(level / 6))];
 
-  const navItems = [
+  /* PT: interfaccia pulita e professionale — solo clienti e profilo, niente gamification */
+  const navItems = isPT ? [
+    { id: "clients", label: "Clienti", icon: Users },
+    { id: "profile", label: "Profilo", icon: User },
+  ] : [
     { id: "training", label: "Training", icon: Dumbbell },
     { id: "nutrition", label: "Nutrition", icon: Utensils },
     { id: "game", label: "Game", icon: Gamepad2 },
@@ -713,7 +731,7 @@ export default function App() {
     );
   }
 
-  if (!body.onboarded) {
+  if (!body.onboarded && !isPT) { // il PT non ha bisogno dei dati corporei: salta l'onboarding
     return (
       <div className="hud-root">
         <style>{CSS}</style>
@@ -743,6 +761,31 @@ export default function App() {
         </div>
       )}
       <InstallBanner ip={ip} />
+
+      {/* Invito PT aperto da link/QR: conferma del collegamento */}
+      {pendingPt && !isPT && (
+        <Overlay>
+        <div className="modal-back">
+          <div className="modal-box cham fade-in" style={{ textAlign: "center" }}>
+            <Users size={26} color="#57c8f2" style={{ margin: "0 auto 12px" }} />
+            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>{tr("INVITO PERSONAL TRAINER")}</div>
+            <div className="tiny t-dim" style={{ margin: "10px 0 18px", lineHeight: 1.7 }}>
+              {tr("Un personal trainer ti ha invitato: confermando potrà vedere le tue schede e seguire i tuoi allenamenti. Potrai scollegarti quando vuoi.")}
+            </div>
+            <div className="row g8">
+              <Btn onClick={() => { clearInvite(); setPendingPt(null); }} style={{ flex: 1 }}>{tr("Rifiuta")}</Btn>
+              <Btn primary style={{ flex: 2 }} onClick={async () => {
+                const ok = await linkToTrainer(user.id, user.email, pendingPt);
+                clearInvite(); setPendingPt(null);
+                fireToast(ok
+                  ? { title: tr("◈ COLLEGAMENTO CONFERMATO"), sub: tr("Il tuo PT ora segue i tuoi allenamenti") }
+                  : { title: tr("Collegamento non riuscito"), sub: tr("Riprova dal link invito") });
+              }}>{tr("Conferma collegamento")}</Btn>
+            </div>
+          </div>
+        </div>
+        </Overlay>
+      )}
       {questsOpen && <QuestModal quests={quests} stats={stats} prs={prs} level={level} streak={streak} onClose={() => setQuestsOpen(false)} />}
       {gateOpen && <StoreModal premium={premium} isGuest={isGuest} fireToast={fireToast} onClose={() => setGateOpen(false)}
         onUnlocked={(until) => setPremiumUntil(until)} />}
@@ -750,7 +793,7 @@ export default function App() {
       {/* TOP HUD BAR */}
       <header className="hud-header">
         <div className="hud-header-inner">
-          <div className="brand">GYM<span className="t-faint">//</span>QUEST</div>
+          <div className="brand">COMBAT<span className="t-faint">//</span>TRAINING</div>
           <button onClick={() => setTab("profile")} className="tap row g6"
             style={{ cursor: "pointer", color: isPremium ? "#ffd76a" : tab === "profile" ? "#9be8ff" : "#7fa8bf", position: "relative", flexShrink: 0 }}>
             <span style={{ position: "relative", display: "inline-flex" }}>
@@ -761,25 +804,33 @@ export default function App() {
             </span>
             <span className="f-hud hide-sm" style={{ fontSize: 11, letterSpacing: ".1em" }}>{user.username}</span>
           </button>
-          <div className="xp-wrap">
-            <div className="row between" style={{ marginBottom: 4 }}>
-              <span className="micro">LV.{level} <span className="t-cyan">{rank}</span></span>
-              <span className="micro">{xp}/{need} XP</span>
+          {isPT ? (
+            <div className="xp-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 11, letterSpacing: ".25em" }}>PERSONAL TRAINER</span>
             </div>
-            <ShieldBar pct={xp / need} />
-            {questFlash && (
-              <div className="f-hud t-amber blink" style={{ fontSize: 9, letterSpacing: ".2em", marginTop: 3, textAlign: "center" }}>
-                {questFlash}
+          ) : (
+            <div className="xp-wrap">
+              <div className="row between" style={{ marginBottom: 4 }}>
+                <span className="micro">LV.{level} <span className="t-cyan">{rank}</span></span>
+                <span className="micro">{xp}/{need} XP</span>
               </div>
-            )}
-          </div>
-          <div className="row g8" style={{ flexShrink: 0 }}>
-            <button onClick={() => setQuestsOpen(true)} className="streak-pill cham-s tap" title={tr("Sfide e medaglie")}
-              style={{ cursor: "pointer", borderColor: "#8a6d1f", boxShadow: "0 0 10px rgba(255,215,106,.2)", padding: "8px 14px", gap: 8 }}>
-              <Target size={18} color="#ffd76a" />
-              <span className="f-hud t-amber hide-sm" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".15em" }}>{tr("SFIDE")}</span>
-            </button>
-          </div>
+              <ShieldBar pct={xp / need} />
+              {questFlash && (
+                <div className="f-hud t-amber blink" style={{ fontSize: 9, letterSpacing: ".2em", marginTop: 3, textAlign: "center" }}>
+                  {questFlash}
+                </div>
+              )}
+            </div>
+          )}
+          {!isPT && (
+            <div className="row g8" style={{ flexShrink: 0 }}>
+              <button onClick={() => setQuestsOpen(true)} className="streak-pill cham-s tap" title={tr("Sfide e medaglie")}
+                style={{ cursor: "pointer", borderColor: "#8a6d1f", boxShadow: "0 0 10px rgba(255,215,106,.2)", padding: "8px 14px", gap: 8 }}>
+                <Target size={18} color="#ffd76a" />
+                <span className="f-hud t-amber hide-sm" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".15em" }}>{tr("SFIDE")}</span>
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -805,6 +856,7 @@ export default function App() {
         </aside>
 
         <main className="main-area">
+          {tab === "clients" && isPT && <TrainerView user={user} fireToast={fireToast} />}
           {tab === "training" && <Training onWorkoutDone={applyWorkoutToQuests} premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
@@ -814,12 +866,19 @@ export default function App() {
               /* radar dei trofei: registra l'indizio trovato (persiste in stats, niente migrazioni DB) */
               onFindHint={(id) => setStats((s) => ({ ...s, hints: [...new Set([...(s.hints || []), id])] }))} />
           )}
-          {tab === "profile" && (
-            <ProfileTab user={user} body={body} setBody={setBody}
-              fireToast={fireToast} onLogout={async () => { await supabase.auth.signOut(); setTab("training"); }}
-              onUserUpdate={setUser} level={level} rank={rank} streak={streak} premium={premium}
-              onRedoSetup={() => setBody((b) => ({ ...b, onboarded: false }))} />
-          )}
+          {tab === "profile" && (isPT ? (
+            <TrainerProfile user={user} fireToast={fireToast}
+              onLogout={async () => { await supabase.auth.signOut(); setTab("clients"); }} />
+          ) : (
+            <>
+              {isAdminUser(user) && <div style={{ marginBottom: 16 }}><PtRequestsAdmin fireToast={fireToast} /></div>}
+              <ProfileTab user={user} body={body} setBody={setBody}
+                fireToast={fireToast} onLogout={async () => { await supabase.auth.signOut(); setTab("training"); }}
+                onUserUpdate={setUser} level={level} rank={rank} streak={streak} premium={premium}
+                onRedoSetup={() => setBody((b) => ({ ...b, onboarded: false }))}
+                ptCard={<PtRequestCard user={user} fireToast={fireToast} />} />
+            </>
+          ))}
         </main>
       </div>
 
@@ -1550,7 +1609,7 @@ function AuthScreen({ fireToast, onGuest }) {
       <div className="auth-box fade-in">
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".3em" }}>
-            GYM<span className="t-faint">//</span>QUEST
+            COMBAT<span className="t-faint">//</span>TRAINING
           </div>
           <div className="micro" style={{ marginTop: 6 }}>{tr("TRAINING HUD SYSTEM")}</div>
         </div>
@@ -1637,7 +1696,7 @@ const BodyField = ({ draft, setD, label, k, unit, step }) => (
 );
 
 /* ================================ PROFILE ================================ */
-function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup }) {
+function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup, ptCard }) {
   const [usage, setUsage] = useState(null);
   const [usageErr, setUsageErr] = useState(null);
   useEffect(() => {
@@ -1719,6 +1778,8 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} />{tr("Esci")}</Btn>
           </div>
         </Panel>
+
+        {ptCard}
 
         {/* Utilizzo AI settimanale + negozio */}
         <Panel>
