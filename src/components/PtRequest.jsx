@@ -46,12 +46,16 @@ export function PtRequestCard({ user, fireToast }) {
 function PtRequestModal({ user, fireToast, onClose, onSent }) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
 
   const send = async () => {
-    setBusy(true);
-    const ok = await submitPtRequest(user.id, user.email, msg);
+    setBusy(true); setErr(null);
+    const res = await submitPtRequest(user.id, user.email, msg);
     setBusy(false);
-    if (!ok) return fireToast({ title: tr("Invio non riuscito"), sub: tr("Riprova tra poco") });
+    if (res !== true) {
+      setErr(typeof res === "string" ? res : tr("Invio non riuscito: riprova tra poco."));
+      return;
+    }
     fireToast({ title: tr("◈ RICHIESTA INVIATA"), sub: tr("Verrà valutata dall'amministratore") });
     onSent({ status: "pending" });
   };
@@ -72,6 +76,7 @@ function PtRequestModal({ user, fireToast, onClose, onSent }) {
         <textarea className="hud-input" rows={4} value={msg} onChange={(e) => setMsg(e.target.value)}
           placeholder={tr("Es. PT certificato ISSA, alleno presso ...")}
           style={{ width: "100%", resize: "vertical", marginBottom: 12 }} />
+        {err && <div className="tiny" style={{ color: "#ff8a8a", marginBottom: 10, lineHeight: 1.5 }}>⚠ {err}</div>}
         <Btn primary onClick={send} disabled={busy || msg.trim().length < 10} style={{ width: "100%" }}>
           {busy ? <Loader2 size={12} className="spin" style={{ display: "inline", verticalAlign: -2 }} />
                 : <Send size={12} style={{ display: "inline", verticalAlign: -2 }} />} {tr("Invia richiesta")}

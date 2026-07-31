@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowLeft, Copy, Trash2, UserPlus, Users, Dumbbell, StickyNote, QrCode, LogOut } from "lucide-react";
-import { inviteLink, listClients, saveClientNote, removeClient, getClientRoutines } from "../lib/trainer";
+import { ArrowLeft, Copy, Trash2, UserPlus, Users, Dumbbell, StickyNote, QrCode, LogOut, Pencil, Plus, Upload, AlertTriangle } from "lucide-react";
+import { inviteLink, listClients, saveClientNote, removeClient, getClientRoutines, saveClientRoutines } from "../lib/trainer";
 import { exMode, isDumbbell } from "../lib/exercises";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
+import { RoutineEditor } from "./RoutineEditor";
+import { DocImport } from "./DocImport";
 
 /* ---------------- Vista Personal Trainer ----------------
    Interfaccia pulita e professionale: niente gamification.
@@ -59,7 +61,12 @@ export function TrainerView({ user, fireToast }) {
                 <Users size={16} color="#57c8f2" />
               </div>
               <div className="grow">
-                <div className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{c.client_email || c.client_id.slice(0, 8)}</div>
+                <div className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>
+                  {c.full_name || c.username || c.client_email || c.client_id.slice(0, 8)}
+                </div>
+                <div className="tiny t-faint">
+                  {[c.full_name && c.username ? `@${c.username}` : null, c.client_email].filter(Boolean).join(" · ")}
+                </div>
                 <div className="tiny t-faint">
                   {tr("dal")} {new Date(c.created_at).toLocaleDateString("it-IT")}{c.note ? ` · 📝` : ""}
                 </div>
@@ -114,14 +121,19 @@ function InviteModal({ user, fireToast, onClose }) {
   );
 }
 
-/* ---------------- Dettaglio cliente: note + schede (predisposto) ---------------- */
+/* ---------------- Dettaglio cliente: note + schede (modifica diretta) ---------------- */
 function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
   const [note, setNote] = useState(client.note || "");
   const [routines, setRoutines] = useState(null); // null = caricamento
   const [confirmRm, setConfirmRm] = useState(false);
+  const [editIdx, setEditIdx] = useState(null);  // null=lista · -1=nuova · >=0 indice scheda
+  const [importOpen, setImportOpen] = useState(false);
+  const [pending, setPending] = useState(null);  // nuove routines in attesa di conferma sovrascrittura
+  const [delId, setDelId] = useState(null);
+  const [busy, setBusy] = useState(false);
   const dirty = note !== (client.note || "");
 
-  useEffect(() => { getClientRoutines(client.client_id).then(setRoutines); }, []);
+  useEffect(() => { getClientRoutines(client.client_id).then((r) => setRoutines(r || [])); }, []);
 
   const save = async () => {
     await saveClientNote(user.id, client.client_id, note);
@@ -135,8 +147,57 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
     onRemoved();
   };
 
+  /* persistenza effettiva dopo la conferma di sovrascrittura */
+  const commit = async () => {
+    setBusy(true);
+    const ok = await saveClientRoutines(client.client_id, pending);
+    setBusy(false);
+    if (!ok) { setPending(null); return fireToast({ title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") }); }
+    setRoutines(pending);
+    setPending(null);
+    fireToast({ title: tr("◈ SCHEDE AGGIORNATE"), sub: tr("Il cliente le vedrà al prossimo caricamento") });
+  };
+
+  /* --- editor scheda (nuova o esistente) --- */
+  if (editIdx !== null) return (
+    <RoutineEditor premium={null} fireToast={fireToast}
+      initial={editIdx >= 0 ? routines[editIdx] : null}
+      onClose={() => setEditIdx(null)}
+      onSave={(draft) => {
+        setPending(editIdx >= 0 ? routines.map((r, i) => (i === editIdx ? draft : r)) : [...(routines || []), draft]);
+        setEditIdx(null);
+      }} />
+  );
+
+  /* --- import AI (foto excel, PDF, testo → bozza scheda per il cliente) --- */
+  if (importOpen) return (
+    <DocImport premium={null}
+      onClose={() => setImportOpen(false)}
+      onSave={(r) => { setPending([...(routines || []), r]); setImportOpen(false); }} />
+  );
+
   return (
     <div className="fade-in stack" style={{ maxWidth: 640 }}>
+      {/* conferma sovrascrittura: le schede del cliente vengono sostituite */}
+      {pending && (
+        <Overlay>
+        <div className="modal-back" onClick={() => !busy && setPending(null)}>
+          <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13, marginBottom: 8 }}>
+              <AlertTriangle size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("ATTENZIONE — SOVRASCRITTURA")}
+            </div>
+            <div className="tiny t-dim" style={{ lineHeight: 1.7, marginBottom: 14 }}>
+              {tr("Salvando, le schede che il cliente vede nella sua app verranno SOSTITUITE con le tue modifiche: le sue versioni (carichi, serie, note) andranno perse. Confermi?")}
+            </div>
+            <div className="row g8">
+              <Btn primary disabled={busy} onClick={commit} style={{ flex: 1 }}>{tr("Sovrascrivi le schede")}</Btn>
+              <Btn disabled={busy} onClick={() => setPending(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+            </div>
+          </div>
+        </div>
+        </Overlay>
+      )}
+
       <div className="row between">
         <Btn small onClick={onBack}><ArrowLeft size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Clienti")}</Btn>
         {confirmRm ? (
@@ -152,8 +213,13 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
       </div>
 
       <Panel accent>
-        <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 16, letterSpacing: ".05em" }}>{client.client_email || client.client_id}</div>
+        <div className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 16, letterSpacing: ".05em" }}>
+          {client.full_name || client.username || client.client_email || client.client_id}
+        </div>
         <div className="tiny t-faint" style={{ marginTop: 4 }}>
+          {[client.full_name && client.username ? `@${client.username}` : null, client.client_email].filter(Boolean).join(" · ")}
+        </div>
+        <div className="tiny t-faint" style={{ marginTop: 2 }}>
           {tr("Cliente dal")} {new Date(client.created_at).toLocaleDateString("it-IT")}
         </div>
       </Panel>
@@ -171,21 +237,46 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
         )}
       </Panel>
 
-      {/* Schede del cliente — PREDISPOSTO: sola lettura per ora.
-          La modifica diretta (PT → scheda del cliente) arriverà in una prossima versione. */}
+      {/* Schede del cliente: crea, modifica, importa — con avviso di sovrascrittura */}
       <Panel>
-        <div className="hud-label row g6" style={{ marginBottom: 8 }}>
-          <Dumbbell size={13} color="#57c8f2" /> {tr("Schede del cliente")}
+        <div className="row between" style={{ marginBottom: 8 }}>
+          <div className="hud-label row g6" style={{ marginBottom: 0 }}>
+            <Dumbbell size={13} color="#57c8f2" /> {tr("Schede del cliente")}
+          </div>
+          <Btn small onClick={() => setEditIdx(-1)}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
         </div>
+        <Btn small onClick={() => setImportOpen(true)} style={{ width: "100%", marginBottom: 10, opacity: .85 }}
+          title={tr("Fotografa la tua tabella (Excel, PDF, testo): l'AI la converte in scheda, progressioni settimanali incluse")}>
+          <Upload size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("◈ IMPORTA CON AI")}
+        </Btn>
         {routines === null && <div className="tiny t-faint" style={{ padding: "6px 0" }}>{tr("Caricamento...")}</div>}
         {routines !== null && routines.length === 0 && (
           <div className="tiny t-faint" style={{ padding: "6px 0" }}>{tr("Il cliente non ha ancora schede.")}</div>
         )}
-        {(routines || []).map((r) => (
+        {(routines || []).map((r, ri) => (
           <div key={r.id} className="cham-s" style={{ padding: "10px 12px", background: "#04101b", border: "1px solid #0e2233", marginBottom: 8 }}>
             <div className="row between">
-              <span className="f-hud t-bright" style={{ fontWeight: 700, letterSpacing: ".12em", fontSize: 13 }}>{r.name}</span>
-              <span className="micro t-dim">{r.exercises.length} {tr("ESERCIZI")}</span>
+              <span className="f-hud t-bright" style={{ fontWeight: 700, letterSpacing: ".12em", fontSize: 13 }}>
+                {r.name}
+                {r.progression?.enabled && <span className="micro" style={{ marginLeft: 8, color: "#ffd76a" }}>PROG</span>}
+              </span>
+              <div className="row g8" style={{ flexShrink: 0 }}>
+                <span className="micro t-dim">{r.exercises.length} {tr("ESERCIZI")}</span>
+                <span onClick={() => setEditIdx(ri)} className="tap" style={{ cursor: "pointer", padding: "2px 6px", color: "#9be8ff" }} title={tr("Modifica scheda")}>
+                  <Pencil size={14} />
+                </span>
+                {delId === r.id ? (
+                  <span onClick={() => setPending(routines.filter((x) => x.id !== r.id))} className="tap"
+                    style={{ cursor: "pointer", padding: "2px 6px", color: "#ff8f7d", fontSize: 11, fontWeight: 700 }}>
+                    {tr("Conferma?")}
+                  </span>
+                ) : (
+                  <span onClick={() => { setDelId(r.id); setTimeout(() => setDelId((d) => (d === r.id ? null : d)), 2500); }}
+                    className="tap" style={{ cursor: "pointer", padding: "2px 6px", color: "#7fa8bf" }} title={tr("Elimina scheda")}>
+                    <Trash2 size={14} />
+                  </span>
+                )}
+              </div>
             </div>
             <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.7 }}>
               {r.exercises.map((e, i) => (
@@ -201,7 +292,7 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
           </div>
         ))}
         <div className="micro t-faint" style={{ marginTop: 4, lineHeight: 1.6 }}>
-          {tr("Prossimamente: da qui potrai creare e modificare direttamente le schede che il cliente vedrà nella sua app.")}
+          {tr("Le modifiche salvate qui sovrascrivono le schede del cliente: lui le vedrà aggiornate al prossimo caricamento dell'app.")}
         </div>
       </Panel>
     </div>

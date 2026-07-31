@@ -228,3 +228,44 @@ create policy "L'admin aggiorna i ruoli"
   on public.profiles for update
   using ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com')
   with check ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com');
+
+-- v3.1) Policy admin mancanti su profiles: SELECT (verifica) e INSERT (upsert ruoli)
+drop policy if exists "L'admin legge tutti i profili" on public.profiles;
+create policy "L'admin legge tutti i profili"
+  on public.profiles for select
+  using ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com');
+
+drop policy if exists "L'admin crea profili" on public.profiles;
+create policy "L'admin crea profili"
+  on public.profiles for insert
+  with check ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com');
+
+-- ============================================================
+-- v4 — IDENTITÀ CLIENTI + MODIFICA SCHEDE DA PARTE DEL PT
+-- ============================================================
+
+-- 1) Colonne identità su profiles (nome/cognome + username visibili al PT)
+alter table public.profiles add column if not exists full_name text;
+alter table public.profiles add column if not exists username text;
+
+-- 2) Il PT modifica le schede dei propri clienti (user_data.routines)
+drop policy if exists "Il PT modifica i dati dei propri clienti" on public.user_data;
+create policy "Il PT modifica i dati dei propri clienti"
+  on public.user_data for update
+  using (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
+  ))
+  with check (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
+  ));
+
+-- 3) Il PT crea la riga dati se il cliente non l'ha ancora (upsert)
+drop policy if exists "Il PT crea i dati dei propri clienti" on public.user_data;
+create policy "Il PT crea i dati dei propri clienti"
+  on public.user_data for insert
+  with check (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
+  ));
