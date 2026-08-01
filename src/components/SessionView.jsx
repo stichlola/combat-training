@@ -235,17 +235,7 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
           onClose={() => setSetMenu(null)} />
       )}
       {results && <ResultsScreen vanilla={vanilla} results={results} onClose={() => { setSession(null); exitToHome(); }} />}
-      <FloatingTimer />
-      <MachineScan premium={premium} variant="float" fireToast={fireToast}
-        currentNames={session.exercises.map((e) => e.name)}
-        onAdd={(name, group) => upd((s) => ({
-          ...s,
-          exercises: [...s.exercises, group === "Cardio"
-            ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
-            : isHold(name)
-              ? { name, group, mode: "hold", note: "", sets: holdSets() }
-              : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
-        }))} />
+
 
       {/* Conferma uscita: la sessione resta attiva */}
       {confirmExit && (
@@ -326,6 +316,21 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
           </div>
         </div>
       </Panel>
+      </div>
+
+      {/* Strumenti di sessione nel flusso normale (non più pulsanti flottanti) */}
+      <div className="row g8" style={{ flexWrap: "wrap" }}>
+      <FloatingTimer inline />
+      <MachineScan premium={premium} variant="inline" fireToast={fireToast}
+        currentNames={session.exercises.map((e) => e.name)}
+        onAdd={(name, group) => upd((s) => ({
+          ...s,
+          exercises: [...s.exercises, group === "Cardio"
+            ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
+            : isHold(name)
+              ? { name, group, mode: "hold", note: "", sets: holdSets() }
+              : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+        }))} />
       </div>
 
       <div data-dl className="stack" style={{ marginTop: 0 }}>

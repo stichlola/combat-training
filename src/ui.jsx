@@ -88,6 +88,11 @@ button.btn{text-align:center}
 @keyframes spin{to{transform:rotate(360deg)}}
 .float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
 .float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:var(--modal);border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;max-width:340px;box-sizing:border-box}
+/* timer in linea (sessione): bottone normale, pannello a comparsa sotto */
+.timer-inline{position:relative;display:inline-block}
+.timer-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:60;background:var(--modal);
+  border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;
+  min-width:290px;box-sizing:border-box}
 .set-grid-t{display:grid;grid-template-columns:18px 42px 1fr 64px 48px;gap:8px;align-items:center}
 .icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer}
 
@@ -265,6 +270,7 @@ body.dragging *{cursor:grabbing!important}
 .vanilla .streak-pill{border-radius:999px}
 .vanilla .modal-box{border:none;border-radius:28px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
 .vanilla .float-timer{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
+.vanilla .timer-pop{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
 .vanilla .setmenu{border:none;border-radius:16px;box-shadow:0 2px 6px 2px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.2)}
 .vanilla .float-cam-btn,.vanilla .float-timer-btn{border:none;border-radius:16px;background:#e4e2e6;
   color:#1d1b20;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.15)}
