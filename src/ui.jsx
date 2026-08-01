@@ -225,16 +225,16 @@ body.dragging *{cursor:grabbing!important}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* ============================== VANILLA ==============================
-   Tema CHIARO Google Material Design 3: superfici in tonalità lavanda,
-   primario viola #6750A4, elevazioni al posto dei bordi, bottoni a pillola,
+   Tema CHIARO stile Material con colore NEUTRO: grigi grafite al posto
+   del colore d'accento, elevazioni al posto dei bordi, bottoni a pillola,
    card 16px, dialoghi 28px, tipografia Roboto. */
 .vanilla{color-scheme:light;
-  --bg:#fef7ff;--panel:#ffffff;--panel2:#f7f2fa;--line:#e7e0ec;--line2:#cac4d0;
-  --cyan:#6750a4;--cyan-hi:#6750a4;--bright:#1d1b20;--text:#49454f;
+  --bg:#f7f7f8;--panel:#ffffff;--panel2:#f1eff2;--line:#e5e3e6;--line2:#c9c7cb;
+  --cyan:#333136;--cyan-hi:#333136;--bright:#1d1b20;--text:#49454f;
   --dim:#625b71;--faint:#938f99;--amber:#7a5901;--green:#146c2e;--red:#b3261e;
-  --card:#f7f2fa;--card2:#f3edf7;--active:#eaddff;--active2:#f3edf7;
-  --soft:#f3edf7;--soft2:#e7e0ec;--hairline:#efebf4;--input:#e6e0e9;
-  --modal:#ece6f0;--done:#d9f0dc;--warm-bg:#fff3d6;--warm-line:#e8c766;
+  --card:#f1eff2;--card2:#ebe9ec;--active:#e4e2e6;--active2:#efecef;
+  --soft:#efecef;--soft2:#e3e1e4;--hairline:#efecef;--input:#eae8eb;
+  --modal:#f3f2f4;--done:#d9f0dc;--warm-bg:#fff3d6;--warm-line:#e8c766;
   font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
 .vanilla::before,.vanilla::after{display:none}
 .vanilla .f-hud,.vanilla .hud-label,.vanilla .hud-title,.vanilla .micro,.vanilla .btn,.vanilla .brand,
@@ -249,32 +249,32 @@ body.dragging *{cursor:grabbing!important}
 .vanilla .seg{clip-path:none;border-radius:4px}
 .vanilla .panel{background:#ffffff;border:none;border-radius:16px;
   box-shadow:0 1px 2px rgba(0,0,0,.14),0 1px 3px 1px rgba(0,0,0,.08)}
-.vanilla .panel-accent{background:#f7f2fa;border-color:transparent}
+.vanilla .panel-accent{background:#f1eff2;border-color:transparent}
 .vanilla .panel::before{display:none}
 .vanilla .btn{border-radius:999px;letter-spacing:.01em;font-weight:600}
-.vanilla .btn-primary{background:#6750a4;border-color:transparent;color:#fff;
+.vanilla .btn-primary{background:#333136;border-color:transparent;color:#fff;
   box-shadow:0 1px 2px rgba(0,0,0,.2),0 1px 3px 1px rgba(0,0,0,.1)}
 .vanilla .btn-primary:hover{box-shadow:0 1px 3px rgba(0,0,0,.2),0 4px 8px 3px rgba(0,0,0,.1)}
-.vanilla .btn-ghost{background:#e8def8;color:#1d192b;border-color:transparent}
-.vanilla .btn-ghost:hover{background:#ded3f3}
+.vanilla .btn-ghost{background:#e9e7ea;color:#1d1b20;border-color:transparent}
+.vanilla .btn-ghost:hover{background:#dfdde0}
 .vanilla .hud-input{background:var(--input);border:1px solid transparent;border-radius:12px;font-weight:500;color:#1d1b20}
-.vanilla .hud-input:focus{border-color:transparent;box-shadow:inset 0 -2px 0 var(--cyan);background:#e6e0e9}
-.vanilla .hud-header{background:rgba(254,247,255,.88);border-bottom-color:var(--soft)}
-.vanilla .bottom-nav{background:#f3edf7;border-top:none}
+.vanilla .hud-input:focus{border-color:transparent;box-shadow:inset 0 -2px 0 var(--cyan);background:#eae8eb}
+.vanilla .hud-header{background:rgba(247,247,248,.88);border-bottom-color:var(--soft)}
+.vanilla .bottom-nav{background:#efecef;border-top:none}
 .vanilla .brand{letter-spacing:.06em;font-weight:700}
 .vanilla .streak-pill{border-radius:999px}
 .vanilla .modal-box{border:none;border-radius:28px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
 .vanilla .float-timer{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
 .vanilla .setmenu{border:none;border-radius:16px;box-shadow:0 2px 6px 2px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.2)}
-.vanilla .float-cam-btn,.vanilla .float-timer-btn{border:none;border-radius:16px;background:#eaddff;
-  color:#21005d;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.15)}
+.vanilla .float-cam-btn,.vanilla .float-timer-btn{border:none;border-radius:16px;background:#e4e2e6;
+  color:#1d1b20;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.15)}
 .vanilla .set-chip{border:none;border-radius:8px}
 .vanilla .chip{border-radius:8px}
 .vanilla .set-warmup{background:var(--warm-bg)}
-.vanilla .bnav-btn.on svg{background:#eaddff;border-radius:999px;padding:4px 16px;box-sizing:content-box;margin:-4px -16px}
+.vanilla .bnav-btn.on svg{background:#e4e2e6;border-radius:999px;padding:4px 16px;box-sizing:content-box;margin:-4px -16px}
 .vanilla .bnav-btn div:last-child{display:none}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
-body.vanilla{background:#fef7ff}
+body.vanilla{background:#f7f7f8}
 
 `;
 

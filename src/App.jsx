@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -25,7 +25,7 @@ const UI_MODES = [
   { id: "combat", label: "Combat Training", flag: "⚔",
     desc: "Esperienza gamificata: livelli, XP, sfide e trofei — grafica HUD da gioco" },
   { id: "vanilla", label: "Vanilla", flag: "◻",
-    desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica Google Material Design" },
+    desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material" },
 ];
 import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar } from "./ui";
 const Trophy3D = React.lazy(() => import("./Trophy3D"));   // three.js caricato solo quando serve
@@ -1090,8 +1090,7 @@ function Training({ vanilla, onWorkoutDone, premium, addXp, fireToast, routines,
 
       {/* RIGHT: history + library + PR */}
       <div className="col stack">
-        <Panel>
-          <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Mission log — ultimi allenamenti")}</div>
+        <CollapsiblePanel id="missionlog" label={tr("Mission log — ultimi allenamenti")}>
           {(!history || history.length === 0) && (
             <div className="tiny t-faint" style={{ padding: "8px 0" }}>
               {tr("Nessun allenamento registrato. Completa il primo workout per iniziare il log.")}
@@ -1115,14 +1114,11 @@ function Training({ vanilla, onWorkoutDone, premium, addXp, fireToast, routines,
               </div>
             </button>
           ))}
-        </Panel>
+        </CollapsiblePanel>
 
         <ExerciseLibrary />
 
-        <Panel>
-          <div className="hud-label row g6" style={{ marginBottom: 8 }}>
-            <Trophy size={13} color="#ffd76a" /> Personal records
-          </div>
+        <CollapsiblePanel id="prs" label="Personal records" icon={<Trophy size={13} color="#ffd76a" />}>
           {Object.keys(prs).length === 0 && (
             <div className="tiny t-faint" style={{ padding: "6px 0" }}>
               {tr("Nessun record. Completa serie con carichi crescenti per registrare i PR.")}
@@ -1134,7 +1130,7 @@ function Training({ vanilla, onWorkoutDone, premium, addXp, fireToast, routines,
               <span className="f-hud t-amber" style={{ fontWeight: 700, fontSize: 13 }}>{v} KG</span>
             </div>
           ))}
-        </Panel>
+        </CollapsiblePanel>
       </div>
     </div>
   );
@@ -1217,10 +1213,34 @@ function WorkoutReport({ rec, onClose }) {
   );
 }
 
+/* ---------------- Collapsible Panel (aperto di default, stato salvato) ---------------- */
+const PANELS_KEY = "gq_panels_v1";
+const readPanels = () => { try { return JSON.parse(localStorage.getItem(PANELS_KEY)) || {}; } catch { return {}; } };
+
+function CollapsiblePanel({ id, label, icon, children }) {
+  const [open, setOpen] = useState(() => readPanels()[id] !== false); // default: aperto
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    const map = readPanels();
+    map[id] = next;
+    localStorage.setItem(PANELS_KEY, JSON.stringify(map));
+  };
+  return (
+    <Panel>
+      <button onClick={toggle} className="tap row between" style={{ width: "100%", cursor: "pointer", marginBottom: open ? 8 : 0 }}>
+        <span className="hud-label row g6" style={{ marginBottom: 0 }}>{icon}{label}</span>
+        {open ? <ChevronDown size={15} color="var(--faint)" /> : <ChevronRight size={15} color="var(--faint)" />}
+      </button>
+      {open && children}
+    </Panel>
+  );
+}
+
 /* ---------------- Exercise Library ---------------- */
 function ExerciseLibrary() {
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState("Petto");
+  const [open, setOpen] = useState(null); // libreria: tutti i gruppi chiusi di default
   const [info, setInfo] = useState(null);
   const filtered = useMemo(() => {
     if (!q) return EXERCISE_DB;
@@ -1232,9 +1252,8 @@ function ExerciseLibrary() {
     return out;
   }, [q]);
   return (
-    <Panel>
+    <CollapsiblePanel id="library" label={tr("Libreria esercizi")}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
-      <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Libreria esercizi")}</div>
       <div style={{ position: "relative", marginBottom: 12 }}>
         <Search size={14} color="var(--faint)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
         <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)}
@@ -1263,7 +1282,7 @@ function ExerciseLibrary() {
           </div>
         ))}
       </div>
-    </Panel>
+    </CollapsiblePanel>
   );
 }
 
