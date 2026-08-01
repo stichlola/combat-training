@@ -1,10 +1,11 @@
 /* ============================================================
    SCOUTER — visore AR stile Dragon Ball
-   Fotocamera + riconoscimento REALE del soggetto: un modello
-   TensorFlow.js (COCO-SSD, caricato lazy solo all'apertura)
-   rileva le persone nel frame e lo scouter le aggancia con le
-   staffe di mira, seguendole in continuo. Se il modello non è
-   disponibile (offline), resta il reticolo scenografico.
+   Fotocamera + riconoscimento REALE del soggetto (lazy, solo
+   all'apertura). Sensore primario: MoveNet MultiPose — lavora
+   sui punti chiave del corpo, quindi aggancia bene anche i
+   mezzi busti e i primi piani dove COCO-SSD fatica. Riserva:
+   COCO-SSD (soglia bassa) se il primo non si carica. Offline:
+   resta il reticolo scenografico.
    La lettura di potenza deriva dal livello del giocatore.
    ============================================================ */
 import React, { useEffect, useRef, useState } from "react";
@@ -61,50 +62,101 @@ export default function Scouter({ level = 1, onClose }) {
     };
   }, []);
 
-  /* ---------- modello di rilevamento persone (lazy) ---------- */
+  /* ---------- modello di rilevamento persone (lazy) ----------
+     Primario: MoveNet MultiPose (punti chiave → ottimo su mezzi
+     busti e primi piani). Riserva: COCO-SSD a soglia bassa. */
   useEffect(() => {
     let dead = false, timer = null;
+
+    // box del soggetto dai punti chiave: margine generoso e vincoli al frame
+    const boxFromKeypoints = (kps, vw, vh) => {
+      const good = kps.filter((k) => (k.score ?? 0) >= 0.3);
+      if (good.length < 4) return null;   // troppo pochi punti: non è una persona affidabile
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      good.forEach((k) => {
+        x0 = Math.min(x0, k.x); y0 = Math.min(y0, k.y);
+        x1 = Math.max(x1, k.x); y1 = Math.max(y1, k.y);
+      });
+      let w = x1 - x0, h = y1 - y0;
+      // i punti chiave coprono solo l'interno del corpo: allarga per testa/spalle/gambe
+      const padX = w * 0.22, padTop = h * 0.28, padBottom = h * 0.12;
+      x0 = Math.max(0, x0 - padX); y0 = Math.max(0, y0 - padTop);
+      x1 = Math.min(vw, x1 + padX); y1 = Math.min(vh, y1 + padBottom);
+      return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    };
+
+    // da coordinate video → coordinate schermo (object-fit: cover)
+    const toDisplay = (b, v) => {
+      const vw = v.videoWidth, vh = v.videoHeight;
+      const cw = v.clientWidth, ch = v.clientHeight;
+      const s = Math.max(cw / vw, ch / vh);
+      const ox = (vw * s - cw) / 2, oy = (vh * s - ch) / 2;
+      return { x: b.x * s - ox, y: b.y * s - oy, w: b.w * s, h: b.h * s };
+    };
+
     (async () => {
+      let detectPerson = null;   // funzione unificata: video → box video | null
       try {
-        const [coco] = await Promise.all([
-          import("@tensorflow-models/coco-ssd"),
+        const [pd, tf] = await Promise.all([
+          import("@tensorflow-models/pose-detection"),
           import("@tensorflow/tfjs"),
+          import("@tensorflow/tfjs-backend-webgl"),
         ]);
         if (dead) return;
-        modelRef.current = await coco.load({ base: "lite_mobilenet_v2" });
-        if (dead) return;
-        setSensor("on");
-        const tick = async () => {
-          const v = videoRef.current;
-          if (!dead && modelRef.current && v && v.readyState >= 2 && v.videoWidth) {
-            try {
-              const preds = await modelRef.current.detect(v, 5, 0.45);
-              const people = preds.filter((p) => p.class === "person");
-              if (people.length) {
-                // il soggetto più grande inquadrato
-                const p = people.reduce((a, b) => (a.bbox[2] * a.bbox[3] > b.bbox[2] * b.bbox[3] ? a : b));
-                // da coordinate video → coordinate schermo (object-fit: cover)
-                const vw = v.videoWidth, vh = v.videoHeight;
-                const cw = v.clientWidth, ch = v.clientHeight;
-                const s = Math.max(cw / vw, ch / vh);
-                const ox = (vw * s - cw) / 2, oy = (vh * s - ch) / 2;
-                targetRef.current = {
-                  x: p.bbox[0] * s - ox, y: p.bbox[1] * s - oy,
-                  w: p.bbox[2] * s, h: p.bbox[3] * s,
-                };
-              } else {
-                targetRef.current = null;
-              }
-            } catch {}
-          }
-          timer = setTimeout(tick, 220);
+        // pose-detection registra webgpu come backend prioritario: dove non
+        // esiste romperebbe tutto → forza webgl (riserva: cpu) prima di usarlo
+        try { if (!(await tf.setBackend("webgl"))) await tf.setBackend("cpu"); } catch { try { await tf.setBackend("cpu"); } catch {} }
+        await tf.ready();
+        const det = await pd.createDetector(pd.SupportedModels.MoveNet, {
+          modelType: pd.movenet.modelType.MULTIPOSE_LIGHTNING,
+          enableSmoothing: true,
+        });
+        modelRef.current = det;
+        detectPerson = async (v) => {
+          const poses = await det.estimatePoses(v, { maxPoses: 5, flipHorizontal: false });
+          const boxes = poses
+            .map((p) => boxFromKeypoints(p.keypoints, v.videoWidth, v.videoHeight))
+            .filter(Boolean);
+          if (!boxes.length) return null;
+          // il soggetto più grande inquadrato
+          return boxes.reduce((a, b) => (a.w * a.h > b.w * b.h ? a : b));
         };
-        tick();
-      } catch {
-        if (!dead) setSensor("off");   // niente modello: reticolo scenografico
+      } catch (e1) {
+        console.warn("scouter: MoveNet non disponibile, passo a COCO-SSD —", e1?.message || e1);
+        // riserva: COCO-SSD con soglia più permissiva (mezzi busti hanno score basso)
+        try {
+          const coco = await import("@tensorflow-models/coco-ssd");
+          if (dead) return;
+          const m = await coco.load({ base: "lite_mobilenet_v2" });
+          modelRef.current = m;
+          detectPerson = async (v) => {
+            const preds = await m.detect(v, 6, 0.28);
+            const people = preds.filter((p) => p.class === "person");
+            if (!people.length) return null;
+            const p = people.reduce((a, b) => (a.bbox[2] * a.bbox[3] > b.bbox[2] * b.bbox[3] ? a : b));
+            return { x: p.bbox[0], y: p.bbox[1], w: p.bbox[2], h: p.bbox[3] };
+          };
+        } catch (e2) {
+          console.warn("scouter: nessun modello di rilevamento disponibile —", e2?.message || e2);
+          if (!dead) setSensor("off");   // niente modello: reticolo scenografico
+          return;
+        }
       }
+      if (dead) return;
+      setSensor("on");
+      const tick = async () => {
+        const v = videoRef.current;
+        if (!dead && detectPerson && v && v.readyState >= 2 && v.videoWidth) {
+          try {
+            const b = await detectPerson(v);
+            targetRef.current = b ? toDisplay(b, v) : null;
+          } catch {}
+        }
+        timer = setTimeout(tick, 220);
+      };
+      tick();
     })();
-    return () => { dead = true; clearTimeout(timer); };
+    return () => { dead = true; clearTimeout(timer); modelRef.current?.dispose?.(); modelRef.current = null; };
   }, []);
 
   /* ---------- smoothing del box + stato aggancio ---------- */
@@ -250,6 +302,7 @@ export default function Scouter({ level = 1, onClose }) {
 
       {/* staffe di mira sul soggetto tracciato */}
       {locked && box && (
+        <>
         <div style={{
           position: "absolute", left: box.x - 8, top: box.y - 8, width: box.w + 16, height: box.h + 16,
           pointerEvents: "none", transition: "opacity .2s",
@@ -264,13 +317,16 @@ export default function Scouter({ level = 1, onClose }) {
               filter: `drop-shadow(0 0 6px ${G})`,
             }} />
           ))}
-          <div style={{
-            position: "absolute", top: -22, left: 0, color: G, fontSize: 10,
-            letterSpacing: ".2em", textShadow: `0 0 8px ${G}`, whiteSpace: "nowrap",
-          }}>
-            ◉ SOGGETTO — PWR {power.toLocaleString()}
-          </div>
         </div>
+        {/* etichetta soggetto: resta sempre dentro lo schermo anche se il box tocca i bordi */}
+        <div style={{
+          position: "absolute", pointerEvents: "none",
+          left: Math.max(10, box.x - 8), top: box.y > 44 ? box.y - 30 : box.y + 10,
+          color: G, fontSize: 10, letterSpacing: ".2em", textShadow: `0 0 8px ${G}`, whiteSpace: "nowrap",
+        }}>
+          ◉ SOGGETTO — PWR {power.toLocaleString()}
+        </div>
+        </>
       )}
 
       {/* etichetta stato */}
