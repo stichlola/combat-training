@@ -132,8 +132,7 @@ body.dragging *{cursor:grabbing!important}
 .setmenu button:hover{background:var(--active);color:var(--bright)}
 .setmenu button.danger{color:#ff8f7d}
 /* testata sessione sticky: comandi (Esci/nome/Termina) e statistiche sempre visibili nello scroll */
-.sticky-hud{position:sticky;top:0;z-index:60;background:var(--bg);padding:8px 0;
-  box-shadow:0 16px 16px -12px rgba(4,9,15,.95)}
+.sticky-hud{padding:8px 0}
 
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .toast-in{animation:ti .35s cubic-bezier(.34,1.4,.64,1)}
