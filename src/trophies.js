@@ -1,5 +1,5 @@
 /* ============================================================
-   CATALOGO TROFEI — Il viaggio di Damastir
+   CATALOGO RICOMPENSE — Il viaggio di Damastir
    Ogni trofeo è un capitolo della storia: dall'arrivo nel mondo
    distopico al siero, dall'underground al tradimento, dal deserto
    allo spazio. Vedi LORE.md per l'arco completo.
@@ -8,19 +8,10 @@
    ============================================================ */
 export const TROPHIES = [
   {
-    id: "recruit",
-    name: "Medaglia del Fuoritempo",
-    rarity: "comune",
-    how: "Si ottiene all'iscrizione: il primo passo nel programma.",
-    lore: "Medaglia d'oro antico con il sigillo di COMBAT TRAINING inciso ad arco, corona d'alloro e stella centrale. Al cuore pulsa un frammento d'Eco verde: si dice si risvegli a ogni passo del portatore. Non è una ricompensa — è un giuramento.",
-    check: () => true,
-    model: "recruit",
-  },
-  {
     id: "scouter",
     name: "Scouter del Ricognitore",
     rarity: "comune",
-    how: "Si ottiene all'iscrizione, insieme alla medaglia. Sblocca lo Scouter nella sezione GAME.",
+    how: "Si ottiene all'iscrizione: sblocca subito lo Scouter nella sezione GAME, anche per gli utenti non premium.",
     lore: "Visore tattico da ricognitore: unità auricolare blindata e lente rossa con display integrato. Inquadra un soggetto e ne legge potenza, resistenza e velocità. Esemplare rattoppato del mercato dei relitti, perfettamente funzionante. Attivalo nella sezione GAME.",
     check: () => true,
     model: "scouter",
@@ -66,7 +57,7 @@ export const TROPHIES = [
     name: "Effige della Spalla Vuota",
     rarity: "epico",
     how: "Raggiungi il livello 15.",
-    lore: "Per anni Joseph visse sulla spalla di Damastir: il suo gatto, il suo condottiero, il suo unico legame con il mondo perduto. Poi scelse Vaaladriel, e la spalla restò vuota. Questo idolo, scavato dai viandanti in una pietra che non riflette la luce, ha un solo occhio azzurro che non si spegne mai. Non è un trofeo di vittoria: è un monumento a ciò che si perde crescendo. Il livello quindici si raggiunge solo imparando ad allenarsi da soli.",
+    lore: "Per anni Joseph visse sulla spalla di Damastir: il suo gatto, il suo condottiero, il suo unico legame con il mondo perduto. Poi scelse Vaaladriel, e la spalla restò vuota. Questo idolo, scavato dai viandanti in una pietra che non riflette la luce, ha un solo occhio azzurro che non si spegne mai. Non è una ricompensa di vittoria: è un monumento a ciò che si perde crescendo. Il livello quindici si raggiunge solo imparando ad allenarsi da soli.",
     check: (s, prs, lvl) => lvl >= 15,
     model: "idol15",
   },

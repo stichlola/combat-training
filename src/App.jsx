@@ -23,7 +23,7 @@ import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
 /* Le due "versioni" dell'app: stessa struttura, con o senza gamification */
 const UI_MODES = [
   { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
-    desc: "Esperienza gamificata: livelli, XP, sfide e trofei — grafica HUD da gioco" },
+    desc: "Esperienza gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
   { id: "vanilla", label: "Vanilla", flag: "◻", Icon: Square,
     desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material" },
 ];
@@ -103,9 +103,12 @@ function useBootFacts() {
 /* ================================ STORE (premium + crediti) ================================ */
 
 /* ---------------- Popup Quest + Achievements ---------------- */
+/* Lore mostrata nel visore 3D delle medaglie (sezione MEDAGLIE) */
+const MEDAL_3D_LORE = "Medaglia d'oro antico con il sigillo di COMBAT TRAINING inciso ad arco, corona d'alloro e stella centrale. Al cuore pulsa un frammento d'Eco verde: si dice si risvegli a ogni passo del portatore. Non è una ricompensa — è un giuramento.";
+
 function QuestModal({ quests, stats, prs, level, streak, onClose }) {
   const [tab, setTab] = useState("daily");
-  const [selTrophy, setSelTrophy] = useState(null);   // trofeo aperto nel visore 3D
+  const [selTrophy, setSelTrophy] = useState(null);   // ricompensa o medaglia aperta nel visore 3D
   const midnight = new Date(); midnight.setHours(24, 0, 0, 0);
   const hLeft = Math.max(0, Math.round((midnight - new Date()) / 3600000));
   const achieved = ACHIEVEMENTS.filter((a) => a.check(stats, prs, level));
@@ -123,7 +126,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
         </div>
 
         <div className="row g6" style={{ marginBottom: 14 }}>
-          {[["daily", "GIORNALIERE"], ["weekly", "SETTIMANALI"], ["ach", "MEDAGLIE"], ["troph", "TROFEI"]].map(([k, l]) => (
+          {[["daily", "GIORNALIERE"], ["weekly", "SETTIMANALI"], ["ach", "MEDAGLIE"], ["troph", "RICOMPENSE"]].map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} className={`tap cham-s chip ${tab === k ? "chip-on" : ""}`}
               style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "8px 0", fontSize: 10 }}>
               {l}
@@ -165,16 +168,23 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
             <div className="stack-s">
               {ACHIEVEMENTS.map((a) => {
                 const ok = achieved.includes(a);
+                const view3d = ok && a.model; // medaglia ammirabile in 3D (per ora solo la più facile)
                 return (
-                  <div key={a.id} className="cham-s row g12" style={{
+                  <div key={a.id} className="cham-s row g12"
+                    onClick={() => view3d && setSelTrophy({ name: a.name, rarity: a.tier === "hard" ? "epico" : "comune", model: a.model, lore: MEDAL_3D_LORE, how: a.desc })}
+                    style={{
                     padding: "10px 12px", background: "var(--card2)", alignItems: "center",
                     border: `1px solid ${ok ? "#ffd76a" : "var(--soft)"}`, opacity: ok ? 1 : 0.55,
+                    cursor: view3d ? "pointer" : "default",
                   }}>
                     <Medal size={20} color={ok ? "#ffd76a" : "#2a4a63"} style={{ flexShrink: 0 }} />
                     <div className="grow">
                       <div className={ok ? "t-amber" : "t-dim"} style={{ fontSize: 13, fontWeight: 700 }}>{tr(a.name)}</div>
                       <div className="tiny t-faint">{tr(a.desc)}</div>
                     </div>
+                    {view3d && (
+                      <span className="micro cham-s" style={{ padding: "2px 7px", flexShrink: 0, border: "1px solid #b8860b", color: "#ffd76a" }}>3D</span>
+                    )}
                     <span className="micro cham-s" style={{
                       padding: "2px 7px", flexShrink: 0,
                       border: `1px solid ${a.tier === "hard" ? "#c05a8e" : "#2a5f7d"}`,
@@ -183,6 +193,11 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
                   </div>
                 );
               })}
+              {achieved.some((a) => a.model) && (
+                <div className="micro t-faint" style={{ marginTop: 10, textAlign: "center" }}>
+                  TOCCA LA MEDAGLIA PER AMMIRARLA IN 3D
+                </div>
+              )}
             </div>
           </>
         )}
@@ -192,7 +207,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
           return (
             <>
               <div className="micro t-faint" style={{ marginBottom: 10 }}>
-                {got.length} / {TROPHIES.length} NELLA SALA TROFEI
+                {got.length} / {TROPHIES.length} NELLA SALA RICOMPENSE
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 {TROPHIES.map((t) => {
@@ -221,13 +236,13 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
                 })}
               </div>
               <div className="micro t-faint" style={{ marginTop: 10, textAlign: "center" }}>
-                TOCCA UN TROFEO PER AMMIRARLO IN 3D
+                TOCCA UNA RICOMPENSA PER AMMIRARLA IN 3D
               </div>
             </>
           );
         })()}
 
-        {/* -------- Visore 3D del trofeo -------- */}
+        {/* -------- Visore 3D della ricompensa -------- */}
         {selTrophy && (
           <div className="modal-back" onClick={() => setSelTrophy(null)} style={{ zIndex: 60 }}>
             <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}
@@ -651,51 +666,6 @@ export default function App() {
     window.__gqHydrateGuest = hydrateGuest;
 
     captureInviteHash(); // link invito PT (#pt=...): parcheggia l'id per dopo il login
-
-    (async () => {
-      supabase.auth.getSession().then(async ({ data: { session } }) => {
-        if (session) await hydrate(session.user);
-        else if (localStorage.getItem(GUEST_KEY)) hydrateGuest(); // ospite già avviato: rientra diretto
-        authDone.current = true; // splash: può chiudersi (utente ripristinato o assente)
-      }).catch(() => { authDone.current = true; });
-    })();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) hydrate(session.user);
-      else if (!window.__gqKeepGuest) { setUser(null); setHydrated(false); }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  /* Splash: progress bar che si completa quando la sessione è verificata */
-  useEffect(() => {
-    const t0 = Date.now();
-    const iv = setInterval(() => {
-      setBootProg((p) => {
-        const elapsed = Date.now() - t0;
-        const target = authDone.current || elapsed > 4000 ? 1 : Math.min(0.86, elapsed / 1400);
-        const n = Math.min(target, p + 0.06);
-        if (n >= 1) { clearInterval(iv); setTimeout(() => setBooting(false), 260); }
-        return n;
-      });
-    }, 50);
-    return () => clearInterval(iv);
-  }, []);
-
-  /* Autosave con debounce: ogni modifica viene scritta su Supabase */
-  const saveRef2 = useRef(null);
-  useEffect(() => {
-    if (!user || !hydrated) return;
-    clearTimeout(saveRef2.current);
-    if (user.guest) {
-      saveRef2.current = setTimeout(() => {
-        try {
-          localStorage.setItem(GUEST_KEY, JSON.stringify({
-            body, nutrition: nutri, routines, prs, session, history, quests, stats, xp, level,
-          }));
-        } catch {}
-      }, 800);
-      return;
-    }
     saveRef2.current = setTimeout(() => {
       supabase.from("user_data").upsert({
         user_id: user.id, body, nutrition: nutri, routines, prs,
@@ -762,7 +732,7 @@ export default function App() {
 
   useEffect(() => { window.__gqXpSnap = { xp, level }; }, [xp, level]);
 
-  /* trofei: avvisa quando se ne sblocca uno nuovo (derivati da stats/prs/livello, niente DB) */
+  /* ricompense: avvisa quando se ne sblocca una nuova (derivate da stats/prs/livello, niente DB) */
   const trophyRef = useRef(null);
   useEffect(() => {
     if (!hydrated) return;
@@ -771,7 +741,7 @@ export default function App() {
     const fresh = TROPHIES.filter((t) => ids.includes(t.id) && !trophyRef.current.includes(t.id));
     trophyRef.current = ids;
     fresh.forEach((t, i) =>
-      setTimeout(() => fireToast({ title: tr("◈ TROFEO SBLOCCATO"), sub: t.name, color: RARITY[t.rarity].color }), 900 * (i + 1)));
+      setTimeout(() => fireToast({ title: tr("◈ RICOMPENSA SBLOCCATA"), sub: t.name, color: RARITY[t.rarity].color }), 900 * (i + 1)));
   }, [stats, prs, level, hydrated]);
 
   const need = xpForLevel(level);
@@ -948,8 +918,8 @@ export default function App() {
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
           {tab === "game" && (
-            <GameTab level={level} stats={stats} prs={prs}
-              /* radar dei trofei: registra l'indizio trovato (persiste in stats, niente migrazioni DB) */
+            <GameTab level={level} stats={stats} prs={prs} premium={premium}
+              /* radar delle ricompense: registra l'indizio trovato (persiste in stats, niente migrazioni DB) */
               onFindHint={(id) => setStats((s) => ({ ...s, hints: [...new Set([...(s.hints || []), id])] }))} />
           )}
           {tab === "profile" && (isPT ? (

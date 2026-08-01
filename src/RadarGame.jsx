@@ -1,10 +1,10 @@
 /* ============================================================
-   RADAR DEI TROFEI — minigioco stile Dragon Radar.
-   I trofei ancora BLOCCATI sono nascosti nella mappa radar:
-   trascini il tuo segnale e quando ti avvicini a un trofeo il
+   RADAR DELLE RICOMPENSE — minigioco stile Dragon Radar.
+   Le ricompense ancora BLOCCATE sono nascoste nella mappa radar:
+   trascini il tuo segnale e quando ti avvicini a una ricompensa il
    telefono vibra (se la vibrazione non è supportata, il radar
    pulsa). Catturato il segnale, scopri l'INDIZIO per sbloccarlo:
-   compare a schermo e resta registrato nella Sala Trofei
+   compare a schermo e resta registrato nella Sala Ricompense
    al posto di "???". Posizioni deterministiche per id trofeo:
    niente da salvare, la mappa è uguale a ogni apertura.
    ============================================================ */
@@ -170,7 +170,7 @@ export default function RadarGame({ stats, prs, level, onFindHint, onClose }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(2,8,5,.96)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div className="row between" style={{ width: "100%", maxWidth: 420, marginBottom: 10 }}>
         <div className="f-hud row g8" style={{ color: G, fontWeight: 700, fontSize: 12, letterSpacing: ".2em", alignItems: "center" }}>
-          <Radar size={16} /> RADAR DEI TROFEI
+          <Radar size={16} /> RADAR DELLE RICOMPENSE
         </div>
         <span onClick={onClose} className="tap" style={{ color: "#5a7a6a", cursor: "pointer", padding: 6 }}><X size={20} /></span>
       </div>
@@ -184,7 +184,7 @@ export default function RadarGame({ stats, prs, level, onFindHint, onClose }) {
       </div>
       <div className="micro" style={{ color: "#3a5a48", marginTop: 12, textAlign: "center", letterSpacing: ".1em", lineHeight: 1.8 }}>
         TRASCINA IL SEGNALE SUL RADAR · LA VIBRAZIONE GUIDA LA CACCIA
-        <br />TROVA I TROFEI BLOCCATI PER SCOPRIRNE L'INDIZIO
+        <br />TROVA LE RICOMPENSE BLOCCATE PER SCOPRIRNE L'INDIZIO
       </div>
 
       {/* overlay indizio scoperto */}
@@ -197,11 +197,11 @@ export default function RadarGame({ stats, prs, level, onFindHint, onClose }) {
               <Lock size={30} color={RARITY[found.rarity].color} />
             </div>
             <div className="micro" style={{ color: RARITY[found.rarity].color, letterSpacing: ".2em", marginBottom: 10 }}>
-              TROFEO {RARITY[found.rarity].label} · IDENTITÀ IGNOTA
+              RICOMPENSA {RARITY[found.rarity].label} · IDENTITÀ IGNOTA
             </div>
             <div className="hud-label" style={{ marginBottom: 6, color: "#8fb2c9" }}>INDIZIO DI SBLOCCO</div>
             <div className="t-bright" style={{ fontSize: 16, lineHeight: 1.5, marginBottom: 18 }}>{found.how}</div>
-            <button onClick={claim} className="btn btn-primary cham-s tap" style={{ width: "100%" }}>REGISTRA NELLA SALA TROFEI</button>
+            <button onClick={claim} className="btn btn-primary cham-s tap" style={{ width: "100%" }}>REGISTRA NELLA SALA RICOMPENSE</button>
           </div>
         </div>
       )}

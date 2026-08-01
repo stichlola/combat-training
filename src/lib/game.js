@@ -96,7 +96,8 @@ export const freshQuests = (dailyPool, weeklyPool) => ({
 
 /* ---------------- Achievements (fissi) ---------------- */
 export const ACHIEVEMENTS = [
-  { id: "first", name: "Il Primo Passo", desc: "Completa il tuo primo allenamento", tier: "easy", check: (s) => s.workouts >= 1 },
+  // model: la medaglia si può ammirare in 3D nella sezione MEDAGLIE (per ora solo la più facile da sbloccare)
+  { id: "first", name: "Il Primo Passo", desc: "Completa il tuo primo allenamento", tier: "easy", model: "medal", check: (s) => s.workouts >= 1 },
   { id: "w10", name: "Recluta Promossa", desc: "Completa 10 allenamenti", tier: "easy", check: (s) => s.workouts >= 10 },
   { id: "w50", name: "Veterano del Ferro", desc: "Completa 50 allenamenti", tier: "hard", check: (s) => s.workouts >= 50 },
   { id: "w100", name: "Spartan-117", desc: "Completa 100 allenamenti", tier: "hard", check: (s) => s.workouts >= 100 },

@@ -35,7 +35,7 @@ export default function Trophy3D({ model, glow = "#39ff88" }) {
     scene.add(warm);
 
     // modello
-    const obj = (MODEL_BUILDERS[model] || MODEL_BUILDERS.recruit)();
+    const obj = (MODEL_BUILDERS[model] || MODEL_BUILDERS.medal)();
     // normalizza dimensioni
     const box = new THREE.Box3().setFromObject(obj);
     const size = box.getSize(new THREE.Vector3());

@@ -171,7 +171,7 @@ const EN_UI = {
   "Stile": "Style",
   "Stile dell'app": "App style",
   "Potrai cambiarlo quando vuoi dal profilo": "You can change it anytime from your profile",
-  "Esperienza gamificata: livelli, XP, sfide e trofei — grafica HUD da gioco": "Gamified experience: levels, XP, challenges and trophies — game HUD graphics",
+  "Esperienza gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco": "Gamified experience: levels, XP, challenges and rewards — game HUD graphics",
   "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material": "Clean, minimal interface, same structure without gamification — light graphics in neutral Material-style tones",
   "Le modifiche salvate qui sovrascrivono le schede del cliente: lui le vedrà aggiornate al prossimo caricamento dell'app.": "Changes saved here overwrite the client's routines: they'll see them updated on the next app load.",
   "NESSUN CLIENTE COLLEGATO": "NO CLIENTS CONNECTED",

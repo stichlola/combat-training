@@ -1,5 +1,5 @@
 /* ============================================================
-   GYMQUEST — SALA TROFEI
+   GYMQUEST — SALA RICOMPENSE
    Trofei collezionabili in 3D (ispirazione: Super Smash Bros.
    Brawl per la trophy room, Jak and Daxter: The Precursor
    Legacy per la lore — leghe antiche, Eco, manufatti Precursor).
@@ -595,9 +595,10 @@ function buildScouter() {
   return g;
 }
 
-/* Mappa id trofeo → builder del modello (importata dal visore lazy) */
+/* Mappa id modello → builder (importata dal visore lazy).
+   "medal" è la medaglia d'oro mostrata nella sezione MEDAGLIE. */
 export const MODEL_BUILDERS = {
-  recruit: () => buildMedal({ face: drawRecruitFace, metalColor: GOLD, coreGlow: ECO_GREEN }),
+  medal: () => buildMedal({ face: drawRecruitFace, metalColor: GOLD, coreGlow: ECO_GREEN }),
   scouter: () => buildScouter(),
   firstw: () => buildDumbbell({ color: BRONZE }),
   orb5: () => buildPrecursorOrb({ glow: ECO_GREEN }),
