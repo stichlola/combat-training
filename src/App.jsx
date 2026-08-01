@@ -666,6 +666,51 @@ export default function App() {
     window.__gqHydrateGuest = hydrateGuest;
 
     captureInviteHash(); // link invito PT (#pt=...): parcheggia l'id per dopo il login
+
+    (async () => {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session) await hydrate(session.user);
+        else if (localStorage.getItem(GUEST_KEY)) hydrateGuest(); // ospite già avviato: rientra diretto
+        authDone.current = true; // splash: può chiudersi (utente ripristinato o assente)
+      }).catch(() => { authDone.current = true; });
+    })();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) hydrate(session.user);
+      else if (!window.__gqKeepGuest) { setUser(null); setHydrated(false); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  /* Splash: progress bar che si completa quando la sessione è verificata */
+  useEffect(() => {
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      setBootProg((p) => {
+        const elapsed = Date.now() - t0;
+        const target = authDone.current || elapsed > 4000 ? 1 : Math.min(0.86, elapsed / 1400);
+        const n = Math.min(target, p + 0.06);
+        if (n >= 1) { clearInterval(iv); setTimeout(() => setBooting(false), 260); }
+        return n;
+      });
+    }, 50);
+    return () => clearInterval(iv);
+  }, []);
+
+  /* Autosave con debounce: ogni modifica viene scritta su Supabase */
+  const saveRef2 = useRef(null);
+  useEffect(() => {
+    if (!user || !hydrated) return;
+    clearTimeout(saveRef2.current);
+    if (user.guest) {
+      saveRef2.current = setTimeout(() => {
+        try {
+          localStorage.setItem(GUEST_KEY, JSON.stringify({
+            body, nutrition: nutri, routines, prs, session, history, quests, stats, xp, level,
+          }));
+        } catch {}
+      }, 800);
+      return;
+    }
     saveRef2.current = setTimeout(() => {
       supabase.from("user_data").upsert({
         user_id: user.id, body, nutrition: nutri, routines, prs,
