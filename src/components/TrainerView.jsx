@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { ArrowLeft, Copy, Trash2, UserPlus, Users, Dumbbell, StickyNote, QrCode, LogOut, Pencil, Plus, Upload, AlertTriangle } from "lucide-react";
-import { inviteLink, listClients, saveClientNote, removeClient, getClientRoutines, saveClientRoutines } from "../lib/trainer";
+import { inviteLink, listClients, saveClientNote, removeClient, getClientRoutines, saveClientRoutines, ptImportsLeft, ptImportConsume, PT_IMPORT_WEEK_LIMIT } from "../lib/trainer";
 import { exMode, isDumbbell } from "../lib/exercises";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
@@ -131,7 +131,14 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
   const [pending, setPending] = useState(null);  // nuove routines in attesa di conferma sovrascrittura
   const [delId, setDelId] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [importsLeft, setImportsLeft] = useState(() => ptImportsLeft()); // soft lock anti-abuso
   const dirty = note !== (client.note || "");
+
+  const openImport = () => {
+    if (importsLeft <= 0)
+      return fireToast({ title: tr("Limite import raggiunto"), sub: `${tr("Max")} ${PT_IMPORT_WEEK_LIMIT}/${tr("settimana")} — ${tr("si azzera lunedì")}` });
+    setImportOpen(true);
+  };
 
   useEffect(() => { getClientRoutines(client.client_id).then((r) => setRoutines(r || [])); }, []);
 
@@ -160,7 +167,7 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
 
   /* --- editor scheda (nuova o esistente) --- */
   if (editIdx !== null) return (
-    <RoutineEditor premium={null} fireToast={fireToast}
+    <RoutineEditor premium={null} fireToast={fireToast} showScan={false}
       initial={editIdx >= 0 ? routines[editIdx] : null}
       onClose={() => setEditIdx(null)}
       onSave={(draft) => {
@@ -173,7 +180,10 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
   if (importOpen) return (
     <DocImport premium={null}
       onClose={() => setImportOpen(false)}
-      onSave={(r) => { setPending([...(routines || []), r]); setImportOpen(false); }} />
+      onSave={(r) => {
+        ptImportConsume(); setImportsLeft(ptImportsLeft());
+        setPending([...(routines || []), r]); setImportOpen(false);
+      }} />
   );
 
   return (
@@ -245,10 +255,13 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
           </div>
           <Btn small onClick={() => setEditIdx(-1)}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
         </div>
-        <Btn small onClick={() => setImportOpen(true)} style={{ width: "100%", marginBottom: 10, opacity: .85 }}
+        <Btn small onClick={openImport} style={{ width: "100%", marginBottom: 4, opacity: importsLeft <= 0 ? .4 : .85 }}
           title={tr("Fotografa la tua tabella (Excel, PDF, testo): l'AI la converte in scheda, progressioni settimanali incluse")}>
           <Upload size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("◈ IMPORTA CON AI")}
         </Btn>
+        <div className="micro t-faint" style={{ textAlign: "center", marginBottom: 10 }}>
+          {tr("Import rimasti questa settimana")}: {importsLeft}/{PT_IMPORT_WEEK_LIMIT}
+        </div>
         {routines === null && <div className="tiny t-faint" style={{ padding: "6px 0" }}>{tr("Caricamento...")}</div>}
         {routines !== null && routines.length === 0 && (
           <div className="tiny t-faint" style={{ padding: "6px 0" }}>{tr("Il cliente non ha ancora schede.")}</div>
@@ -278,15 +291,16 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
                 )}
               </div>
             </div>
-            <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.7 }}>
+            <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.9 }}>
               {r.exercises.map((e, i) => (
-                <span key={i}>
-                  {tr(e.name)} <span className="t-cyan">
+                <div key={i} className="row between g8">
+                  <span>{i + 1}. {tr(e.name)}</span>
+                  <span className="t-cyan" style={{ flexShrink: 0 }}>
                     {exMode(e) === "time" ? `${e.sets.length}×${Math.round((e.sets[0]?.sec || 0) / 60)}min`
                       : exMode(e) === "hold" ? `${e.sets.length}×${e.sets[0]?.sec || 60}s`
                       : `${e.sets.length}×${e.sets[0]?.w || "—"}kg×${e.sets[0]?.r || "—"}`}
-                  </span>{i < r.exercises.length - 1 ? " · " : ""}
-                </span>
+                  </span>
+                </div>
               ))}
             </div>
           </div>

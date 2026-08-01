@@ -137,3 +137,32 @@ export async function decidePtRequest(req, approve) {
   }
   return true;
 }
+
+/* ── Soft lock import AI (lato PT) ──────────────────────────
+   Limite settimanale alto, uguale per tutti: serve solo ad evitare
+   abusi. È volutamente "soft" (contatore sul dispositivo del PT). */
+export const PT_IMPORT_WEEK_LIMIT = 20;
+const PT_IMPORT_KEY = "gq_pt_imports";
+
+const ptWeekKey = () => {
+  const d = new Date();
+  const day = (d.getDay() + 6) % 7; // settimana che inizia di lunedì
+  const mon = new Date(d); mon.setDate(d.getDate() - day);
+  return mon.toISOString().slice(0, 10);
+};
+
+export function ptImportsLeft() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PT_IMPORT_KEY) || "{}");
+    if (raw.week !== ptWeekKey()) return PT_IMPORT_WEEK_LIMIT;
+    return Math.max(0, PT_IMPORT_WEEK_LIMIT - (raw.count || 0));
+  } catch { return PT_IMPORT_WEEK_LIMIT; }
+}
+
+export function ptImportConsume() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PT_IMPORT_KEY) || "{}");
+    const count = raw.week === ptWeekKey() ? (raw.count || 0) : 0;
+    localStorage.setItem(PT_IMPORT_KEY, JSON.stringify({ week: ptWeekKey(), count: count + 1 }));
+  } catch { /* ignore */ }
+}

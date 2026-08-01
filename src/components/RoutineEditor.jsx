@@ -12,7 +12,7 @@ import { tr } from "../lib/i18n";
 import { Btn, Panel } from "../ui";
 
 /* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ---------------- */
-export function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) {
+export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, showScan = true }) {
   const [draft, setDraft] = useState(() => initial
     ? JSON.parse(JSON.stringify(initial))
     : { id: Date.now(), name: "", exercises: [] });
@@ -270,9 +270,11 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave }) 
         {showPicker ? tr("‹ CHIUDI ELENCO") : <><Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}</>}
       </button>
       {showPicker && <ExercisePicker activeNames={draft.exercises.map((e) => e.name)} onPick={pickEx} />}
-      <MachineScan premium={premium} variant="float" fabBottom={92} fireToast={fireToast}
-        currentNames={draft.exercises.map((e) => e.name)}
-        onAdd={(name, group) => pickEx(name, group)} />
+      {showScan && (
+        <MachineScan premium={premium} variant="float" fabBottom={92} fireToast={fireToast}
+          currentNames={draft.exercises.map((e) => e.name)}
+          onAdd={(name, group) => pickEx(name, group)} />
+      )}
     </div>
   );
 }
