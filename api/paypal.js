@@ -2,19 +2,14 @@
 // SICUREZZA: l'ordine viene CREATO e CATTURATO lato server; il premium viene
 // concesso SOLO dopo verifica che PayPal confermi COMPLETED con importo 20.00 EUR.
 // Il client non può né fissare il prezzo né scrivere lo stato premium.
-import { getUserFromToken, grantPremium, addCredits, createRedeemCode } from "./_premium.js";
+import { getUserFromToken, grantPremium, addCredits, createRedeemCode, PRODUCTS } from "./_premium.js";
 
 const PP_BASE = process.env.PAYPAL_ENV === "live"
   ? "https://api-m.paypal.com"
   : "https://api-m.sandbox.paypal.com";
-/* Catalogo prodotti: il prezzo è deciso QUI, mai dal client.
-   custom_id viaggia dentro l'ordine PayPal: alla cattura leggiamo il prodotto
-   dalla risposta di PayPal, non da ciò che dichiara il client. */
-const PRODUCTS = {
-  premium: { amount: "20.00", desc: "Combat Training Premium — 12 mesi" },
-  pack30:  { amount: "3.00",  desc: "Combat Training — 30 crediti extra", credits: 30 },
-  pack100: { amount: "8.00",  desc: "Combat Training — 100 crediti extra", credits: 100 },
-};
+/* Catalogo prodotti in _premium.js (condiviso con Stripe): il prezzo è deciso
+   lato server, mai dal client. custom_id viaggia dentro l'ordine PayPal: alla
+   cattura leggiamo il prodotto dalla risposta di PayPal, non dal client. */
 
 async function ppToken() {
   const auth = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_SECRET}`).toString("base64");

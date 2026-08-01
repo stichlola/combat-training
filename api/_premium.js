@@ -101,6 +101,13 @@ export async function addCredits(userId, n, orderId) {
   return u.credits;
 }
 
+/* Catalogo prodotti condiviso (PayPal + Stripe): il prezzo è deciso QUI, mai dal client. */
+export const PRODUCTS = {
+  premium: { amount: "20.00", desc: "Combat Training Premium — 12 mesi" },
+  pack30:  { amount: "3.00",  desc: "Combat Training — 30 crediti extra", credits: 30 },
+  pack100: { amount: "8.00",  desc: "Combat Training — 100 crediti extra", credits: 100 },
+};
+
 /* ---------------- Acquisto senza account: codice di riscatto ---------------- */
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export async function createRedeemCode(product, orderId) {
@@ -113,6 +120,14 @@ export async function createRedeemCode(product, orderId) {
   });
   if (!r.ok) throw new Error("Creazione codice fallita");
   return code;
+}
+
+/* Idempotenza Stripe: se per questo ordine esiste già un codice, restituiscilo */
+export async function findRedeemCodeByOrder(orderId) {
+  const r = await fetch(`${SB_URL}/rest/v1/redeem_codes?order_id=eq.${encodeURIComponent(orderId)}&select=code&limit=1`, { headers: H() });
+  if (!r.ok) return null;
+  const rows = await r.json();
+  return rows && rows[0] ? rows[0].code : null;
 }
 
 /* Riscatta un codice su un account: applica premium o crediti, poi lo marca usato */

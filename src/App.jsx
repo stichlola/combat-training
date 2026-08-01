@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, Square
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, Square, CreditCard
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -270,8 +270,8 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
   );
 }
 
-function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast }) {
-  const [code, setCode] = useState(null);        // codice emesso per acquisto senza account
+function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast, initialCode }) {
+  const [code, setCode] = useState(initialCode || null); // codice emesso per acquisto senza account
   const [redeem, setRedeem] = useState("");
   const [redeemMsg, setRedeemMsg] = useState(null);
   const doRedeem = async () => {
@@ -295,6 +295,25 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
   const [product, setProduct] = useState(premium.is ? "pack30" : "premium");
   const ppRef = useRef(null);
   const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+  const [stripeLoading, setStripeLoading] = useState(false);
+
+  /* Stripe Checkout: crea la sessione lato server e reindirizza alla pagina Stripe;
+     al rientro (?stripe_session=...) la verifica/avvenuto accredito è gestito a livello App */
+  const payStripe = async () => {
+    setErr(null); setStripeLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const r = await fetch("/api/stripe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+        body: JSON.stringify({ action: "checkout", product }),
+      });
+      const d = await r.json();
+      if (d.url) { window.location.href = d.url; return; }
+      setErr(d.detail ? `${d.error}: ${d.detail}` : (d.error || tr("Errore Stripe, riprova.")));
+    } catch { setErr(tr("Errore Stripe, riprova.")); }
+    setStripeLoading(false);
+  };
 
   useEffect(() => {
     (async () => {
@@ -403,6 +422,19 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
         ) : (
           <div className="tiny t-red" style={{ textAlign: "center" }}>{tr("⚠ VITE_PAYPAL_CLIENT_ID non configurato")}</div>
         )}
+
+        {/* Stripe Checkout: alternativa a PayPal (carta, Apple Pay, Google Pay) */}
+        <div className="row" style={{ alignItems: "center", gap: 10, margin: "10px 0" }}>
+          <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+          <span className="micro t-faint">{tr("OPPURE")}</span>
+          <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+        </div>
+        <Btn full onClick={payStripe} disabled={stripeLoading}>
+          {stripeLoading
+            ? <Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />
+            : <CreditCard size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />}
+          {tr("Paga con carta — Stripe")}
+        </Btn>
         {code && (
           <Panel accent style={{ borderColor: "#ffd76a", marginTop: 12 }}>
             <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12 }}>{tr("PAGAMENTO RICEVUTO")}</div>
@@ -434,7 +466,7 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
 
         {err && <div className="tiny t-red" style={{ marginTop: 8, textAlign: "center" }}>⚠ {err}</div>}
         <div className="micro t-faint" style={{ marginTop: 12, textAlign: "center", lineHeight: 1.6 }}>
-          PAGAMENTI SICURI PAYPAL · I CREDITI NON SCADONO · I LIMITI SETTIMANALI SI AZZERANO OGNI LUNEDÌ
+          PAGAMENTI SICURI PAYPAL E STRIPE · I CREDITI NON SCADONO · I LIMITI SETTIMANALI SI AZZERANO OGNI LUNEDÌ
         </div>
       </div>
     </div>
@@ -471,6 +503,7 @@ export default function App() {
   const [prs, setPrs] = useState(DEFAULT_PRS);
   const [premiumUntil, setPremiumUntil] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
+  const [stripeCode, setStripeCode] = useState(null); // codice di riscatto emesso al rientro da Stripe (ospite)
   const isPremium = !!premiumUntil && new Date(premiumUntil) > new Date();
   const premium = { is: isPremium, until: premiumUntil, guest: isGuest,
     open: () => setGateOpen(true),
@@ -678,6 +711,38 @@ export default function App() {
     tRef.current = setTimeout(() => setToast(null), 2600);
   };
 
+  /* Rientro da Stripe Checkout: la verifica del pagamento e l'accredito sono
+     SOLO server-side (/api/stripe verify, idempotente); qui si aggiorna la UI */
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const sid = q.get("stripe_session");
+    const cancel = q.get("stripe_cancel");
+    if (!sid && !cancel) return;
+    window.history.replaceState({}, "", window.location.pathname);
+    if (cancel) { fireToast({ title: tr("Pagamento annullato") }); return; }
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const r = await fetch("/api/stripe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+          body: JSON.stringify({ action: "verify", sessionId: sid }),
+        });
+        const d = await r.json();
+        if (d.premium_until) {
+          setPremiumUntil(d.premium_until);
+          fireToast({ title: tr("◈ PREMIUM ATTIVO"), sub: tr("Benvenuto tra gli Spartan") });
+        } else if (d.credits != null) {
+          fireToast({ title: tr("◈ CREDITI AGGIUNTI"), sub: tr("Saldo crediti aggiornato") });
+        } else if (d.code) {
+          setStripeCode(d.code); setGateOpen(true); // ospite: mostra il codice nello Store
+        } else {
+          fireToast({ title: tr("Pagamento non confermato"), sub: d.error || "" });
+        }
+      } catch { fireToast({ title: tr("Pagamento non confermato"), sub: tr("Contatta il supporto") }); }
+    })();
+  }, []);
+
   const addXp = (amount) => {
     setXp((prev) => {
       let nxp = prev + amount, lvl = level, up = false;
@@ -807,7 +872,7 @@ export default function App() {
       )}
       {questsOpen && <QuestModal quests={quests} stats={stats} prs={prs} level={level} streak={streak} onClose={() => setQuestsOpen(false)} />}
       {gateOpen && <StoreModal premium={premium} isGuest={isGuest} fireToast={fireToast} onClose={() => setGateOpen(false)}
-        onUnlocked={(until) => setPremiumUntil(until)} />}
+        onUnlocked={(until) => setPremiumUntil(until)} initialCode={stripeCode} />}
 
       {/* TOP HUD BAR */}
       <header className="hud-header">

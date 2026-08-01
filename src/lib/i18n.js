@@ -8,6 +8,15 @@ export const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "IT" }, { id: "en
 export const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
+  "Paga con carta — Stripe": "Pay by card — Stripe",
+  "OPPURE": "OR",
+  "Errore Stripe, riprova.": "Stripe error, please retry.",
+  "Pagamento annullato": "Payment cancelled",
+  "Pagamento non confermato": "Payment not confirmed",
+  "Contatta il supporto": "Contact support",
+  "Saldo crediti aggiornato": "Credit balance updated",
+  "PAGAMENTI SICURI PAYPAL E STRIPE · I CREDITI NON SCADONO · I LIMITI SETTIMANALI SI AZZERANO OGNI LUNEDÌ": "SECURE PAYMENTS BY PAYPAL AND STRIPE · CREDITS NEVER EXPIRE · WEEKLY LIMITS RESET EVERY MONDAY",
+  "PAGAMENTI SICURI PAYPAL · I CREDITI NON SCADONO · I LIMITI SETTIMANALI SI AZZERANO OGNI LUNEDÌ": "SECURE PAYMENTS BY PAYPAL AND STRIPE · CREDITS NEVER EXPIRE · WEEKLY LIMITS RESET EVERY MONDAY",
   "PDF troppo grande (max 3.5 MB): comprimilo o incolla il testo.": "PDF too large (max 3.5 MB): compress it or paste the text.",
   "File troppo grande: usa una foto più piccola o incolla il testo.": "File too large: use a smaller photo or paste the text.",
   "SERVE UN ACCOUNT": "AN ACCOUNT IS REQUIRED",
