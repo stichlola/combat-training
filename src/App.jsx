@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, Square
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -22,9 +22,9 @@ import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
 
 /* Le due "versioni" dell'app: stessa struttura, con o senza gamification */
 const UI_MODES = [
-  { id: "combat", label: "Combat Training", flag: "⚔",
+  { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
     desc: "Esperienza gamificata: livelli, XP, sfide e trofei — grafica HUD da gioco" },
-  { id: "vanilla", label: "Vanilla", flag: "◻",
+  { id: "vanilla", label: "Vanilla", flag: "◻", Icon: Square,
     desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material" },
 ];
 import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar } from "./ui";
@@ -910,7 +910,7 @@ export default function App() {
           return (
             <button key={t.id} onClick={() => setTab(t.id)} className={"bnav-btn tap" + (on ? " on" : "")}
               style={{ color: on ? "var(--cyan-hi)" : "var(--faint)", alignItems: "center", textAlign: "center" }}>
-              <t.icon size={20} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : {}} />
+              <span className="bnav-ico"><t.icon size={20} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : {}} /></span>
               {t.label}
               <div style={{ height: 2, width: 32, background: on ? "var(--cyan)" : "transparent", boxShadow: on ? "0 0 6px var(--cyan)" : "none" }} />
             </button>
@@ -1631,7 +1631,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
                 className={"tap cham-s chip " + ((body.uiMode || "combat") === o.id ? "chip-on" : "")}
                 style={{ cursor: "pointer", padding: "6px 12px", fontSize: 12 }}
                 title={tr(o.desc)}>
-                {o.flag} {tr(o.label)}
+                <o.Icon size={12} style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />{tr(o.label)}
               </button>
             ))}
           </div>
@@ -2917,7 +2917,7 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
                     className="tap cham-s" style={{ cursor: "pointer", width: "100%", padding: "12px 14px", textAlign: "left",
                       border: "1px solid " + (d.uiMode === o.id ? "var(--cyan)" : "var(--soft2)"),
                       background: d.uiMode === o.id ? "var(--active)" : "var(--card2)" }}>
-                    <div className={d.uiMode === o.id ? "t-cyan" : "t-bright"} style={{ fontSize: 15, fontWeight: 700 }}>{o.flag} {tr(o.label)}</div>
+                    <div className={d.uiMode === o.id ? "t-cyan" : "t-bright"} style={{ fontSize: 15, fontWeight: 700 }}><o.Icon size={14} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr(o.label)}</div>
                     <div className="tiny t-faint" style={{ marginTop: 3, lineHeight: 1.5 }}>{tr(o.desc)}</div>
                   </button>
                 ))}

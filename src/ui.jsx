@@ -270,8 +270,12 @@ body.dragging *{cursor:grabbing!important}
   color:#1d1b20;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.15)}
 .vanilla .set-chip{border:none;border-radius:8px}
 .vanilla .chip{border-radius:8px}
+/* chip selezionato stile M3: contenitore tonale, testo scuro (niente nero pieno) */
+.vanilla .chip-on{background:#e4e2e6;color:#1d1b20;border-color:transparent}
 .vanilla .set-warmup{background:var(--warm-bg)}
-.vanilla .bnav-btn.on svg{background:#e4e2e6;border-radius:999px;padding:4px 16px;box-sizing:content-box;margin:-4px -16px}
+.bnav-ico{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:28px;
+  margin:-4px 0;border-radius:999px}
+.vanilla .bnav-btn.on .bnav-ico{background:#e4e2e6}
 .vanilla .bnav-btn div:last-child{display:none}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
 body.vanilla{background:#f7f7f8}

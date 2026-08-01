@@ -3,7 +3,8 @@
    nomi esercizi, PR, quest salvate); tr() traduce solo ciò che si vede. */
 let CURRENT_LANG = "it";
 export const setLangGlobal = (l) => { CURRENT_LANG = l; };
-export const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "🇮🇹" }, { id: "en", label: "English", flag: "🇬🇧" }];
+/* flag come testo: le emoji-bandiera non renderizzano su Windows */
+export const LANG_OPTS = [{ id: "it", label: "Italiano", flag: "IT" }, { id: "en", label: "English", flag: "EN" }];
 export const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : s);
 
 const EN_UI = {
