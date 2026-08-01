@@ -59,7 +59,7 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
 
         <div className="stack" style={{ maxHeight: "42vh", overflowY: "auto", paddingRight: 4 }}>
           {weeks.map((wk, wi) => (
-            <div key={wi} className="cham-s" style={{ padding: "10px 12px", background: wi + 1 === curWeek ? "rgba(255,215,106,.06)" : "#04101b", border: `1px solid ${wi + 1 === curWeek ? "#ffd76a" : "#0e2233"}` }}>
+            <div key={wi} className="cham-s" style={{ padding: "10px 12px", background: wi + 1 === curWeek ? "rgba(255,215,106,.06)" : "var(--card)", border: `1px solid ${wi + 1 === curWeek ? "#ffd76a" : "var(--soft)"}` }}>
               <div className="row between" style={{ marginBottom: 8 }}>
                 <span className={`f-hud ${wi + 1 === curWeek ? "t-amber" : "t-cyan"}`} style={{ fontWeight: 700, fontSize: 12, letterSpacing: ".12em" }}>
                   {tr("SETTIMANA")} {wi + 1}{wi + 1 === curWeek ? " ●" : ""}

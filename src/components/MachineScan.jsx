@@ -82,7 +82,7 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
 
   const trigger = variant === "float" ? (
     <button onClick={() => camRef.current && camRef.current.click()} className="float-cam-btn cham-s tap" title={tr("Scansiona macchinario")}>
-      {busy ? <Loader2 size={20} color="#ffd76a" className="spin" /> : <Camera size={20} color="#57c8f2" />}
+      {busy ? <Loader2 size={20} color="#ffd76a" className="spin" /> : <Camera size={20} color="var(--cyan)" />}
     </button>
   ) : (
     <Btn small onClick={() => camRef.current && camRef.current.click()} style={{ flexShrink: 0 }}>
@@ -102,7 +102,7 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
           <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
             {busy && (
               <div style={{ textAlign: "center", padding: "30px 0" }}>
-                <Loader2 size={26} color="#57c8f2" className="spin" style={{ margin: "0 auto 10px" }} />
+                <Loader2 size={26} color="var(--cyan)" className="spin" style={{ margin: "0 auto 10px" }} />
                 <div className="f-hud t-cyan" style={{ letterSpacing: ".2em", fontSize: 12 }}>{tr("ANALISI MACCHINARIO...")}</div>
               </div>
             )}
@@ -135,12 +135,12 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
                     const inWo = currentNames.includes(name);
                     const open = openEx === name;
                     return (
-                      <div key={name} className="cham-s" style={{ border: `1px solid ${inWo ? "#57c8f2" : "#0e2233"}`, background: "#060f18" }}>
+                      <div key={name} className="cham-s" style={{ border: `1px solid ${inWo ? "var(--cyan)" : "var(--soft)"}`, background: "var(--card2)" }}>
                         <button onClick={() => setOpenEx(open ? null : name)} className="tap row between"
                           style={{ width: "100%", padding: "10px 12px", cursor: "pointer" }}>
                           <span className="row g8">
                             <span className="t-bright" style={{ fontSize: 14, fontWeight: 700, textAlign: "left" }}>{tr(name)}</span>
-                            {inWo && <span className="micro cham-s" style={{ padding: "2px 7px", border: "1px solid #57c8f2", color: "#57c8f2" }}>{tr("IN SCHEDA")}</span>}
+                            {inWo && <span className="micro cham-s" style={{ padding: "2px 7px", border: "1px solid var(--cyan)", color: "var(--cyan)" }}>{tr("IN SCHEDA")}</span>}
                           </span>
                           <span className="row g8" style={{ alignItems: "center" }}>
                             <span className="micro t-cyan">{tr(g).toUpperCase()}</span>

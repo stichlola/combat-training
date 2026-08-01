@@ -135,18 +135,18 @@ PROGRESSIONE SETTIMANALE: se il documento è una tabella programmata per settima
               }}
               className="tap cham"
               style={{ width: "100%", padding: "32px 16px", cursor: "pointer",
-                border: `1px dashed ${drag ? "#57c8f2" : "#2f6786"}`,
-                background: drag ? "#0c2a3d" : "transparent", transition: "background .15s,border-color .15s",
+                border: `1px dashed ${drag ? "var(--cyan)" : "#2f6786"}`,
+                background: drag ? "var(--active)" : "transparent", transition: "background .15s,border-color .15s",
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
               {file ? (
                 <>
-                  <FileText size={24} color="#9be8ff" />
+                  <FileText size={24} color="var(--cyan-hi)" />
                   <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{file.name}</span>
                   <span className="micro">{tr("TOCCA PER SOSTITUIRE")}</span>
                 </>
               ) : (
                 <>
-                  <Upload size={24} color="#57c8f2" />
+                  <Upload size={24} color="var(--cyan)" />
                   <span className="f-hud t-cyan" style={{ fontSize: 12, letterSpacing: ".2em" }}>{tr("CARICA DOCUMENTO")}</span>
                   <span className="tiny t-dim">{tr("Trascina qui il file, oppure tocca — PDF · Foto · Testo")}</span>
                 </>
@@ -177,13 +177,13 @@ PROGRESSIONE SETTIMANALE: se il documento è una tabella programmata per settima
                 ...r, exercises: r.exercises.map((x, j) => j !== i ? x : { ...x, [field]: val }),
               }));
               return (
-                <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid #0a1826" }}>
+                <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid var(--hairline)" }}>
                   <div className="row between g8">
                     <div className="grow">
                       <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(e.name)}</span>
                       <span className="micro" style={{ marginLeft: 8 }}>{tr(e.group).toUpperCase()}</span>
                       {e.isCustom && <span className="micro cham-s" style={{ marginLeft: 8, padding: "2px 7px", border: "1px solid #ffd76a", color: "#ffd76a" }}>{tr("NUOVO")}</span>}
-                      {e.progression?.weeks?.length > 1 && <span className="micro cham-s" style={{ marginLeft: 8, padding: "2px 7px", border: "1px solid #57c8f2", color: "#9be8ff" }}>PROG ×{e.progression.weeks.length}</span>}
+                      {e.progression?.weeks?.length > 1 && <span className="micro cham-s" style={{ marginLeft: 8, padding: "2px 7px", border: "1px solid var(--cyan)", color: "var(--cyan-hi)" }}>PROG ×{e.progression.weeks.length}</span>}
                     </div>
                     <span className="tiny t-dim" style={{ flexShrink: 0 }}>
                       {e.mode === "time" ? `${e.sets.length} × tempo` : `${e.sets.length} × ${e.sets[0].r}${e.sets[0].w ? ` @ ${e.sets[0].w}kg` : ""}`}

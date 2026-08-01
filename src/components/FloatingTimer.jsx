@@ -24,7 +24,7 @@ export function FloatingTimer() {
   return (
     <Overlay>
       <button onClick={() => setOpen(!open)} className="float-timer-btn cham-s tap" title={tr("Timer di recupero")}>
-        <Timer size={20} color={running && left > 0 ? "#ffd76a" : "#57c8f2"} className={running && left > 0 ? "blink" : ""} />
+        <Timer size={20} color={running && left > 0 ? "#ffd76a" : "var(--cyan)"} className={running && left > 0 ? "blink" : ""} />
       </button>
       {open && (
         <div className="float-timer cham-s fade-in">
@@ -39,8 +39,8 @@ export function FloatingTimer() {
             </span>
             <span onClick={() => bump(30)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>+30</span>
           </div>
-          <div className="cham-s" style={{ height: 5, background: "#0e2233", margin: "8px 0" }}>
-            <div style={{ height: "100%", width: `${(left / dur) * 100}%`, background: left === 0 ? "#ffd76a" : "#57c8f2", transition: "width 1s linear" }} />
+          <div className="cham-s" style={{ height: 5, background: "var(--soft)", margin: "8px 0" }}>
+            <div style={{ height: "100%", width: `${(left / dur) * 100}%`, background: left === 0 ? "#ffd76a" : "var(--cyan)", transition: "width 1s linear" }} />
           </div>
           <div className="row g8">
             {running

@@ -19,12 +19,12 @@ export function ExerciseInfoModal({ name, group, ex, onClose }) {
         </div>
         <div className="cham-s" style={{
           height: 210, marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center",
-          background: "#04101b", border: "1px solid #0e2233", overflow: "hidden",
+          background: "var(--card)", border: "1px solid var(--soft)", overflow: "hidden",
         }}>
           {media
             ? <img src={media} alt={name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", background: "#eef2f5" }} />
             : <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 44, color: "#1b3a52", lineHeight: 1 }}>{GROUP_ICONS[group] || "◇"}</div>
+                <div style={{ fontSize: 44, color: "var(--soft2)", lineHeight: 1 }}>{GROUP_ICONS[group] || "◇"}</div>
                 <div className="micro" style={{ marginTop: 8 }}>{tr("ANTEPRIMA NON DISPONIBILE")}</div>
               </div>}
         </div>

@@ -30,7 +30,7 @@ export function ExercisePicker({ activeNames = [], onPick }) {
                     style={{ cursor: "pointer", fontSize: 12, letterSpacing: ".02em", padding: "6px 12px", fontFamily: "'Rajdhani',sans-serif", textTransform: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
                     {ex}
                     <span onClick={(e) => { e.stopPropagation(); setInfo({ name: ex, group }); }}
-                      className="tap icon-tap" style={{ color: on ? "#04121d" : "#3f637c" }} title={tr("Info esercizio")}><Info size={12} /></span>
+                      className="tap icon-tap" style={{ color: on ? "#04121d" : "var(--faint)" }} title={tr("Info esercizio")}><Info size={12} /></span>
                   </button>
                 );
               })}

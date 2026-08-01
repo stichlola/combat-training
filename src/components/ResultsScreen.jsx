@@ -4,7 +4,7 @@ import { tr } from "../lib/i18n";
 import { Btn, Overlay, QBar } from "../ui";
 
 /* ---------------- Schermata risultati post-allenamento (stile Halo Reach) ---------------- */
-export function ResultsScreen({ results, onClose }) {
+export function ResultsScreen({ results, onClose, vanilla }) {
   const [go, setGo] = useState(false);            // avvia le animazioni delle barre
   const [shownXp, setShownXp] = useState(results.xpBefore);
   const [shownLvl, setShownLvl] = useState(results.levelBefore);
@@ -35,7 +35,8 @@ export function ResultsScreen({ results, onClose }) {
         <div className="micro t-faint" style={{ textAlign: "center", marginBottom: 18 }}>{results.name}</div>
 
         {/* XP animato */}
-        <div className="cham-s" style={{ padding: "12px 14px", background: "#04101b", border: `1px solid ${flash ? "#ffd76a" : "#1b3a52"}`, marginBottom: 16, transition: "border-color .3s" }}>
+        {!vanilla && (
+        <div className="cham-s" style={{ padding: "12px 14px", background: "var(--card)", border: `1px solid ${flash ? "#ffd76a" : "var(--soft2)"}`, marginBottom: 16, transition: "border-color .3s" }}>
           <div className="row between" style={{ marginBottom: 6 }}>
             <span className={`f-hud ${flash ? "t-amber" : "t-cyan"}`} style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
               {flash ? "▲ RANK UP!" : `LV.${shownLvl}`}
@@ -46,18 +47,20 @@ export function ResultsScreen({ results, onClose }) {
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="seg" style={{
                 flex: 1,
-                background: (shownXp / need) * 12 > i ? "linear-gradient(180deg,#9be8ff,#3fa9d9)" : "#0e2233",
+                background: (shownXp / need) * 12 > i ? "linear-gradient(180deg,var(--cyan-hi),var(--cyan))" : "var(--soft)",
                 boxShadow: (shownXp / need) * 12 > i ? "0 0 6px rgba(87,200,242,.6)" : "none",
               }} />
             ))}
           </div>
         </div>
+        )}
 
         {/* progresso quest animato */}
+        {!vanilla && (<>
         <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Avanzamento sfide")}</div>
         <div className="stack-s" style={{ marginBottom: 16 }}>
           {results.quests.map((q, i) => (
-            <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "#060f18", border: `1px solid ${q.completedNow ? "#ffd76a" : "#0e2233"}` }}>
+            <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "var(--card2)", border: `1px solid ${q.completedNow ? "#ffd76a" : "var(--soft)"}` }}>
               <div className="row between g8">
                 <span className={q.done ? "t-amber" : "t-bright"} style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.35 }}>
                   {q.completedNow && "◈ "}{tr(q.text)}
@@ -75,6 +78,7 @@ export function ResultsScreen({ results, onClose }) {
           ))}
           {results.quests.length === 0 && <div className="tiny t-faint">{tr("Nessuna sfida attiva oggi.")}</div>}
         </div>
+        </>)}
 
         </div>
         <div style={{ paddingTop: 14, flexShrink: 0 }}>

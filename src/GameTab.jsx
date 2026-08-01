@@ -52,15 +52,15 @@ export default function GameTab({ level, stats, prs, onFindHint }) {
           const Icon = f.icon;
           return (
             <div key={f.trophyId} className="cham-s" style={{
-              padding: "14px 16px", background: "#060f18",
-              border: `1px solid ${ok ? r.border : "#0e2233"}`,
+              padding: "14px 16px", background: "var(--card2)",
+              border: `1px solid ${ok ? r.border : "var(--soft)"}`,
               opacity: ok ? 1 : 0.55,
             }}>
               <div className="row between g8" style={{ alignItems: "center" }}>
                 <div className="row g12" style={{ alignItems: "center" }}>
                   <Icon size={26} color={ok ? r.color : "#2a4a63"} />
                   <div>
-                    <div className="f-hud" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".15em", color: ok ? r.color : "#3f637c" }}>
+                    <div className="f-hud" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".15em", color: ok ? r.color : "var(--faint)" }}>
                       {f.title}
                     </div>
                     <div className="tiny t-faint">{f.sub}</div>
@@ -69,7 +69,7 @@ export default function GameTab({ level, stats, prs, onFindHint }) {
                 <span className="micro cham-s" style={{
                   padding: "2px 8px", flexShrink: 0,
                   border: `1px solid ${ok ? r.border : "#1d3448"}`,
-                  color: ok ? r.color : "#3f637c",
+                  color: ok ? r.color : "var(--faint)",
                 }}>
                   {ok ? "SBLOCCATO" : <span className="row g6" style={{ alignItems: "center" }}><Lock size={10} /> BLOCCATO</span>}
                 </span>

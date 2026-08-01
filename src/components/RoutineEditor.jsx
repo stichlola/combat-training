@@ -142,8 +142,8 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
           le settimane dei singoli esercizi si gestiscono dall'icona 📈 su ogni card */}
       <div className="cham-s" style={{
         padding: "10px 12px",
-        background: draft.progression?.enabled ? "rgba(255,215,106,.08)" : "#060f18",
-        border: `1px solid ${draft.progression?.enabled ? "#ffd76a" : "#0e2233"}`,
+        background: draft.progression?.enabled ? "rgba(255,215,106,.08)" : "var(--card2)",
+        border: `1px solid ${draft.progression?.enabled ? "#ffd76a" : "var(--soft)"}`,
       }}>
         <button onClick={() => upd((d) => ({ ...d, progression: { enabled: !d.progression?.enabled, startDate: d.progression?.startDate || todayISO() } }))}
           className="tap" style={{ width: "100%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", padding: 0 }}>
@@ -152,11 +152,11 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
           </span>
           <span style={{
             width: 38, height: 20, borderRadius: 10, position: "relative", flexShrink: 0,
-            background: draft.progression?.enabled ? "#ffd76a" : "#1b3a52", transition: "background .2s",
+            background: draft.progression?.enabled ? "#ffd76a" : "var(--soft2)", transition: "background .2s",
           }}>
             <span style={{
               position: "absolute", top: 2, left: draft.progression?.enabled ? 20 : 2, width: 16, height: 16,
-              borderRadius: "50%", background: draft.progression?.enabled ? "#04090f" : "#5d87a3", transition: "left .2s",
+              borderRadius: "50%", background: draft.progression?.enabled ? "var(--bg)" : "#5d87a3", transition: "left .2s",
             }} />
           </span>
         </button>

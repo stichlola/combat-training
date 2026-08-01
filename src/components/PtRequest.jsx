@@ -20,7 +20,7 @@ export function PtRequestCard({ user, fireToast }) {
     <Panel>
       <div className="row between">
         <div className="row g8">
-          <ShieldCheck size={15} color="#57c8f2" />
+          <ShieldCheck size={15} color="var(--cyan)" />
           <span className="hud-label" style={{ marginBottom: 0 }}>{tr("AREA PERSONAL TRAINER")}</span>
         </div>
         {req?.status === "pending" && <span className="chip cham-s" style={{ fontSize: 9 }}>{tr("IN VALUTAZIONE")}</span>}
@@ -122,7 +122,7 @@ export function PtRequestsAdmin({ fireToast }) {
       ) : (
         <div className="stack">
           {list.map((r) => (
-            <div key={r.id} className="cham-s" style={{ padding: 12, background: "#04101b", border: "1px solid #0e2233" }}>
+            <div key={r.id} className="cham-s" style={{ padding: 12, background: "var(--card)", border: "1px solid var(--soft)" }}>
               <div className="row between" style={{ marginBottom: 6 }}>
                 <span className="tiny t-bright" style={{ fontWeight: 700 }}>{r.email}</span>
                 <span className="micro t-faint">{new Date(r.created_at).toLocaleDateString("it-IT")}</span>

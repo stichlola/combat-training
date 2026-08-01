@@ -9,6 +9,10 @@ export const CSS = `
   --bg:#04090f; --panel:#081420; --panel2:#0a1a2a; --line:#1b3a52; --line2:#2f6786;
   --cyan:#57c8f2; --cyan-hi:#9be8ff; --bright:#e6f6ff; --text:#cfe8f5;
   --dim:#7fa8bf; --faint:#3f637c; --amber:#ffd76a; --green:#2fbf71; --red:#ff8f7a;
+  /* superfici secondarie (sostituiscono gli hex hardcoded: il tema chiaro le sovrascrive) */
+  --card:#04101b; --card2:#060f18; --active:#0c2a3d; --active2:#0c1c2b;
+  --soft:#0e2233; --soft2:#1b3a52; --hairline:#0a1826; --input:#050d15;
+  --modal:#071523; --done:#0a2418; --warm-bg:#241c0a; --warm-line:#8a6d2f;
 }
 *{box-sizing:border-box}
 .hud-root{min-height:100vh;background:var(--bg);color:var(--text);
@@ -44,12 +48,12 @@ export const CSS = `
 .btn-sm{font-size:11px;padding:6px 12px}
 .btn-primary{background:linear-gradient(180deg,#57c8f2,#2f8fbf);color:#04121d;border-color:var(--cyan-hi)}
 .btn-primary:hover{box-shadow:0 0 14px rgba(87,200,242,.45)}
-.btn-ghost{background:#0c1c2b;color:var(--cyan-hi)}
+.btn-ghost{background:var(--active2);color:var(--cyan-hi)}
 .btn-ghost:hover{border-color:var(--cyan)}
 .btn:disabled{opacity:.3;cursor:default}
 .btn-full{width:100%}
 
-.hud-input{background:#050d15;border:1px solid var(--line);color:var(--bright)!important;
+.hud-input{background:var(--input);border:1px solid var(--line);color:var(--bright)!important;
   -webkit-text-fill-color:var(--bright);caret-color:var(--cyan);
   padding:10px 12px;font-size:15px;width:100%;outline:none;
   font-family:'Rajdhani',sans-serif;font-weight:600}
@@ -59,12 +63,12 @@ input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active{
-  -webkit-box-shadow:0 0 0 1000px #050d15 inset !important;
-  box-shadow:0 0 0 1000px #050d15 inset !important;
+  -webkit-box-shadow:0 0 0 1000px var(--input) inset !important;
+  box-shadow:0 0 0 1000px var(--input) inset !important;
   -webkit-text-fill-color:var(--bright) !important;
   caret-color:var(--cyan);
   transition:background-color 99999s ease-in-out 0s}
-input,textarea,select{background-color:#050d15;color:var(--bright)}
+input,textarea,select{background-color:var(--input);color:var(--bright)}
 input[type=number]{appearance:textfield;-moz-appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
@@ -78,18 +82,18 @@ button.btn{text-align:center}
 .fade-in{animation:fi .3s ease both}
 /* --- modali e overlay --- */
 .modal-back{position:fixed;inset:0;background:rgba(2,6,10,.82);backdrop-filter:blur(3px);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-box{width:100%;max-width:430px;background:#071523;border:1px solid #57c8f2;box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto}
-.float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c2a3d;border:1px solid #57c8f2;cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
+.modal-box{width:100%;max-width:430px;background:var(--modal);border:1px solid var(--cyan);box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto}
+.float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c2a3d;border:1px solid #57c8f2;cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
-.float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:#071523;border:1px solid #ffd76a;box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;max-width:340px;box-sizing:border-box}
+.float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
+.float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:var(--modal);border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;max-width:340px;box-sizing:border-box}
 .set-grid-t{display:grid;grid-template-columns:18px 42px 1fr 64px 48px;gap:8px;align-items:center}
 .icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer}
 
 /* --- info esercizio: pulsante ben visibile --- */
 .info-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border:1px solid var(--line);
-  background:#0c1c2b;color:var(--cyan-hi);font-family:'Chakra Petch',sans-serif;
+  background:var(--active2);color:var(--cyan-hi);font-family:'Chakra Petch',sans-serif;
   font-size:9px;letter-spacing:.18em;cursor:pointer;flex-shrink:0}
 .info-btn:hover{border-color:var(--cyan);box-shadow:0 0 8px rgba(87,200,242,.25)}
 
@@ -107,20 +111,20 @@ body.dragging{user-select:none;-webkit-user-select:none}
 body.dragging *{cursor:grabbing!important}
 /* chip serie: numero progressivo o "W" (riscaldamento); il tap apre il menu azioni */
 .set-chip{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:34px;
-  padding:0 5px;border:1px solid var(--line);background:#0c1c2b;color:var(--faint);
+  padding:0 5px;border:1px solid var(--line);background:var(--active2);color:var(--faint);
   font-family:'Chakra Petch',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
   user-select:none;-webkit-user-select:none;flex-shrink:0}
 .set-chip:active{border-color:var(--cyan);color:var(--cyan-hi)}
-.set-chip.warmup{color:#ffd76a;border-color:#8a6d2f;background:#241c0a}
-.set-warmup{background:rgba(255,215,106,.05);box-shadow:inset 2px 0 0 #8a6d2f}
+.set-chip.warmup{color:var(--amber);border-color:var(--warm-line);background:var(--warm-bg)}
+.set-warmup{background:rgba(255,215,106,.05);box-shadow:inset 2px 0 0 var(--warm-line)}
 /* mini menu azioni della serie (riscaldamento / elimina) */
 .setmenu-back{position:fixed;inset:0;z-index:120;background:rgba(2,8,14,.45)}
-.setmenu{position:fixed;min-width:190px;background:#071523;border:1px solid #57c8f2;
+.setmenu{position:fixed;min-width:190px;background:var(--modal);border:1px solid var(--cyan);
   box-shadow:0 0 24px rgba(87,200,242,.25);padding:6px;z-index:121}
 .setmenu button{display:flex;align-items:center;gap:9px;width:100%;padding:11px 10px;
-  background:none;border:none;color:#8fb2c9;font-family:'Rajdhani',sans-serif;font-size:13px;
+  background:none;border:none;color:var(--dim);font-family:'Rajdhani',sans-serif;font-size:13px;
   font-weight:700;letter-spacing:.08em;text-align:left;cursor:pointer}
-.setmenu button:hover{background:#0c2a3d;color:#eaf7ff}
+.setmenu button:hover{background:var(--active);color:var(--bright)}
 .setmenu button.danger{color:#ff8f7d}
 /* testata sessione sticky: comandi (Esci/nome/Termina) e statistiche sempre visibili nello scroll */
 .sticky-hud{position:sticky;top:0;z-index:60;background:var(--bg);padding:8px 0;
@@ -143,7 +147,7 @@ body.dragging *{cursor:grabbing!important}
   font-size:14px;color:var(--cyan-hi);display:none}
 .xp-wrap{flex:1;max-width:420px}
 .streak-pill{display:flex;align-items:center;gap:6px;padding:5px 10px;
-  border:1px solid #5a4a1f;background:#1a1408}
+  border:1px solid var(--warm-line);background:var(--warm-bg)}
 .seg-row{display:flex;gap:3px}
 .seg{height:8px;flex:1;clip-path:polygon(3px 0,100% 0,calc(100% - 3px) 100%,0 100%);
   transition:all .3s ease}
@@ -188,7 +192,7 @@ body.dragging *{cursor:grabbing!important}
 
 .set-grid{display:grid;grid-template-columns:18px 42px 1fr 1fr 48px;gap:8px;align-items:center}
 .divider-row{display:flex;justify-content:space-between;align-items:center;
-  padding:7px 0;border-bottom:1px solid #0e2233}
+  padding:7px 0;border-bottom:1px solid var(--hairline)}
 .divider-row:last-child{border-bottom:none}
 .chip{font-family:'Chakra Petch',sans-serif;font-size:9px;letter-spacing:.15em;
   padding:3px 8px;border:1px solid var(--line);color:var(--dim);text-transform:uppercase}
@@ -198,7 +202,7 @@ body.dragging *{cursor:grabbing!important}
 .check-btn:hover{border-color:var(--cyan)}
 .check-on{background:var(--green);border-color:#7cffb5;color:#04121d;
   box-shadow:0 0 10px rgba(47,191,113,.4)}
-.set-done{background:#0a2418}
+.set-done{background:var(--done)}
 .dash-btn{width:100%;padding:7px;border:1px dashed var(--line);color:var(--faint);
   font-family:'Chakra Petch',sans-serif;font-size:10px;letter-spacing:.2em;cursor:pointer;text-align:center}
 .dash-btn:hover{border-color:var(--cyan);color:var(--cyan-hi)}
@@ -219,6 +223,50 @@ body.dragging *{cursor:grabbing!important}
 .link-btn:hover{color:var(--cyan-hi)}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ============================== VANILLA ==============================
+   Tema CHIARO ispirato ad apple.com: fondo #f5f5f7, card bianche,
+   testo quasi nero, accento blu Apple, angoli arrotondati, font di sistema. */
+.vanilla{color-scheme:light;
+  --bg:#f5f5f7;--panel:#ffffff;--panel2:#f5f5f7;--line:#e3e3e8;--line2:#d9d9de;
+  --cyan:#0071e3;--cyan-hi:#0071e3;--bright:#2c2c2e;--text:#48484a;
+  --dim:#6e6e73;--faint:#aeaeb2;--amber:#9e7c0c;--green:#34a853;--red:#d70015;
+  --card:#f5f5f7;--card2:#f5f5f7;--active:#eef4fc;--active2:#eef4fc;
+  --soft:#ececf1;--soft2:#e3e3e8;--hairline:#f0f0f4;--input:#f5f5f7;
+  --modal:#ffffff;--done:#e6f4ea;--warm-bg:#fbf3d9;--warm-line:#e6d28a;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;font-weight:500}
+.vanilla::before,.vanilla::after{display:none}
+.vanilla .f-hud,.vanilla .hud-label,.vanilla .hud-title,.vanilla .micro,.vanilla .btn,.vanilla .brand,
+.vanilla .bnav-btn,.vanilla .snav-btn,.vanilla .hud-input,.vanilla .chip{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif}
+.vanilla .hud-label,.vanilla .hud-title,.vanilla .micro,.vanilla .btn,.vanilla .brand,
+.vanilla .bnav-btn,.vanilla .snav-btn{letter-spacing:.03em}
+.vanilla .hud-label,.vanilla .hud-title,.vanilla .btn,.vanilla .bnav-btn,.vanilla .snav-btn{text-transform:none}
+.vanilla .cham{clip-path:none;border-radius:16px}
+.vanilla .cham-s{clip-path:none;border-radius:10px}
+.vanilla .seg{clip-path:none;border-radius:4px}
+.vanilla .panel{background:#ffffff;border:1px solid var(--soft);border-radius:18px;
+  box-shadow:0 2px 12px rgba(0,0,0,.04)}
+.vanilla .panel-accent{background:#ffffff;border-color:var(--line)}
+.vanilla .panel::before{display:none}
+.vanilla .btn{border-radius:10px;letter-spacing:.03em}
+.vanilla .btn-primary{background:var(--cyan);border-color:transparent;color:#fff}
+.vanilla .btn-primary:hover{box-shadow:0 2px 10px rgba(0,113,227,.25)}
+.vanilla .btn-ghost{background:#f5f5f7;color:var(--cyan);border-color:transparent}
+.vanilla .btn-ghost:hover{background:#eef4fc}
+.vanilla .hud-input{background:var(--input);border:1px solid transparent;border-radius:10px;font-weight:500}
+.vanilla .hud-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,113,227,.15);background:#ffffff}
+.vanilla .hud-header{background:rgba(255,255,255,.82);border-bottom-color:var(--soft)}
+.vanilla .bottom-nav{background:rgba(255,255,255,.94);border-top-color:var(--soft)}
+.vanilla .brand{letter-spacing:.08em}
+.vanilla .streak-pill{border-radius:8px}
+.vanilla .modal-box{box-shadow:0 12px 40px rgba(0,0,0,.16);border-color:var(--soft2)}
+.vanilla .float-timer{box-shadow:0 8px 28px rgba(0,0,0,.14)}
+.vanilla .setmenu{box-shadow:0 8px 28px rgba(0,0,0,.16)}
+.vanilla .set-warmup{background:var(--warm-bg)}
+/* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
+body.vanilla{background:#f5f5f7}
+
 `;
 
 /* ============================== PRIMITIVES ============================== */
@@ -242,7 +290,7 @@ export function ShieldBar({ pct }) {
       {Array.from({ length: 12 }, (_, i) => {
         const filled = pct * 12 > i;
         return <div key={i} className="seg" style={{
-          background: filled ? "linear-gradient(180deg,#9be8ff,#3fa9d9)" : "#0e2233",
+          background: filled ? "linear-gradient(180deg,#9be8ff,#3fa9d9)" : "var(--soft)",
           boxShadow: filled ? "0 0 6px rgba(87,200,242,.6)" : "none",
         }} />;
       })}
@@ -265,7 +313,7 @@ export function HudToast({ toast }) {
 /* ---------------- Barra di avanzamento quest ---------------- */
 export function QBar({ pct, done, animate }) {
   return (
-    <div className="cham-s" style={{ height: 7, background: "#0e2233", overflow: "hidden" }}>
+    <div className="cham-s" style={{ height: 7, background: "var(--soft)", overflow: "hidden" }}>
       <div style={{
         height: "100%",
         width: `${Math.min(100, pct * 100)}%`,

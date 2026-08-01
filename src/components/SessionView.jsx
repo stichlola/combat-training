@@ -12,7 +12,7 @@ import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
 
 /* ---------------- Sessione di allenamento attiva ---------------- */
-export function SessionView({ onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
+export function SessionView({ vanilla, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
   const [info, setInfo] = useState(null);
   const [confirmExit, setConfirmExit] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -234,7 +234,7 @@ export function SessionView({ onWorkoutDone, premium, session, setSession, prs, 
           onDelete={() => removeSet(setMenu.ei, setMenu.si)}
           onClose={() => setSetMenu(null)} />
       )}
-      {results && <ResultsScreen results={results} onClose={() => { setSession(null); exitToHome(); }} />}
+      {results && <ResultsScreen vanilla={vanilla} results={results} onClose={() => { setSession(null); exitToHome(); }} />}
       <FloatingTimer />
       <MachineScan premium={premium} variant="float" fireToast={fireToast}
         currentNames={session.exercises.map((e) => e.name)}
@@ -282,7 +282,7 @@ export function SessionView({ onWorkoutDone, premium, session, setSession, prs, 
                 ["XP", "+" + (60 + doneSets * 10), "t-amber"],
                 ["RECORD", sessionPrCount > 0 ? `🏆 ${sessionPrCount}` : "—", "t-amber"],
               ].map(([l, v, c]) => (
-                <div key={l} className="cham-s" style={{ padding: "10px 12px", background: "#04101b", border: "1px solid #0e2233" }}>
+                <div key={l} className="cham-s" style={{ padding: "10px 12px", background: "var(--card)", border: "1px solid var(--soft)" }}>
                   <div className="micro">{l}</div>
                   <div className={`f-hud ${c}`} style={{ fontWeight: 700, fontSize: 17 }}>{v}</div>
                 </div>
@@ -360,7 +360,7 @@ export function SessionView({ onWorkoutDone, premium, session, setSession, prs, 
                 <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
                   style={{ cursor: "pointer", color: "#6e4038" }}><Trash2 size={16} /></span>
                 {prs[ex.name] && !exMode(ex) && (
-                  <span style={{ marginLeft: 6, paddingLeft: 14, borderLeft: "1px solid #1b3a52", display: "inline-flex", alignItems: "center" }}>
+                  <span style={{ marginLeft: 6, paddingLeft: 14, borderLeft: "1px solid var(--soft2)", display: "inline-flex", alignItems: "center" }}>
                     <Trophy size={16} color="#ffd76a" />
                   </span>
                 )}
