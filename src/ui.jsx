@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 
 /* ============================== STYLES ============================== */
 export const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap');
 
 :root{color-scheme:dark;
   --bg:#04090f; --panel:#081420; --panel2:#0a1a2a; --line:#1b3a52; --line2:#2f6786;
@@ -225,47 +225,56 @@ body.dragging *{cursor:grabbing!important}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* ============================== VANILLA ==============================
-   Tema CHIARO ispirato ad apple.com: fondo #f5f5f7, card bianche,
-   testo quasi nero, accento blu Apple, angoli arrotondati, font di sistema. */
+   Tema CHIARO Google Material Design 3: superfici in tonalità lavanda,
+   primario viola #6750A4, elevazioni al posto dei bordi, bottoni a pillola,
+   card 16px, dialoghi 28px, tipografia Roboto. */
 .vanilla{color-scheme:light;
-  --bg:#f5f5f7;--panel:#ffffff;--panel2:#f5f5f7;--line:#e3e3e8;--line2:#d9d9de;
-  --cyan:#0071e3;--cyan-hi:#0071e3;--bright:#2c2c2e;--text:#48484a;
-  --dim:#6e6e73;--faint:#aeaeb2;--amber:#9e7c0c;--green:#34a853;--red:#d70015;
-  --card:#f5f5f7;--card2:#f5f5f7;--active:#eef4fc;--active2:#eef4fc;
-  --soft:#ececf1;--soft2:#e3e3e8;--hairline:#f0f0f4;--input:#f5f5f7;
-  --modal:#ffffff;--done:#e6f4ea;--warm-bg:#fbf3d9;--warm-line:#e6d28a;
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;font-weight:500}
+  --bg:#fef7ff;--panel:#ffffff;--panel2:#f7f2fa;--line:#e7e0ec;--line2:#cac4d0;
+  --cyan:#6750a4;--cyan-hi:#6750a4;--bright:#1d1b20;--text:#49454f;
+  --dim:#625b71;--faint:#938f99;--amber:#7a5901;--green:#146c2e;--red:#b3261e;
+  --card:#f7f2fa;--card2:#f3edf7;--active:#eaddff;--active2:#f3edf7;
+  --soft:#f3edf7;--soft2:#e7e0ec;--hairline:#efebf4;--input:#e6e0e9;
+  --modal:#ece6f0;--done:#d9f0dc;--warm-bg:#fff3d6;--warm-line:#e8c766;
+  font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
 .vanilla::before,.vanilla::after{display:none}
 .vanilla .f-hud,.vanilla .hud-label,.vanilla .hud-title,.vanilla .micro,.vanilla .btn,.vanilla .brand,
 .vanilla .bnav-btn,.vanilla .snav-btn,.vanilla .hud-input,.vanilla .chip{
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif}
+  font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .vanilla .hud-label,.vanilla .hud-title,.vanilla .micro,.vanilla .btn,.vanilla .brand,
-.vanilla .bnav-btn,.vanilla .snav-btn{letter-spacing:.03em}
+.vanilla .bnav-btn,.vanilla .snav-btn{letter-spacing:.04em}
 .vanilla .hud-label,.vanilla .hud-title,.vanilla .btn,.vanilla .bnav-btn,.vanilla .snav-btn{text-transform:none}
+.vanilla .hud-label{font-weight:700}
 .vanilla .cham{clip-path:none;border-radius:16px}
-.vanilla .cham-s{clip-path:none;border-radius:10px}
+.vanilla .cham-s{clip-path:none;border-radius:12px}
 .vanilla .seg{clip-path:none;border-radius:4px}
-.vanilla .panel{background:#ffffff;border:1px solid var(--soft);border-radius:18px;
-  box-shadow:0 2px 12px rgba(0,0,0,.04)}
-.vanilla .panel-accent{background:#ffffff;border-color:var(--line)}
+.vanilla .panel{background:#ffffff;border:none;border-radius:16px;
+  box-shadow:0 1px 2px rgba(0,0,0,.14),0 1px 3px 1px rgba(0,0,0,.08)}
+.vanilla .panel-accent{background:#f7f2fa;border-color:transparent}
 .vanilla .panel::before{display:none}
-.vanilla .btn{border-radius:10px;letter-spacing:.03em}
-.vanilla .btn-primary{background:var(--cyan);border-color:transparent;color:#fff}
-.vanilla .btn-primary:hover{box-shadow:0 2px 10px rgba(0,113,227,.25)}
-.vanilla .btn-ghost{background:#f5f5f7;color:var(--cyan);border-color:transparent}
-.vanilla .btn-ghost:hover{background:#eef4fc}
-.vanilla .hud-input{background:var(--input);border:1px solid transparent;border-radius:10px;font-weight:500}
-.vanilla .hud-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,113,227,.15);background:#ffffff}
-.vanilla .hud-header{background:rgba(255,255,255,.82);border-bottom-color:var(--soft)}
-.vanilla .bottom-nav{background:rgba(255,255,255,.94);border-top-color:var(--soft)}
-.vanilla .brand{letter-spacing:.08em}
-.vanilla .streak-pill{border-radius:8px}
-.vanilla .modal-box{box-shadow:0 12px 40px rgba(0,0,0,.16);border-color:var(--soft2)}
-.vanilla .float-timer{box-shadow:0 8px 28px rgba(0,0,0,.14)}
-.vanilla .setmenu{box-shadow:0 8px 28px rgba(0,0,0,.16)}
+.vanilla .btn{border-radius:999px;letter-spacing:.01em;font-weight:600}
+.vanilla .btn-primary{background:#6750a4;border-color:transparent;color:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.2),0 1px 3px 1px rgba(0,0,0,.1)}
+.vanilla .btn-primary:hover{box-shadow:0 1px 3px rgba(0,0,0,.2),0 4px 8px 3px rgba(0,0,0,.1)}
+.vanilla .btn-ghost{background:#e8def8;color:#1d192b;border-color:transparent}
+.vanilla .btn-ghost:hover{background:#ded3f3}
+.vanilla .hud-input{background:var(--input);border:1px solid transparent;border-radius:12px;font-weight:500;color:#1d1b20}
+.vanilla .hud-input:focus{border-color:transparent;box-shadow:inset 0 -2px 0 var(--cyan);background:#e6e0e9}
+.vanilla .hud-header{background:rgba(254,247,255,.88);border-bottom-color:var(--soft)}
+.vanilla .bottom-nav{background:#f3edf7;border-top:none}
+.vanilla .brand{letter-spacing:.06em;font-weight:700}
+.vanilla .streak-pill{border-radius:999px}
+.vanilla .modal-box{border:none;border-radius:28px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
+.vanilla .float-timer{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
+.vanilla .setmenu{border:none;border-radius:16px;box-shadow:0 2px 6px 2px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.2)}
+.vanilla .float-cam-btn,.vanilla .float-timer-btn{border:none;border-radius:16px;background:#eaddff;
+  color:#21005d;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.15)}
+.vanilla .set-chip{border:none;border-radius:8px}
+.vanilla .chip{border-radius:8px}
 .vanilla .set-warmup{background:var(--warm-bg)}
+.vanilla .bnav-btn.on svg{background:#eaddff;border-radius:999px;padding:4px 16px;box-sizing:content-box;margin:-4px -16px}
+.vanilla .bnav-btn div:last-child{display:none}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
-body.vanilla{background:#f5f5f7}
+body.vanilla{background:#fef7ff}
 
 `;
 

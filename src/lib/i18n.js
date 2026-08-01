@@ -162,7 +162,7 @@ const EN_UI = {
   "Stile dell'app": "App style",
   "Potrai cambiarlo quando vuoi dal profilo": "You can change it anytime from your profile",
   "Esperienza gamificata: livelli, XP, sfide e trofei — grafica HUD da gioco": "Gamified experience: levels, XP, challenges and trophies — game HUD graphics",
-  "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica soft in stile Apple": "Clean, minimal interface, same structure without gamification — soft Apple-style graphics",
+  "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica Google Material Design": "Clean, minimal interface, same structure without gamification — Google Material Design graphics",
   "Le modifiche salvate qui sovrascrivono le schede del cliente: lui le vedrà aggiornate al prossimo caricamento dell'app.": "Changes saved here overwrite the client's routines: they'll see them updated on the next app load.",
   "NESSUN CLIENTE COLLEGATO": "NO CLIENTS CONNECTED",
   "Condividi il tuo link invito o il QR code: il cliente si registra (o accede) e conferma il collegamento.": "Share your invite link or QR code: the client signs up (or logs in) and confirms the link.",

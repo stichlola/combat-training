@@ -25,7 +25,7 @@ const UI_MODES = [
   { id: "combat", label: "Combat Training", flag: "⚔",
     desc: "Esperienza gamificata: livelli, XP, sfide e trofei — grafica HUD da gioco" },
   { id: "vanilla", label: "Vanilla", flag: "◻",
-    desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica soft in stile Apple" },
+    desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica Google Material Design" },
 ];
 import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar } from "./ui";
 const Trophy3D = React.lazy(() => import("./Trophy3D"));   // three.js caricato solo quando serve
@@ -908,7 +908,7 @@ export default function App() {
         {navItems.map((t) => {
           const on = tab === t.id;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} className="bnav-btn tap"
+            <button key={t.id} onClick={() => setTab(t.id)} className={"bnav-btn tap" + (on ? " on" : "")}
               style={{ color: on ? "var(--cyan-hi)" : "var(--faint)", alignItems: "center", textAlign: "center" }}>
               <t.icon size={20} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : {}} />
               {t.label}
