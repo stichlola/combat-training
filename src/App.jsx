@@ -1916,27 +1916,78 @@ const calcTargets = (body, days, goal) => {
 };
 
 /* Piano di fallback locale (se l'API non risponde): template scalato sulle kcal */
+/* Piano template usato se l'AI non risponde: come la generazione AI,
+   3 OPZIONI equivalenti per ogni pasto (ruotano da sole ogni giorno) */
 const FALLBACK_PLAN = (t) => {
   const scale = t.kcal / 2400;
   const s = (g) => Math.round((g * scale) / 5) * 5;
   return {
     Colazione: [
-      { nome: "Avena", q: `${s(80)}g` }, { nome: "Yogurt greco 0%", q: `${s(200)}g` },
-      { nome: "Banana", q: "1 media" }, { nome: "Mandorle", q: `${s(15)}g` },
+      [
+        { nome: "Avena", q: `${s(80)}g` }, { nome: "Yogurt greco 0%", q: `${s(200)}g` },
+        { nome: "Banana", q: "1 media" }, { nome: "Mandorle", q: `${s(15)}g` },
+      ],
+      [
+        { nome: "Uova", q: "3" }, { nome: "Pane integrale", q: `${s(80)}g` },
+        { nome: "Marmellata", q: `${s(20)}g` }, { nome: "Spremuta d'arancia", q: "1" },
+      ],
+      [
+        { nome: "Fiocchi di latte", q: `${s(250)}g` }, { nome: "Avena", q: `${s(70)}g` },
+        { nome: "Miele", q: `${s(15)}g` }, { nome: "Frutta fresca", q: `${s(150)}g` },
+      ],
     ],
     Pranzo: [
-      { nome: "Petto di pollo", q: `${s(180)}g` }, { nome: "Riso basmati", q: `${s(90)}g` },
-      { nome: "Verdure miste", q: "a volontà" }, { nome: "Olio EVO", q: `${s(10)}g` },
+      [
+        { nome: "Petto di pollo", q: `${s(180)}g` }, { nome: "Riso basmati", q: `${s(90)}g` },
+        { nome: "Verdure miste", q: "a volontà" }, { nome: "Olio EVO", q: `${s(10)}g` },
+      ],
+      [
+        { nome: "Pasta", q: `${s(100)}g` }, { nome: "Tonno al naturale", q: `${s(150)}g` },
+        { nome: "Verdure miste", q: "a volontà" }, { nome: "Olio EVO", q: `${s(10)}g` },
+      ],
+      [
+        { nome: "Manzo magro", q: `${s(170)}g` }, { nome: "Patate", q: `${s(400)}g` },
+        { nome: "Verdure miste", q: "a volontà" }, { nome: "Olio EVO", q: `${s(10)}g` },
+      ],
     ],
     "Spuntino pre-workout": [
-      { nome: "Pane integrale", q: `${s(60)}g` }, { nome: "Bresaola", q: `${s(60)}g` },
+      [
+        { nome: "Pane integrale", q: `${s(60)}g` }, { nome: "Bresaola", q: `${s(60)}g` },
+      ],
+      [
+        { nome: "Gallette di riso", q: "4" }, { nome: "Miele", q: `${s(15)}g` },
+        { nome: "Yogurt greco 0%", q: `${s(170)}g` },
+      ],
+      [
+        { nome: "Panino", q: `${s(70)}g` }, { nome: "Prosciutto cotto", q: `${s(60)}g` },
+      ],
     ],
     "Post-workout": [
-      { nome: "Whey protein", q: "30g" }, { nome: "Banana", q: "1 media" },
+      [
+        { nome: "Whey protein", q: "30g" }, { nome: "Banana", q: "1 media" },
+      ],
+      [
+        { nome: "Whey protein", q: "30g" }, { nome: "Gallette di riso", q: "4" },
+        { nome: "Miele", q: `${s(15)}g` },
+      ],
+      [
+        { nome: "Latte scremato", q: `${s(400)}ml` }, { nome: "Whey protein", q: "20g" },
+        { nome: "Datteri", q: `${s(30)}g` },
+      ],
     ],
     Cena: [
-      { nome: "Salmone o pesce bianco", q: `${s(180)}g` }, { nome: "Patate", q: `${s(250)}g` },
-      { nome: "Verdure", q: "a volontà" }, { nome: "Olio EVO", q: `${s(10)}g` },
+      [
+        { nome: "Salmone o pesce bianco", q: `${s(180)}g` }, { nome: "Patate", q: `${s(250)}g` },
+        { nome: "Verdure", q: "a volontà" }, { nome: "Olio EVO", q: `${s(10)}g` },
+      ],
+      [
+        { nome: "Uova", q: "3" }, { nome: "Pane integrale", q: `${s(70)}g` },
+        { nome: "Verdure", q: "a volontà" }, { nome: "Olio EVO", q: `${s(10)}g` },
+      ],
+      [
+        { nome: "Petto di tacchino", q: `${s(180)}g` }, { nome: "Cous cous", q: `${s(80)}g` },
+        { nome: "Verdure", q: "a volontà" }, { nome: "Olio EVO", q: `${s(10)}g` },
+      ],
     ],
   };
 };
@@ -2483,7 +2534,7 @@ Schema: {"targets":{"kcal":number,"p":number,"c":number,"f":number},
  "sourcePlan":{"protocol":string,"window":[{"time":string,"label":string,"note":string,"fasting":boolean}],
    "categories":[{"name":string,"rule":string,"items":[{"q":string,"n":string,"alt":string}]}],"directives":string}}
 IMPORTANTE: molte schede sono organizzate per FONTI INTERCAMBIABILI (es. "FONTI PROTEICHE — SCEGLI 1: 200g pollo / 220g pesce bianco / 160g tonno") con una finestra alimentare e gli orari dei pasti. In quel caso compila "sourcePlan" fedelmente: categorie con i loro nomi e regole ("SCEGLI 1", "A PASTO"), ogni opzione con quantità in "q" e alimento in "n", eventuali alternative fra parentesi in "alt", e la fascia di digiuno con "fasting":true.
-Compila "meals" con una proposta di pasto già composto per ciascun pasto della finestra (scegliendo una combinazione valida delle fonti). Se il documento elenca solo pasti fissi, lascia "sourcePlan" a null.
+Compila "meals" con 3 OPZIONI di pasto già composte per ciascun pasto della finestra (3 combinazioni valide e diverse delle fonti, ognuna come array di alimenti: "NomePasto":[[{...}],[{...}],[{...}]]). Se il documento elenca solo pasti fissi, restituisci una sola opzione per pasto e lascia "sourcePlan" a null.
 REGOLE:
 - Usa ESATTAMENTE i pasti presenti nel documento, con i loro nomi (es. "Colazione", "Pranzo", "Spuntino", "Cena"). Se il piano prevede il digiuno intermittente e ha solo 2 pasti, restituisci solo quei 2.
 - Se i valori di kcal o macro non sono indicati, stimali dagli alimenti elencati.
@@ -2674,7 +2725,7 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
 Alimenti semplici da palestra (pollo, riso, avena, uova, whey, pesce...).
 ${prefs.trim() ? `PREFERENZE E VINCOLI DELL'UTENTE (rispettali sempre): ${prefs.trim()}` : "Nessuna preferenza particolare."}
 NUMERO PASTI: rispetta le preferenze. Se l'utente indica digiuno intermittente o una finestra alimentare, genera SOLO i pasti compatibili (anche 2 soli), distribuendo comunque tutti i macro nella finestra. Altrimenti usa 5 pasti: Colazione, Pranzo, Spuntino pre-workout, Post-workout, Cena.
-VARIETÀ: per OGNI pasto genera 3 OPZIONI alternative diverse tra loro (ingredienti diversi) ma equivalenti nei macro, così da poter ruotare i pasti nei vari giorni.
+VARIETÀ: per OGNI pasto genera ESATTAMENTE 3 OPZIONI alternative diverse tra loro (ingredienti diversi) ma equivalenti nei macro, così da poter ruotare i pasti nei vari giorni. Mai meno di 3 opzioni.
 Rispondi SOLO con JSON valido senza markdown né backtick, con QUESTE DUE CHIAVI:
 {"meals":{"NomePasto":[[{"nome":string,"q":string}],[...],[...]]},
  "sourcePlan":{
