@@ -13,7 +13,7 @@ import { RoutineEditor } from "./components/RoutineEditor";
 import { SessionView } from "./components/SessionView";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
-import { captureInviteHash, clearInvite, fetchMyRole, isAdminUser, linkToTrainer, pendingInvite, saveMyFullName, syncMyUsername } from "./lib/trainer";
+import { captureInviteHash, clearInvite, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
 import { dlStart } from "./lib/dnd";
 import { applyProgression, todayISO } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb } from "./lib/exercises";
@@ -500,6 +500,7 @@ export default function App() {
   /* --- auth & persistenza via Supabase --- */
   const [user, setUser] = useState(null);
   const [pendingPt, setPendingPt] = useState(null); // invito PT da confermare (id trainer)
+  const [myTrainer, setMyTrainer] = useState(null); // PT attuale dell'utente: { id, name } | null (max uno)
   const GUEST_KEY = "gq_guest_v1";
   const isGuest = !!(user && user.guest);
   const isPT = !!(user && user.role === "pt");
@@ -636,6 +637,8 @@ export default function App() {
         role,
       });
       if (role === "pt") setTab("clients");
+      /* il PT attuale dell'utente (max uno): mostrato in header e profilo */
+      if (role !== "pt") fetchMyTrainer(authUser.id).then(setMyTrainer);
       /* invito PT in sospeso (link #pt=...): chiedi conferma dopo il login */
       const pt = pendingInvite();
       if (pt && pt !== authUser.id && role !== "pt") setPendingPt(pt);
@@ -861,25 +864,33 @@ export default function App() {
       )}
       <InstallBanner ip={ip} />
 
-      {/* Invito PT aperto da link/QR: conferma del collegamento */}
+      {/* Invito PT aperto da link/QR: conferma del collegamento (o del CAMBIO PT) */}
       {pendingPt && !isPT && (
         <Overlay>
         <div className="modal-back">
           <div className="modal-box cham fade-in" style={{ textAlign: "center" }}>
             <Users size={26} color="var(--cyan)" style={{ margin: "0 auto 12px" }} />
-            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>{tr("INVITO PERSONAL TRAINER")}</div>
+            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>
+              {myTrainer && myTrainer.id !== pendingPt ? tr("CAMBIO PERSONAL TRAINER") : tr("INVITO PERSONAL TRAINER")}
+            </div>
             <div className="tiny t-dim" style={{ margin: "10px 0 18px", lineHeight: 1.7 }}>
-              {tr("Un personal trainer ti ha invitato: confermando potrà vedere le tue schede e seguire i tuoi allenamenti. Potrai scollegarti quando vuoi.")}
+              {myTrainer && myTrainer.id !== pendingPt
+                ? <>{tr("Attualmente sei seguito da")} <b className="t-amber">{myTrainer.name || tr("il tuo PT")}</b>. {tr("Confermando passerai al nuovo personal trainer: potrà vedere le tue schede e seguire i tuoi allenamenti.")}</>
+                : tr("Un personal trainer ti ha invitato: confermando potrà vedere le tue schede e seguire i tuoi allenamenti. Potrai scollegarti quando vuoi.")}
             </div>
             <div className="row g8">
               <Btn onClick={() => { clearInvite(); setPendingPt(null); }} style={{ flex: 1 }}>{tr("Rifiuta")}</Btn>
               <Btn primary style={{ flex: 2 }} onClick={async () => {
+                const changing = myTrainer && myTrainer.id !== pendingPt;
                 const ok = await linkToTrainer(user.id, user.email, pendingPt);
                 clearInvite(); setPendingPt(null);
+                if (ok) setMyTrainer(await fetchMyTrainer(user.id)); // aggiorna chip header/profilo
                 fireToast(ok
-                  ? { title: tr("◈ COLLEGAMENTO CONFERMATO"), sub: tr("Il tuo PT ora segue i tuoi allenamenti") }
+                  ? changing
+                    ? { title: tr("◈ PT CAMBIATO"), sub: tr("Il nuovo PT ora segue i tuoi allenamenti") }
+                    : { title: tr("◈ COLLEGAMENTO CONFERMATO"), sub: tr("Il tuo PT ora segue i tuoi allenamenti") }
                   : { title: tr("Collegamento non riuscito"), sub: tr("Riprova dal link invito") });
-              }}>{tr("Conferma collegamento")}</Btn>
+              }}>{myTrainer && myTrainer.id !== pendingPt ? tr("Conferma cambio PT") : tr("Conferma collegamento")}</Btn>
             </div>
           </div>
         </div>
@@ -892,7 +903,19 @@ export default function App() {
       {/* TOP HUD BAR */}
       <header className="hud-header">
         <div className="hud-header-inner">
-          <div className="brand">COMBAT<span className="t-faint">//</span>TRAINING</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div className="brand">COMBAT<span className="t-faint">//</span>TRAINING</div>
+            {myTrainer && !isPT && (
+              <button onClick={() => setTab("profile")} className="tap row g6"
+                title={tr("Il tuo personal trainer")}
+                style={{ cursor: "pointer", alignItems: "center", padding: 0, background: "none", border: "none" }}>
+                <Users size={10} color="var(--cyan)" />
+                <span className="f-hud t-cyan" style={{ fontSize: 9, letterSpacing: ".18em", fontWeight: 700 }}>
+                  PT · {(myTrainer.name || tr("ATTIVO")).toUpperCase()}
+                </span>
+              </button>
+            )}
+          </div>
           <button onClick={() => setTab("profile")} className="tap row g6"
             style={{ cursor: "pointer", color: isPremium ? "#ffd76a" : tab === "profile" ? "var(--cyan-hi)" : "var(--dim)", position: "relative", flexShrink: 0 }}>
             <span style={{ position: "relative", display: "inline-flex" }}>
@@ -977,6 +1000,12 @@ export default function App() {
                 fireToast={fireToast} onLogout={async () => { await supabase.auth.signOut(); setTab("training"); }}
                 onUserUpdate={setUser} level={level} rank={rank} streak={streak} premium={premium}
                 onRedoSetup={() => setBody((b) => ({ ...b, onboarded: false }))}
+                trainer={myTrainer}
+                onUnlinkTrainer={async () => {
+                  const ok = await unlinkMyTrainer(user.id);
+                  if (ok) { setMyTrainer(null); fireToast({ title: tr("◈ PT SCOLLEGATO"), sub: tr("Nessun personal trainer ti segue ora") }); }
+                  else fireToast({ title: tr("Operazione non riuscita"), sub: tr("Riprova tra poco") });
+                }}
                 ptCard={<PtRequestCard user={user} fireToast={fireToast} />} />
             </>
           ))}
@@ -1620,7 +1649,8 @@ const BodyField = ({ draft, setD, label, k, unit, step }) => (
 );
 
 /* ================================ PROFILE ================================ */
-function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup, ptCard }) {
+function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup, ptCard, trainer, onUnlinkTrainer }) {
+  const [ptUnlink, setPtUnlink] = useState(false); // conferma in due passi dello scollegamento dal PT
   const [usage, setUsage] = useState(null);
   const [usageErr, setUsageErr] = useState(null);
   useEffect(() => {
@@ -1720,6 +1750,37 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} />{tr("Esci")}</Btn>
           </div>
         </Panel>
+
+        {/* Il personal trainer che segue l'utente (max uno) */}
+        {trainer && (
+          <Panel>
+            <div className="hud-label" style={{ marginBottom: 10 }}>{tr("▸ Il tuo personal trainer")}</div>
+            <div className="row between g8" style={{ alignItems: "center" }}>
+              <div className="row g12" style={{ alignItems: "center" }}>
+                <div className="cham-s" style={{ width: 38, height: 38, background: "var(--active)", border: "1px solid var(--cyan)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Users size={18} color="var(--cyan-hi)" />
+                </div>
+                <div>
+                  <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".08em" }}>
+                    {(trainer.name || tr("PT ATTIVO")).toUpperCase()}
+                  </div>
+                  <div className="micro t-faint">{tr("Vede le tue schede e segue i tuoi allenamenti")}</div>
+                </div>
+              </div>
+            </div>
+            <div className="tiny t-faint" style={{ margin: "10px 0 8px", lineHeight: 1.6 }}>
+              {tr("Per cambiare PT apri il link o il QR del nuovo trainer: sostituirà automaticamente quello attuale.")}
+            </div>
+            {ptUnlink ? (
+              <div className="row g8">
+                <Btn small primary onClick={onUnlinkTrainer} style={{ flex: 1 }}>{tr("Conferma scollegamento")}</Btn>
+                <Btn small onClick={() => setPtUnlink(false)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+              </div>
+            ) : (
+              <Btn small onClick={() => setPtUnlink(true)}>{tr("Scollegati dal PT")}</Btn>
+            )}
+          </Panel>
+        )}
 
         {ptCard}
 
@@ -2093,7 +2154,7 @@ const GENERIC_EXTRA = {
   ],
 };
 
-function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRegen, loading }) {
+function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRegen, loading, onReorder }) {
   const cats = plan.categories || [];
   const [addFor, setAddFor] = useState(null);        // categoria in cui si sta aggiungendo a mano
   const [nf, setNf] = useState({ q: "", n: "" });
@@ -2170,7 +2231,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
         </Panel>
       )}
 
-      <div className="two-col">
+      <div className="two-col" data-dl>
         {cats.map((c) => {
           const color = CAT_COLORS[c.name] || "var(--cyan)";
           const extra = GENERIC_EXTRA[c.name] || [];
@@ -2179,8 +2240,12 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
           return (
             <Panel key={c.name} style={{ borderLeft: `3px solid ${color}` }}>
               <div className="row between" style={{ marginBottom: 8 }}>
-                <span className="f-hud" style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
-                  {c.name.toUpperCase()}
+                <span className="row g8" style={{ alignItems: "center" }}>
+                  <span className="drag-handle" title={tr("Trascina per riordinare")}
+                    onPointerDown={(e) => dlStart(e, onReorder || (() => {}))}><GripVertical size={14} /></span>
+                  <span className="f-hud" style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
+                    {c.name.toUpperCase()}
+                  </span>
                 </span>
                 <span className="micro t-faint">{single(c) ? tr("(SCEGLI 1)") : tr("(SCELTA MULTIPLA)")}</span>
               </div>
@@ -2648,6 +2713,30 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
     fireToast({ title: tr("◈ PIANO GENERATO"), sub: `${targets.kcal} kcal · P${targets.p} C${targets.c} G${targets.f}` });
   };
 
+  /* Ordine delle card pasto: se l'utente ha trascinato, vale nutri.mealOrder;
+     altrimenti l'ordine standard (sortMeals per fascia oraria). */
+  const orderedMealNames = (n) => {
+    const entries = Object.entries(n.meals || {});
+    const win = n.sourcePlan && n.sourcePlan.window;
+    const base = (n.mealOrder && n.mealOrder.length)
+      ? [...entries].sort((a, b) => {
+          const ia = n.mealOrder.indexOf(a[0]), ib = n.mealOrder.indexOf(b[0]);
+          return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+        })
+      : sortMeals(entries, win);
+    return base.map(([k]) => k);
+  };
+  /* Riordino trascinando l'handle: persiste in nutri.mealOrder */
+  const moveMeal = (from, to) => {
+    setNutri((n) => {
+      if (!n) return n;
+      const arr = orderedMealNames(n);
+      const [m] = arr.splice(from, 1);
+      arr.splice(to, 0, m);
+      return { ...n, mealOrder: arr };
+    });
+  };
+
   const startEdit = () => { setDraft({ ...nutri.targets }); setEditing(true); };
   const saveEdit = () => {
     const t = {
@@ -2695,7 +2784,15 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
         setPicks={savePlate}
         loading={loading}
         onImport={() => setImporting(true)}
-        onRegen={() => generate(!!nutri)} />
+        onRegen={() => generate(!!nutri)}
+        /* riordino delle categorie trascinando l'handle (persiste nel piano) */
+        onReorder={(from, to) => setNutri((n) => {
+          if (!n || !n.sourcePlan || !n.sourcePlan.categories) return n;
+          const cats = [...n.sourcePlan.categories];
+          const [m] = cats.splice(from, 1);
+          cats.splice(to, 0, m);
+          return { ...n, sourcePlan: { ...n.sourcePlan, categories: cats } };
+        })} />
     </div>
   );
 
@@ -2858,7 +2955,9 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
               fireToast({ title: tr("◈ PASTO AGGIORNATO"), sub: editMeal });
             }} />
         )}
-        {sortMeals(Object.entries(nutri.meals), nutri.sourcePlan && nutri.sourcePlan.window).map(([meal, raw]) => {
+        <div data-dl className="stack">
+        {orderedMealNames(nutri).map((meal) => {
+          const raw = nutri.meals[meal];
           const opts = asOptions(raw);
           const idx = dayIndex() % Math.max(1, opts.length);
           const foods = opts[idx] || [];
@@ -2866,7 +2965,12 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
             <button key={meal} onClick={() => setEditMeal(meal)} className="tap" style={{ width: "100%", cursor: "pointer", textAlign: "left" }}>
               <Panel hover>
                 <div className="row between" style={{ marginBottom: 6 }}>
-                  <div className="hud-label">▸ {meal}</div>
+                  <div className="row g8" style={{ alignItems: "center" }}>
+                    <span className="drag-handle" title={tr("Trascina per riordinare")}
+                      onPointerDown={(e) => dlStart(e, moveMeal)}
+                      onClick={(e) => e.stopPropagation()}><GripVertical size={14} /></span>
+                    <div className="hud-label">▸ {meal}</div>
+                  </div>
                   <span className="micro t-faint">
                     {opts.length > 1 ? `${tr("OPZIONE")} ${idx + 1}/${opts.length} · ` : ""}{tr("MODIFICA")} ›
                   </span>
@@ -2882,6 +2986,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
             </button>
           );
         })}
+        </div>
         <div className="micro">{tr("Il piano è indicativo: consulta un professionista per esigenze specifiche.")}</div>
       </div>
     </div>

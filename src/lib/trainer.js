@@ -28,10 +28,31 @@ export function captureInviteHash() {
 export const pendingInvite = () => localStorage.getItem("gq_pending_pt");
 export const clearInvite = () => localStorage.removeItem("gq_pending_pt");
 
-/* il cliente conferma il collegamento al PT (RLS: insert solo client_id = se stesso) */
+/* UN SOLO PT per utente: il collegamento sostituisce sempre quello attuale.
+   (RLS: il cliente cancella/inserisce solo righe con client_id = se stesso) */
 export async function linkToTrainer(clientId, clientEmail, trainerId) {
+  await supabase.from("trainer_clients").delete().eq("client_id", clientId);
   const { error } = await supabase.from("trainer_clients")
-    .upsert({ trainer_id: trainerId, client_id: clientId, client_email: clientEmail });
+    .insert({ trainer_id: trainerId, client_id: clientId, client_email: clientEmail });
+  return !error;
+}
+
+/* Il PT attuale del cliente (al massimo uno). Ritorna null oppure
+   { id, name } — name = full_name o username letto dal profilo del PT
+   (richiede la policy "Il cliente legge il profilo del proprio PT"). */
+export async function fetchMyTrainer(clientId) {
+  const { data } = await supabase.from("trainer_clients")
+    .select("trainer_id, created_at").eq("client_id", clientId)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!data) return null;
+  const { data: prof } = await supabase.from("profiles")
+    .select("username, full_name").eq("id", data.trainer_id).maybeSingle();
+  return { id: data.trainer_id, name: prof?.full_name || prof?.username || null };
+}
+
+/* L'utente si scollega dal proprio PT (stop o preparazione al cambio) */
+export async function unlinkMyTrainer(clientId) {
+  const { error } = await supabase.from("trainer_clients").delete().eq("client_id", clientId);
   return !error;
 }
 

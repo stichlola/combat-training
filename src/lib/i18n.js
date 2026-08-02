@@ -705,6 +705,26 @@ const EN_DESC = {
   "Esercizio per il core: bacino stabile, zona lombare protetta, movimento lento guidato dall'addome con espirazione nella fase di contrazione.": "Core exercise: stable pelvis, protected lower back, slow movement led by the abs with an exhale during the contraction.",
   "Attività aerobica: mantieni un ritmo sostenibile e costante, monitora respiro o frequenza cardiaca, e incrementa durata o intensità in modo graduale settimana dopo settimana.": "Aerobic activity: hold a sustainable, steady pace, monitor breathing or heart rate, and increase duration or intensity gradually week after week.",
   "Esegui il movimento in modo lento e controllato, con postura corretta e senza compensi. Se non conosci la tecnica, chiedi una dimostrazione al trainer della tua palestra.": "Perform the movement slowly and under control, with good posture and no compensations. If you don't know the technique, ask a trainer at your gym for a demonstration.",
+  /* Personal trainer: chip header, cambio PT, scheda profilo */
+  "Il tuo personal trainer": "Your personal trainer",
+  "CAMBIO PERSONAL TRAINER": "CHANGE PERSONAL TRAINER",
+  "Attualmente sei seguito da": "You are currently coached by",
+  "il tuo PT": "your PT",
+  "Confermando passerai al nuovo personal trainer: potrà vedere le tue schede e seguire i tuoi allenamenti.": "By confirming you will switch to the new personal trainer: they will see your routines and follow your workouts.",
+  "Conferma cambio PT": "Confirm PT change",
+  "◈ PT CAMBIATO": "◈ PT CHANGED",
+  "Il nuovo PT ora segue i tuoi allenamenti": "Your new PT now follows your workouts",
+  "ATTIVO": "ACTIVE",
+  "▸ Il tuo personal trainer": "▸ Your personal trainer",
+  "PT ATTIVO": "ACTIVE PT",
+  "Vede le tue schede e segue i tuoi allenamenti": "They see your routines and follow your workouts",
+  "Per cambiare PT apri il link o il QR del nuovo trainer: sostituirà automaticamente quello attuale.": "To change PT open the new trainer's link or QR code: it will automatically replace the current one.",
+  "Conferma scollegamento": "Confirm unlink",
+  "Scollegati dal PT": "Unlink from PT",
+  "◈ PT SCOLLEGATO": "◈ PT UNLINKED",
+  "Nessun personal trainer ti segue ora": "No personal trainer is following you now",
+  "Operazione non riuscita": "Operation failed",
+  "Riprova tra poco": "Try again shortly",
 };
 
 Object.assign(EN_UI, EN_CONTENT, EN_DESC);

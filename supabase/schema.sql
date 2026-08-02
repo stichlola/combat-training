@@ -269,3 +269,23 @@ create policy "Il PT crea i dati dei propri clienti"
     select 1 from public.trainer_clients tc
     where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
   ));
+
+
+-- ============================================================
+-- MIGRAZIONE: un solo PT per utente + nome PT visibile al cliente
+-- (eseguire su database già inizializzati con lo schema sopra)
+-- ============================================================
+
+-- 1) Un cliente può essere seguito da UN solo personal trainer
+create unique index if not exists trainer_clients_one_pt_per_client
+  on public.trainer_clients (client_id);
+
+-- 2) Il cliente legge il profilo (nome/username) del proprio PT,
+--    così l'app può mostrargli chi lo segue
+drop policy if exists "Il cliente legge il profilo del proprio PT" on public.profiles;
+create policy "Il cliente legge il profilo del proprio PT"
+  on public.profiles for select
+  using (exists (
+    select 1 from public.trainer_clients tc
+    where tc.client_id = auth.uid() and tc.trainer_id = id
+  ));
