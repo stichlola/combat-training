@@ -1418,20 +1418,29 @@ function AIWorkout({ premium, onClose, onSave }) {
 
   /* parametri condivisi dal generatore locale e dalla generazione AI guidata */
   const scheme = goal === "Forza" ? { s: 5, r: 5 } : goal === "Massa" ? { s: 4, r: 10 } : { s: 3, r: 15 };
-  const daySplits = days >= 4
-    ? [["Petto", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"], ["Spalle", "Core"]].slice(0, days)
+  /* divisioni per 1-7 giorni: full body → upper/lower → PPL → split classica */
+  const daySplits =
+    days === 1 ? [["Petto", "Dorso", "Gambe", "Spalle", "Core"]]  // full body
+    : days === 2 ? [["Petto", "Dorso", "Gambe"], ["Spalle", "Bicipiti", "Tricipiti"]]
     : days === 3 ? [["Petto", "Spalle", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"]]
-    : [["Petto", "Dorso", "Gambe"], ["Spalle", "Bicipiti", "Tricipiti"]];
+    : days === 4 ? [["Petto", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"], ["Spalle", "Core"]]
+    : days === 5 ? [["Petto"], ["Dorso"], ["Gambe"], ["Spalle"], ["Bicipiti", "Tricipiti", "Core"]]  // split classica
+    : days === 6 ? [["Petto", "Spalle", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"],
+                    ["Petto", "Spalle", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"]]  // PPL ×2
+    : [["Petto", "Spalle", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"],
+       ["Petto", "Spalle", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe"], ["Core", "Cardio"]];  // PPL ×2 + recupero attivo
   const bw = ["Push-Up", "Trazioni", "Plank", "Crunch", "Russian Twist", "Leg Raise", "Dip alle Parallele", "Dip tra Panche", "Affondi Bulgari", "Side Plank"];
   const db = [...bw, "Panca Piana Manubri", "Panca Inclinata Manubri", "Rematore Manubrio", "Curl Manubri Alternato", "Hammer Curl", "Shoulder Press Manubri", "Arnold Press", "Alzate Laterali", "Stacco Rumeno", "Affondi Manubri", "Kickback Manubrio"];
   const filter = (list) => equip === "Palestra completa" ? list : list.filter((e) => (equip === "Manubri" ? db : bw).includes(e));
   const plan = daySplits.map((g, i) => `Giorno ${i + 1}: ${g.join(" + ")}`);
 
-  /* generatore locale: 2 esercizi per gruppo del giorno 1, presi dal database */
+  /* generatore locale: esercizi del giorno 1 presi dal database; quanti per
+     gruppo dipende dalla divisione (un solo gruppo → giornata dedicata) */
+  const perGroup = daySplits[0].length === 1 ? 5 : daySplits[0].length === 2 ? 3 : 2;
   const localResult = () => ({
     id: Date.now(),
     name: `AI ${goal.toUpperCase()} D1`,
-    exercises: daySplits[0].flatMap((g) => filter(EXERCISE_DB[g]).slice(0, 2).map((name) => ({
+    exercises: daySplits[0].flatMap((g) => filter(EXERCISE_DB[g]).slice(0, perGroup).map((name) => ({
       name, group: g,
       sets: Array.from({ length: scheme.s }, () => ({ w: equip === "Corpo libero" ? 0 : goal === "Forza" ? 60 : 30, r: scheme.r, done: false })),
     }))),
@@ -1448,7 +1457,7 @@ function AIWorkout({ premium, onClose, onSave }) {
       model: "claude-haiku-4-5-20251001", max_tokens: 2000,
       messages: [{ role: "user", content: `Sei un personal trainer esperto. Componi il GIORNO 1 di una scheda di allenamento.
 OBIETTIVO: ${goal}. ATTREZZATURA: ${equip}. GIORNI/SETTIMANA: ${days} (divisione completa: ${plan.join(" · ")}).
-ESERCIZI DISPONIBILI PER IL GIORNO 1 (usa SOLO questi nomi, scegli 6-9 esercizi coprendo TUTTI i gruppi):
+ESERCIZI DISPONIBILI PER IL GIORNO 1 (usa SOLO questi nomi, circa ${perGroup} esercizi per gruppo — min 4 max 10 in totale — coprendo TUTTI i gruppi):
 ${catalog}
 SCHEMA BASE: ${scheme.s} serie × ${scheme.r} ripetizioni.
 PREFERENZE DELL'UTENTE (priorità massima: adatta scelta degli esercizi, serie, ripetizioni e note): "${text}"
@@ -1553,7 +1562,7 @@ Schema: {"exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sop
             <Opt options={["Massa", "Forza", "Dimagrimento"]} value={goal} set={setGoal} /></div>
           <div>
             <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Giorni/settimana ·")} <span className="t-cyan">{days}</span></div>
-            <input type="range" min="2" max="4" value={days} onChange={(e) => setDays(Number(e.target.value))} />
+            <input type="range" min="1" max="7" value={days} onChange={(e) => setDays(Number(e.target.value))} />
           </div>
           <div><div className="hud-label" style={{ marginBottom: 6 }}>{tr("Attrezzatura")}</div>
             <Opt options={["Palestra completa", "Manubri", "Corpo libero"]} value={equip} set={setEquip} /></div>
