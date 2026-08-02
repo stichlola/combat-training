@@ -1098,9 +1098,14 @@ function Training({ vanilla, onWorkoutDone, premium, addXp, fireToast, routines,
     return <RoutineEditor premium={premium} fireToast={fireToast} initial={initial} onClose={() => { setView("home"); setEditId(null); }}
       onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
   }
-  if (view === "ai") return <AIWorkout premium={premium} onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ SCHEDA AI GENERATA")} />;
+  /* Import e generazione AI AGGIUNGONO sempre una scheda nuova: mai
+     sovrascrivere quelle esistenti. Se l'id arrivasse a collidere con una
+     scheda già presente, se ne forza uno fresco prima del salvataggio. */
+  if (view === "ai") return <AIWorkout premium={premium} onClose={() => setView("home")}
+    onSave={(r) => saveRoutine({ ...r, id: routines.some((x) => x.id === r.id) ? Date.now() : r.id }, "◈ SCHEDA AI GENERATA")} />;
   /* nota: la conversione della scheda PT (import) resta gratuita per scelta */
-  if (view === "import") return <DocImport premium={premium} onClose={() => setView("home")} onSave={(r) => saveRoutine(r, "◈ DOCUMENTO INTERPRETATO")} />;
+  if (view === "import") return <DocImport premium={premium} onClose={() => setView("home")}
+    onSave={(r) => saveRoutine({ ...r, id: routines.some((x) => x.id === r.id) ? Date.now() : r.id }, "◈ DOCUMENTO INTERPRETATO")} />;
 
   return (
     <div className="fade-in two-col">
