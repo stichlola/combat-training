@@ -1410,48 +1410,122 @@ function AIWorkout({ premium, onClose, onSave }) {
   const [goal, setGoal] = useState("Massa");
   const [days, setDays] = useState(3);
   const [equip, setEquip] = useState("Palestra completa");
+  const [prefs, setPrefs] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
   const [error, setError] = useState(null);
+
+  /* parametri condivisi dal generatore locale e dalla generazione AI guidata */
+  const scheme = goal === "Forza" ? { s: 5, r: 5 } : goal === "Massa" ? { s: 4, r: 10 } : { s: 3, r: 15 };
+  const daySplits = days >= 4
+    ? [["Petto", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"], ["Spalle", "Core"]].slice(0, days)
+    : days === 3 ? [["Petto", "Spalle", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"]]
+    : [["Petto", "Dorso", "Gambe"], ["Spalle", "Bicipiti", "Tricipiti"]];
+  const bw = ["Push-Up", "Trazioni", "Plank", "Crunch", "Russian Twist", "Leg Raise", "Dip alle Parallele", "Dip tra Panche", "Affondi Bulgari", "Side Plank"];
+  const db = [...bw, "Panca Piana Manubri", "Panca Inclinata Manubri", "Rematore Manubrio", "Curl Manubri Alternato", "Hammer Curl", "Shoulder Press Manubri", "Arnold Press", "Alzate Laterali", "Stacco Rumeno", "Affondi Manubri", "Kickback Manubrio"];
+  const filter = (list) => equip === "Palestra completa" ? list : list.filter((e) => (equip === "Manubri" ? db : bw).includes(e));
+  const plan = daySplits.map((g, i) => `Giorno ${i + 1}: ${g.join(" + ")}`);
+
+  /* generatore locale: 2 esercizi per gruppo del giorno 1, presi dal database */
+  const localResult = () => ({
+    id: Date.now(),
+    name: `AI ${goal.toUpperCase()} D1`,
+    exercises: daySplits[0].flatMap((g) => filter(EXERCISE_DB[g]).slice(0, 2).map((name) => ({
+      name, group: g,
+      sets: Array.from({ length: scheme.s }, () => ({ w: equip === "Corpo libero" ? 0 : goal === "Forza" ? 60 : 30, r: scheme.r, done: false })),
+    }))),
+    plan,
+  });
+
+  /* Con le preferenze scritte la scheda la compone davvero l'AI: sceglie dal
+     catalogo (già filtrato per attrezzatura) e adatta scelta, serie e note
+     alle richieste. Restituisce "LIMIT" al limite settimanale, lancia errore
+     negli altri casi (e il chiamante ripiega sul generatore locale). */
+  const generateWithAI = async (text) => {
+    const catalog = daySplits[0].map((g) => `${g}: ${filter(EXERCISE_DB[g]).join(" | ")}`).join("\n");
+    const data = await aiCall({
+      model: "claude-haiku-4-5-20251001", max_tokens: 2000,
+      messages: [{ role: "user", content: `Sei un personal trainer esperto. Componi il GIORNO 1 di una scheda di allenamento.
+OBIETTIVO: ${goal}. ATTREZZATURA: ${equip}. GIORNI/SETTIMANA: ${days} (divisione completa: ${plan.join(" · ")}).
+ESERCIZI DISPONIBILI PER IL GIORNO 1 (usa SOLO questi nomi, scegli 6-9 esercizi coprendo TUTTI i gruppi):
+${catalog}
+SCHEMA BASE: ${scheme.s} serie × ${scheme.r} ripetizioni.
+PREFERENZE DELL'UTENTE (priorità massima: adatta scelta degli esercizi, serie, ripetizioni e note): "${text}"
+Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra.
+Schema: {"exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sopra), "sets": number (serie), "reps": number (ripetizioni), "note": string (adattamento legato alle preferenze, "" se nessuno)}]}` }],
+    }, "workout");
+    if (data && data.error === "limit_reached") return "LIMIT";
+    if (data && data.error) throw new Error("API");
+    const raw = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    const parsed = parseLoose(raw);
+    const seen = new Set();
+    const exercises = (parsed.exercises || []).map((e) => {
+      let name = e.name, note = e.note || "";
+      if (!ALL_EXERCISES.includes(name)) {
+        const m = matchToDb(name);
+        if (ALL_EXERCISES.includes(m.name)) { name = m.name; note = [m.note, note].filter(Boolean).join(" · "); }
+        else return null;  // fuori catalogo: si scarta, non si inventano esercizi
+      }
+      /* il filtro attrezzatura vale comunque: esercizio non ammesso →
+         si sostituisce con il primo dello stesso gruppo consentito */
+      const g = findGroup(name);
+      const allowed = filter(EXERCISE_DB[g] || []);
+      if (!allowed.includes(name)) {
+        if (!allowed.length) return null;
+        name = allowed[0];
+      }
+      if (seen.has(name)) return null;
+      seen.add(name);
+      const nSets = Math.min(6, Math.max(2, Number(e.sets) || scheme.s));
+      const reps = Math.min(30, Math.max(3, Number(e.reps) || scheme.r));
+      return {
+        name, group: g, ...(note ? { note } : {}),
+        sets: Array.from({ length: nSets }, () => ({ w: equip === "Corpo libero" ? 0 : goal === "Forza" ? 60 : 30, r: reps, done: false })),
+      };
+    }).filter(Boolean);
+    if (exercises.length < 3) throw new Error("empty");
+    return { id: Date.now(), name: `AI ${goal.toUpperCase()} D1`, exercises, plan };
+  };
 
   /* La generazione passa dal server per applicare il limite settimanale;
      se la chiamata fallisce si usa comunque il generatore locale. */
   const generate = async () => {
     if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
     setLoading(true); setError(null);
-    try {
-      const data = await aiCall({
-        model: "claude-haiku-4-5-20251001", max_tokens: 60,
-        messages: [{ role: "user", content: "ok" }],
-      }, "workout");
-      if (data && data.error === "limit_reached") {
-        setLoading(false);
-        if (premium) premium.open();
-        return setError(tr("Limite settimanale raggiunto"));
+    const p = prefs.trim();
+    if (p) {
+      /* preferenze presenti: generazione AI reale (il limite settimanale è
+         controllato da questa stessa chiamata); in caso di errore si ripiega
+         sul generatore locale avvisando che le preferenze non sono applicate */
+      try {
+        const r = await generateWithAI(p);
+        if (r === "LIMIT") {
+          setLoading(false);
+          if (premium) premium.open();
+          return setError(tr("Limite settimanale raggiunto"));
+        }
+        setResult(r); setLoading(false);
+        return;
+      } catch (e) {
+        setError(tr("AI non disponibile: scheda generata senza applicare le preferenze"));
       }
-    } catch (e) { /* rete/API: si procede col generatore locale */ }
-    setTimeout(() => {
-      const scheme = goal === "Forza" ? { s: 5, r: 5 } : goal === "Massa" ? { s: 4, r: 10 } : { s: 3, r: 15 };
-      const daySplits = days >= 4
-        ? [["Petto", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"], ["Spalle", "Core"]].slice(0, days)
-        : days === 3 ? [["Petto", "Spalle", "Tricipiti"], ["Dorso", "Bicipiti"], ["Gambe", "Core"]]
-        : [["Petto", "Dorso", "Gambe"], ["Spalle", "Bicipiti", "Tricipiti"]];
-      const bw = ["Push-Up", "Trazioni", "Plank", "Crunch", "Russian Twist", "Leg Raise", "Dip alle Parallele", "Dip tra Panche", "Affondi Bulgari", "Side Plank"];
-      const db = [...bw, "Panca Piana Manubri", "Panca Inclinata Manubri", "Rematore Manubrio", "Curl Manubri Alternato", "Hammer Curl", "Shoulder Press Manubri", "Arnold Press", "Alzate Laterali", "Stacco Rumeno", "Affondi Manubri", "Kickback Manubrio"];
-      const filter = (list) => equip === "Palestra completa" ? list : list.filter((e) => (equip === "Manubri" ? db : bw).includes(e));
-      const exercises = daySplits[0].flatMap((g) => filter(EXERCISE_DB[g]).slice(0, 2).map((name) => ({
-        name, group: g,
-        sets: Array.from({ length: scheme.s }, () => ({ w: equip === "Corpo libero" ? 0 : goal === "Forza" ? 60 : 30, r: scheme.r, done: false })),
-      })));
-      setResult({
-        id: Date.now(),
-        name: `AI ${goal.toUpperCase()} D1`,
-        exercises,
-        plan: daySplits.map((g, i) => `Giorno ${i + 1}: ${g.join(" + ")}`),
-      });
-      setLoading(false);
-    }, 1000);
+    } else {
+      /* senza preferenze resta il generatore locale: la chiamata minima serve
+         solo al conteggio del limite settimanale lato server */
+      try {
+        const data = await aiCall({
+          model: "claude-haiku-4-5-20251001", max_tokens: 60,
+          messages: [{ role: "user", content: "ok" }],
+        }, "workout");
+        if (data && data.error === "limit_reached") {
+          setLoading(false);
+          if (premium) premium.open();
+          return setError(tr("Limite settimanale raggiunto"));
+        }
+      } catch (e) { /* rete/API: si procede col generatore locale */ }
+    }
+    setTimeout(() => { setResult(localResult()); setLoading(false); }, 1000);
   };
 
   const Opt = ({ options, value, set }) => (
@@ -1483,6 +1557,13 @@ function AIWorkout({ premium, onClose, onSave }) {
           </div>
           <div><div className="hud-label" style={{ marginBottom: 6 }}>{tr("Attrezzatura")}</div>
             <Opt options={["Palestra completa", "Manubri", "Corpo libero"]} value={equip} set={setEquip} /></div>
+          <div>
+            <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Preferenze di allenamento")} <span className="t-faint">({tr("opzionale")})</span></div>
+            <textarea className="hud-input cham-s" value={prefs} onChange={(e) => setPrefs(e.target.value)} rows={2}
+              placeholder={tr("Es. niente squat per il ginocchio, più enfasi sui dorsali, solo macchine guidate, circuito a tempo...")}
+              style={{ resize: "none", fontSize: 13 }} />
+            <div className="micro t-faint" style={{ marginTop: 6 }}>{tr("SE COMPILATE, LA SCHEDA VIENE COMPOSTA DALL'AI SEGUENDO LE TUE RICHIESTE")}</div>
+          </div>
           {error && <div className="tiny t-red">⚠ {error}</div>}
           <Btn primary full disabled={loading} onClick={generate}>
             {loading ? "Generazione..." : "Genera scheda"}
@@ -1490,6 +1571,7 @@ function AIWorkout({ premium, onClose, onSave }) {
         </Panel>
       ) : (
         <>
+          {error && <div className="tiny t-red">⚠ {error}</div>}
           <Panel accent>
             <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", marginBottom: 4 }}>{result.name}</div>
             {result.plan.map((p) => <div key={p} className="tiny t-dim">{p}</div>)}
