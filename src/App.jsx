@@ -2011,6 +2011,58 @@ const calcTargets = (body, days, goal) => {
   return { kcal, p, c, f };
 };
 
+/* Percentuali macro che sommano SEMPRE a 100: arrotondamento per difetto
+   e distribuzione del resto sulle frazioni più grandi (metodo dei resti). */
+const macroPcts = (p, c, f) => {
+  const tot = p * 4 + c * 4 + f * 9;
+  if (tot <= 0) return [0, 0, 0];
+  const raw = [p * 4, c * 4, f * 9].map((k) => (k / tot) * 100);
+  const out = raw.map(Math.floor);
+  let rem = 100 - out.reduce((a, b) => a + b, 0);
+  raw.map((r, i) => [r - Math.floor(r), i]).sort((a, b) => b[0] - a[0])
+    .forEach(([, i]) => { if (rem > 0) { out[i]++; rem--; } });
+  return out;
+};
+
+/* Ricalcolo delle QUANTITÀ dopo la modifica manuale dei target: i tipi di
+   cibo restano identici, cambiano solo grammi/ml. Ogni alimento è classificato
+   per macro dominante e scalato col fattore del proprio macro (P, C o G). */
+const VERDURA_RE = /verdur|insalat|spinaci|broccoli|zucchin|pomodor|cetriol|lattuga|fennel|finocch|peperon|melanzan|asparag|fagiolin|cavol/i;
+const PROTEIN_RE = /poll|tacchin|tonno|pesce|salmon|merluzzo|gamber|sgombro|carne|manzo|bresaola|prosciutto|uov|album|whey|proteine|fiocchi di latte|yogurt greco|skyr|ricotta|lenticchie|ceci|fagioli|legumi|tofu|seitan|grana|parmigiano|mozzarella/i;
+const FAT_RE = /olio|burro|noci|nocciole|mandorle|anacardi|arachidi|pistacch|avocado|semi|cioccolat|olive|frutta secca/i;
+const CARB_RE = /riso|pasta|pane|avena|patat|polenta|cereal|farro|orzo|cous|quinoa|grano|muesli|fiocchi|gallette|cracker|fette|frutta|banana|mela|pera|aranci|kiwi|mirtill|uva|marmellata|miele|zucchero|datteri|fichi/i;
+
+/* Scala la quantità in una stringa tipo "200g" / "250 ml"; pezzi e cucchiai
+   restano invariati. Arrotonda a passi sensati (5 sotto i 100, 10 sopra). */
+const scaleQ = (q, factor) => {
+  const m = String(q).match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/i);
+  if (!m) return q;
+  const v = parseFloat(m[1].replace(",", ".")) * factor;
+  const step = v >= 100 ? 10 : 5;
+  const nv = Math.max(step, Math.round(v / step) * step);
+  return String(q).replace(m[0], `${nv}${m[2].toLowerCase()}`);
+};
+
+const rescaleMeals = (meals, oldT, newT) => {
+  if (!meals || !oldT || !newT) return meals;
+  const fk = newT.kcal / Math.max(1, oldT.kcal);
+  const fp = newT.p / Math.max(1, oldT.p);
+  const fc = newT.c / Math.max(1, oldT.c);
+  const ff = newT.f / Math.max(1, oldT.f);
+  const factorFor = (nome) => {
+    if (VERDURA_RE.test(nome)) return 1;
+    if (PROTEIN_RE.test(nome)) return fp;
+    if (FAT_RE.test(nome)) return ff;
+    if (CARB_RE.test(nome)) return fc;
+    return fk;
+  };
+  const out = {};
+  for (const [meal, opts] of Object.entries(meals))
+    out[meal] = asOptions(opts).map((opt) =>
+      opt.map((food) => ({ ...food, q: scaleQ(food.q, factorFor(food.nome || "")) })));
+  return out;
+};
+
 /* Piano di fallback locale (se l'API non risponde): template scalato sulle kcal */
 /* Piano template usato se l'AI non risponde: come la generazione AI,
    3 OPZIONI equivalenti per ogni pasto (ruotano da sole ogni giorno) */
@@ -2088,8 +2140,8 @@ const FALLBACK_PLAN = (t) => {
   };
 };
 
-function MacroBar({ label, grams, kcalPerG, totalKcal, color }) {
-  const pct = Math.round(((grams * kcalPerG) / totalKcal) * 100);
+function MacroBar({ label, grams, kcalPerG, totalKcal, color, pct: pctProp }) {
+  const pct = pctProp != null ? pctProp : Math.round(((grams * kcalPerG) / totalKcal) * 100);
   return (
     <div>
       <div className="row between" style={{ marginBottom: 3 }}>
@@ -2797,7 +2849,7 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
   const [draft, setDraft] = useState(null);
   const [prefs, setPrefs] = useState(nutri && nutri.prefs ? nutri.prefs : "");  // preferenze / digiuno intermittente
   const [importing, setImporting] = useState(false);
-  const [stale, setStale] = useState(false);        // target modificati ma pasti non ancora rigenerati
+  const [regenOpen, setRegenOpen] = useState(false); // pagina rigenerazione: chiede le preferenze
   const [editMeal, setEditMeal] = useState(null);   // card pasto aperta per modifica
   const [subTab, setSubTab] = useState("plan");     // "plan" = pasti consigliati · "compose" = pick & place
   const [plate, setPlate] = useState(nutri && nutri.plate ? nutri.plate : []);
@@ -2855,7 +2907,6 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
     for (const [k, v] of Object.entries(meals || {})) normMeals[k] = asOptions(v);
     setNutri({ goal, days, targets, meals: normMeals, prefs,
       sourcePlan: sourcePlan || (nutri && nutri.sourcePlan) || null });
-    setStale(false);
     setLoading(false);
     fireToast({ title: tr("◈ PIANO GENERATO"), sub: `${targets.kcal} kcal · P${targets.p} C${targets.c} G${targets.f}` });
   };
@@ -2886,14 +2937,26 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
 
   const startEdit = () => { setDraft({ ...nutri.targets }); setEditing(true); };
   const saveEdit = () => {
-    const t = {
-      kcal: Number(draft.kcal) || nutri.targets.kcal,
-      p: Number(draft.p) || 0, c: Number(draft.c) || 0, f: Number(draft.f) || 0,
-    };
-    setNutri({ ...nutri, targets: t });
-    setStale(true);   // i pasti non riflettono più i nuovi target
+    let kcal = Math.max(800, Math.round(Number(draft.kcal) || nutri.targets.kcal));
+    let p = Math.max(0, Math.round(Number(draft.p) || 0));
+    let c = Math.max(0, Math.round(Number(draft.c) || 0));
+    let f = Math.max(0, Math.round(Number(draft.f) || 0));
+    /* i grammi devono "valere" le kcal inserite: se non tornano si ricalcolano
+       mantenendo le proporzioni scelte, così le % sommano sempre a 100 */
+    const mk = p * 4 + c * 4 + f * 9;
+    if (mk <= 0) ({ p, c, f } = nutri.targets);
+    else if (Math.abs(mk - kcal) > 1) {
+      const k = kcal / mk;
+      p = Math.round(p * k); f = Math.round(f * k);
+      /* i carboidrati bilanciano l'arrotondamento: totale kcal esatto */
+      c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
+    }
+    const t = { kcal, p, c, f };
+    /* ricalcola subito le quantità dei cibi (i tipi restano invariati) */
+    const meals = rescaleMeals(nutri.meals, nutri.targets, t);
+    setNutri({ ...nutri, targets: t, meals });
     setEditing(false);
-    fireToast({ title: tr("◈ TARGET AGGIORNATI"), sub: `${t.kcal} kcal` });
+    fireToast({ title: tr("◈ TARGET AGGIORNATI"), sub: `${t.kcal} kcal · ${tr("pasti riadattati")}` });
   };
 
   if (importing) return (
@@ -2902,9 +2965,38 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
       onSave={(r) => {
         setNutri({ goal, days, targets: r.targets, meals: r.meals, prefs, imported: true, sourcePlan: r.sourcePlan || null });
         if (r.sourcePlan) setSubTab("compose");
-        setStale(false); setImporting(false);
+        setImporting(false);
         fireToast({ title: tr("◈ PIANO IMPORTATO"), sub: `${r.targets.kcal} kcal` });
       }} />
+  );
+
+  /* ---- Rigenera con AI: pagina dedicata che chiede le preferenze ---- */
+  if (regenOpen && nutri) return (
+    <div className="fade-in stack" style={{ maxWidth: 560 }}>
+      <div className="row between">
+        <Btn small onClick={() => setRegenOpen(false)}>{tr("‹ Indietro")}</Btn>
+        <span className="hud-title">{tr("Rigenera piano")}</span>
+        <div style={{ width: 64 }} />
+      </div>
+      <Panel accent className="stack">
+        <div className="tiny t-dim" style={{ lineHeight: 1.6 }}>
+          {tr("L'AI genera un nuovo piano sui tuoi target attuali")}:
+          <span className="t-cyan"> {nutri.targets.kcal} kcal · P{nutri.targets.p} C{nutri.targets.c} G{nutri.targets.f}</span>
+        </div>
+        <div>
+          <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Preferenze alimentari")} <span className="t-faint">({tr("opzionale")})</span></div>
+          <textarea className="hud-input cham-s" value={prefs} onChange={(e) => setPrefs(e.target.value)} rows={3} autoFocus
+            placeholder={tr("Es. vegetariano, niente lattosio, digiuno intermittente 16:8 con 2 pasti, allergia alle noci...")}
+            style={{ resize: "none", fontSize: 13 }} />
+        </div>
+        <Btn primary full disabled={loading}
+          onClick={async () => { await generate(true); setRegenOpen(false); }}>
+          {loading
+            ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Rigenerazione...")}</span>
+            : tr("◈ Rigenera piano")}
+        </Btn>
+      </Panel>
+    </div>
   );
 
   /* la modalità "componi" non richiede un piano: è indipendente */
@@ -2917,7 +3009,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
         </div>
       )}
       <div className="row g8">
-        <Btn small onClick={() => generate(!!nutri)} disabled={loading} style={{ flex: 1, opacity: .85 }}>
+        <Btn small onClick={() => (nutri ? setRegenOpen(true) : generate(false))} disabled={loading} style={{ flex: 1, opacity: .85 }}>
           {loading ? tr("Rigenerazione...") : tr("◈ Rigenera con AI")}
         </Btn>
         <Btn small onClick={() => setImporting(true)} style={{ flex: 1, opacity: .85 }}>{tr("⤓ Importa piano")}</Btn>
@@ -2931,7 +3023,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
         setPicks={savePlate}
         loading={loading}
         onImport={() => setImporting(true)}
-        onRegen={() => generate(!!nutri)}
+        onRegen={() => (nutri ? setRegenOpen(true) : generate(false))}
         /* riordino delle categorie trascinando l'handle (persiste nel piano) */
         onReorder={(from, to) => setNutri((n) => {
           if (!n || !n.sourcePlan || !n.sourcePlan.categories) return n;
@@ -3026,7 +3118,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
         </div>
 
         <div className="row g8">
-          <Btn small onClick={() => generate(true)} disabled={loading} style={{ flex: 1, opacity: .85 }}>
+          <Btn small onClick={() => setRegenOpen(true)} disabled={loading} style={{ flex: 1, opacity: .85 }}>
             {loading ? tr("Rigenerazione...") : tr("◈ Rigenera con AI")}
           </Btn>
           <Btn small onClick={() => setImporting(true)} style={{ flex: 1, opacity: .85 }}>{tr("⤓ Importa piano")}</Btn>
@@ -3047,46 +3139,32 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
 
           {!editing ? (
             <div className="stack-s">
-              <MacroBar label="Proteine" grams={t.p} kcalPerG={4} totalKcal={t.kcal} color="var(--cyan)" />
-              <MacroBar label="Carboidrati" grams={t.c} kcalPerG={4} totalKcal={t.kcal} color="var(--cyan-hi)" />
-              <MacroBar label="Grassi" grams={t.f} kcalPerG={9} totalKcal={t.kcal} color="#ffd76a" />
+              {/* percentuali col metodo dei resti: la somma è SEMPRE 100% */}
+              <MacroBar label="Proteine" grams={t.p} kcalPerG={4} totalKcal={t.kcal} color="var(--cyan)" pct={macroPcts(t.p, t.c, t.f)[0]} />
+              <MacroBar label="Carboidrati" grams={t.c} kcalPerG={4} totalKcal={t.kcal} color="var(--cyan-hi)" pct={macroPcts(t.p, t.c, t.f)[1]} />
+              <MacroBar label="Grassi" grams={t.f} kcalPerG={9} totalKcal={t.kcal} color="#ffd76a" pct={macroPcts(t.p, t.c, t.f)[2]} />
             </div>
           ) : (
-            <div className="field-grid">
-              {[["kcal", "Kcal"], ["p", "Proteine (g)"], ["c", "Carboidrati (g)"], ["f", "Grassi (g)"]].map(([k, label]) => (
-                <div key={k}>
-                  <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>{label}</div>
-                  <input className="hud-input cham-s" type="number" inputMode="numeric"
-                    value={draft[k]} onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
-                    style={{ textAlign: "center" }} />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="field-grid">
+                {[["kcal", "Kcal"], ["p", "Proteine (g)"], ["c", "Carboidrati (g)"], ["f", "Grassi (g)"]].map(([k, label]) => (
+                  <div key={k}>
+                    <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>{label}</div>
+                    <input className="hud-input cham-s" type="number" inputMode="numeric"
+                      value={draft[k]} onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
+                      style={{ textAlign: "center" }} />
+                  </div>
+                ))}
+              </div>
+              <div className="micro t-faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
+                {tr("I grammi vengono bilanciati sulle kcal (totale sempre 100%) e le quantità dei pasti si riadattano in automatico.")}
+              </div>
+            </>
           )}
 
           <div className="micro" style={{ marginTop: 12 }}>
             P {(t.p / body.peso).toFixed(1)} g/kg · G {(t.f / body.peso).toFixed(1)} g/kg · {nutri.days} allenamenti/sett
           </div>
-        </Panel>
-
-        {stale && (
-          <Panel accent style={{ borderColor: "#ffd76a" }}>
-            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12 }}>{tr("TARGET MODIFICATI")}</div>
-            <div className="tiny t-dim" style={{ marginTop: 6, lineHeight: 1.6 }}>
-              {tr("I pasti mostrati sono ancora quelli dei target precedenti. Rigenerali per allinearli ai nuovi valori.")}
-            </div>
-            <Btn small primary style={{ marginTop: 10 }} disabled={loading} onClick={() => generate(true)}>
-              {loading ? tr("Rigenerazione...") : tr("↻ Rigenera pasti sui nuovi target")}
-            </Btn>
-          </Panel>
-        )}
-
-        <Panel>
-          <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Preferenze alimentari")}</div>
-          <textarea className="hud-input cham-s" value={prefs} onChange={(e) => setPrefs(e.target.value)} rows={2}
-            placeholder={tr("Es. vegetariano, niente lattosio, digiuno intermittente 16:8 con 2 pasti, allergia alle noci...")}
-            style={{ resize: "none", fontSize: 13 }} />
-          <div className="micro t-faint" style={{ marginTop: 6 }}>{tr("VERRANNO APPLICATE ALLA PROSSIMA RIGENERAZIONE")}</div>
         </Panel>
 
       </div>
