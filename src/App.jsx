@@ -720,7 +720,9 @@ export default function App() {
     (async () => {
       supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session) await hydrate(session.user);
-        else if (localStorage.getItem(GUEST_KEY)) hydrateGuest(); // ospite già avviato: rientra diretto
+        /* ospite: MAI ripristinato automaticamente — a ogni refresh si riparte
+           dalla login; chi vuole rientra con "Continua senza account" e
+           ritrova i suoi dati (restano salvati su questo dispositivo) */
         authDone.current = true; // splash: può chiudersi (utente ripristinato o assente)
       }).catch(() => { authDone.current = true; });
     })();
