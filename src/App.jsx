@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -13,7 +13,7 @@ import { RoutineEditor } from "./components/RoutineEditor";
 import { SessionView } from "./components/SessionView";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
-import { captureInviteHash, clearInvite, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
+import { captureInviteHash, clearInvite, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, pendingInviteName, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
 import { dlStart } from "./lib/dnd";
 import { applyProgression, todayISO } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb } from "./lib/exercises";
@@ -523,6 +523,9 @@ export default function App() {
   const GUEST_KEY = "gq_guest_v1";
   const isGuest = !!(user && user.guest);
   const isPT = !!(user && user.role === "pt");
+  /* PT e admin possono passare dall'area PT (clienti) all'app normale:
+     ptMode = true → vista PT · false → vista utente standard */
+  const [ptMode, setPtMode] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [booting, setBooting] = useState(true);      // splash finché il check sessione non è concluso
   const [bootProg, setBootProg] = useState(0);
@@ -657,7 +660,7 @@ export default function App() {
         username: uname,
         role,
       });
-      if (role === "pt") setTab("clients");
+      if (role === "pt") { setPtMode(true); setTab("clients"); }
       /* il PT attuale dell'utente (max uno): mostrato in header e profilo */
       if (role !== "pt") fetchMyTrainer(authUser.id).then(setMyTrainer);
       /* invito PT in sospeso (link #pt=...): chiedi conferma dopo il login */
@@ -824,14 +827,25 @@ export default function App() {
     document.body.classList.toggle("standard", standard);
     return () => document.body.classList.remove("standard");
   }, [standard]);
-  const navItems = isPT ? [
-    { id: "clients", label: "Clienti", icon: Users },
-    { id: "profile", label: "Profilo", icon: User },
-  ] : [
-    { id: "training", label: "Training", icon: Dumbbell },
-    { id: "nutrition", label: "Nutrition", icon: Utensils },
-    ...(standard ? [] : [{ id: "game", label: "Game", icon: Gamepad2 }]),
-    { id: "profile", label: "Profilo", icon: User },
+  /* PT e admin vedono entrambe le facce dell'app: l'ultimo pulsante del menu
+     (sempre in fondo) commuta tra area PT (clienti) e area utente normale */
+  const canPt = isPT || isAdminUser(user);
+  const switchPt = () => {
+    const toPt = !ptMode;
+    setPtMode(toPt);
+    setTab(toPt ? "clients" : "training");
+  };
+  const navItems = [
+    ...(canPt && ptMode ? [
+      { id: "clients", label: "Clienti", icon: Users },
+      { id: "profile", label: "Profilo", icon: User },
+    ] : [
+      { id: "training", label: "Training", icon: Dumbbell },
+      { id: "nutrition", label: "Nutrition", icon: Utensils },
+      ...(standard ? [] : [{ id: "game", label: "Game", icon: Gamepad2 }]),
+      { id: "profile", label: "Profilo", icon: User },
+    ]),
+    ...(canPt ? [{ id: "__ptswitch", label: ptMode ? tr("Utente") : "PT", icon: ArrowLeftRight }] : []),
   ];
 
   const ip = useInstallPrompt();
@@ -898,15 +912,21 @@ export default function App() {
             <div className="tiny t-dim" style={{ margin: "10px 0 18px", lineHeight: 1.7 }}>
               {myTrainer && myTrainer.id !== pendingPt
                 ? <>{tr("Attualmente sei seguito da")} <b className="t-amber">{myTrainer.name || tr("il tuo PT")}</b>. {tr("Confermando passerai al nuovo personal trainer: potrà vedere le tue schede e seguire i tuoi allenamenti.")}</>
-                : tr("Un personal trainer ti ha invitato: confermando potrà vedere le tue schede e seguire i tuoi allenamenti. Potrai scollegarti quando vuoi.")}
+                : <><b className="t-cyan">{pendingInviteName() || tr("Un personal trainer")}</b> {tr("ti ha invitato: confermando potrà vedere le tue schede e seguire i tuoi allenamenti. Potrai scollegarti quando vuoi.")}</>}
             </div>
             <div className="row g8">
               <Btn onClick={() => { clearInvite(); setPendingPt(null); }} style={{ flex: 1 }}>{tr("Rifiuta")}</Btn>
               <Btn primary style={{ flex: 2 }} onClick={async () => {
                 const changing = myTrainer && myTrainer.id !== pendingPt;
+                const inviteName = pendingInviteName(); // nome del PT viaggiato col link
                 const ok = await linkToTrainer(user.id, user.email, pendingPt);
                 clearInvite(); setPendingPt(null);
-                if (ok) setMyTrainer(await fetchMyTrainer(user.id)); // aggiorna chip header/profilo
+                if (ok) {
+                  /* cache del nome: visibile anche prima che la policy
+                     "cliente legge il profilo del PT" sia attiva sul DB */
+                  if (inviteName) { try { localStorage.setItem("gq_my_pt_name", inviteName); } catch {} }
+                  setMyTrainer(await fetchMyTrainer(user.id)); // aggiorna chip header/profilo
+                }
                 fireToast(ok
                   ? changing
                     ? { title: tr("◈ PT CAMBIATO"), sub: tr("Il nuovo PT ora segue i tuoi allenamenti") }
@@ -985,16 +1005,20 @@ export default function App() {
         <aside className="side-nav">
           <div className="panel cham" style={{ padding: "8px 0" }}>
             {navItems.map((t) => {
-              const on = tab === t.id;
+              const isSwitch = t.id === "__ptswitch";
+              const on = !isSwitch && tab === t.id;
               return (
-                <button key={t.id} onClick={() => setTab(t.id)} className="snav-btn tap"
-                  style={{
+                <button key={t.id} onClick={() => (isSwitch ? switchPt() : setTab(t.id))} className="snav-btn tap"
+                  title={isSwitch ? (ptMode ? tr("Passa all'area utente (allenamenti, nutrizione, gioco)") : tr("Passa all'area Personal Trainer (clienti)")) : undefined}
+                  style={isSwitch ? {
+                    color: "#ffd76a", borderTop: "1px solid var(--soft)", marginTop: 4,
+                  } : {
                     color: on ? "var(--cyan-hi)" : "var(--faint)",
                     background: on ? "var(--active2)" : "transparent",
                     boxShadow: on ? "inset 3px 0 0 var(--cyan)" : "none",
                   }}>
-                  <t.icon size={17} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : {}} />
-                  {t.label}
+                  <t.icon size={17} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : isSwitch ? { filter: "drop-shadow(0 0 5px rgba(255,215,106,.7))" } : {}} />
+                  {isSwitch ? (ptMode ? tr("Vista utente") : tr("Vista PT")) : t.label}
                 </button>
               );
             })}
@@ -1002,7 +1026,7 @@ export default function App() {
         </aside>
 
         <main className="main-area">
-          {tab === "clients" && isPT && <TrainerView user={user} fireToast={fireToast} />}
+          {tab === "clients" && canPt && ptMode && <TrainerView user={user} fireToast={fireToast} />}
           {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
@@ -1012,7 +1036,7 @@ export default function App() {
               /* radar delle ricompense: registra l'indizio trovato (persiste in stats, niente migrazioni DB) */
               onFindHint={(id) => setStats((s) => ({ ...s, hints: [...new Set([...(s.hints || []), id])] }))} />
           )}
-          {tab === "profile" && (isPT ? (
+          {tab === "profile" && (isPT && ptMode ? (
             <TrainerProfile user={user} fireToast={fireToast}
               onLogout={async () => { await supabase.auth.signOut(); setTab("clients"); }} />
           ) : (
@@ -1025,7 +1049,7 @@ export default function App() {
                 trainer={myTrainer}
                 onUnlinkTrainer={async () => {
                   const ok = await unlinkMyTrainer(user.id);
-                  if (ok) { setMyTrainer(null); fireToast({ title: tr("◈ PT SCOLLEGATO"), sub: tr("Nessun personal trainer ti segue ora") }); }
+                  if (ok) { try { localStorage.removeItem("gq_my_pt_name"); } catch {} setMyTrainer(null); fireToast({ title: tr("◈ PT SCOLLEGATO"), sub: tr("Nessun personal trainer ti segue ora") }); }
                   else fireToast({ title: tr("Operazione non riuscita"), sub: tr("Riprova tra poco") });
                 }}
                 /* ospite: la richiesta PT richiede un account (valutazione admin):
@@ -1052,13 +1076,17 @@ export default function App() {
       {/* BOTTOM NAV (mobile) */}
       <nav className="bottom-nav">
         {navItems.map((t) => {
-          const on = tab === t.id;
+          const isSwitch = t.id === "__ptswitch";
+          const on = !isSwitch && tab === t.id;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} className={"bnav-btn tap" + (on ? " on" : "")}
-              style={{ color: on ? "var(--cyan-hi)" : "var(--faint)", alignItems: "center", textAlign: "center" }}>
-              <span className="bnav-ico"><t.icon size={20} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : {}} /></span>
-              {t.label}
-              <div style={{ height: 2, width: 32, background: on ? "var(--cyan)" : "transparent", boxShadow: on ? "0 0 6px var(--cyan)" : "none" }} />
+            <button key={t.id} onClick={() => (isSwitch ? switchPt() : setTab(t.id))} className={"bnav-btn tap" + (on ? " on" : "")}
+              title={isSwitch ? (ptMode ? tr("Passa all'area utente") : tr("Passa all'area Personal Trainer")) : undefined}
+              style={isSwitch
+                ? { color: "#ffd76a", alignItems: "center", textAlign: "center", borderLeft: "1px solid var(--soft)" }
+                : { color: on ? "var(--cyan-hi)" : "var(--faint)", alignItems: "center", textAlign: "center" }}>
+              <span className="bnav-ico"><t.icon size={20} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : isSwitch ? { filter: "drop-shadow(0 0 5px rgba(255,215,106,.7))" } : {}} /></span>
+              {isSwitch ? (ptMode ? tr("Utente") : "PT") : t.label}
+              <div style={{ height: 2, width: 32, background: on ? "var(--cyan)" : isSwitch ? "rgba(255,215,106,.55)" : "transparent", boxShadow: on ? "0 0 6px var(--cyan)" : "none" }} />
             </button>
           );
         })}
@@ -3488,9 +3516,9 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
    Su iOS il prompt non esiste proprio: si mostrano le istruzioni manuali. */
 function useInstallPrompt() {
   const [deferred, setDeferred] = useState(null);
-  const [dismissed, setDismissed] = useState(() => {
-    try { return localStorage.getItem("gq_install_dismissed") === "1"; } catch { return false; }
-  });
+  /* la chiusura vale solo per la sessione corrente: a ogni refresh della
+     pagina il banner di installazione viene riproposto */
+  const [dismissed, setDismissed] = useState(false);
   const standalone =
     typeof window !== "undefined" &&
     (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true);
@@ -3502,10 +3530,7 @@ function useInstallPrompt() {
     return () => window.removeEventListener("beforeinstallprompt", h);
   }, []);
 
-  const dismiss = () => {
-    setDismissed(true);
-    try { localStorage.setItem("gq_install_dismissed", "1"); } catch {}
-  };
+  const dismiss = () => setDismissed(true);
   const install = async () => {
     if (!deferred) return;
     deferred.prompt();

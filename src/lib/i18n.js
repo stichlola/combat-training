@@ -740,6 +740,20 @@ const EN_DESC = {
   "Nessun personal trainer ti segue ora": "No personal trainer is following you now",
   "Operazione non riuscita": "Operation failed",
   "Riprova tra poco": "Try again shortly",
+  /* Switch vista PT/utente + richiesta PT opzionale + nome PT dal link */
+  "Vista utente": "User view",
+  "Vista PT": "PT view",
+  "Utente": "User",
+  "Passa all'area utente": "Switch to the user area",
+  "Passa all'area Personal Trainer": "Switch to the Personal Trainer area",
+  "Passa all'area utente (allenamenti, nutrizione, gioco)": "Switch to the user area (workouts, nutrition, game)",
+  "Passa all'area Personal Trainer (clienti)": "Switch to the Personal Trainer area (clients)",
+  "(facoltativo)": "(optional)",
+  "Puoi presentarti brevemente: esperienza, certificazioni, dove alleni.": "You can briefly introduce yourself: experience, certifications, where you train.",
+  "Es. PT certificato ISSA, alleno presso ... (opzionale)": "E.g. ISSA certified PT, I train at ... (optional)",
+  "(nessuna presentazione)": "(no introduction)",
+  "Un personal trainer": "A personal trainer",
+  "ti ha invitato: confermando potrà vedere le tue schede e seguire i tuoi allenamenti. Potrai scollegarti quando vuoi.": "invited you: by confirming they will see your routines and follow your workouts. You can unlink anytime.",
 };
 
 Object.assign(EN_UI, EN_CONTENT, EN_DESC);

@@ -14,19 +14,30 @@ export async function fetchMyRole(authUser) {
   return "user";
 }
 
-/* link di invito: il cliente lo apre, fa login e conferma il collegamento */
-export const inviteLink = (trainerId) => `${location.origin}${location.pathname}#pt=${trainerId}`;
+/* link di invito: il cliente lo apre, fa login e conferma il collegamento.
+   Il nome del PT viaggia nel link (&n=...) così il cliente vede subito CHI lo
+   seguirà, anche prima che la policy "cliente legge il profilo del PT" sia attiva. */
+export const inviteLink = (trainerId, trainerName) =>
+  `${location.origin}${location.pathname}#pt=${trainerId}` +
+  (trainerName ? `&n=${encodeURIComponent(trainerName)}` : "");
 
-/* hash #pt=<id> catturato all'avvio (prima del login), poi ripulito */
+/* hash #pt=<id>[&n=<nome>] catturato all'avvio (prima del login), poi ripulito */
 export function captureInviteHash() {
-  const m = location.hash.match(/^#pt=([0-9a-f-]{36})$/i);
+  const m = location.hash.match(/^#pt=([0-9a-f-]{36})(?:&n=([^&]*))?$/i);
   if (!m) return null;
   localStorage.setItem("gq_pending_pt", m[1]);
+  if (m[2]) {
+    try { localStorage.setItem("gq_pending_pt_name", decodeURIComponent(m[2])); } catch {}
+  }
   history.replaceState(null, "", location.pathname);
   return m[1];
 }
 export const pendingInvite = () => localStorage.getItem("gq_pending_pt");
-export const clearInvite = () => localStorage.removeItem("gq_pending_pt");
+export const pendingInviteName = () => localStorage.getItem("gq_pending_pt_name");
+export const clearInvite = () => {
+  localStorage.removeItem("gq_pending_pt");
+  localStorage.removeItem("gq_pending_pt_name");
+};
 
 /* UN SOLO PT per utente: il collegamento sostituisce sempre quello attuale.
    (RLS: il cliente cancella/inserisce solo righe con client_id = se stesso) */
@@ -39,7 +50,8 @@ export async function linkToTrainer(clientId, clientEmail, trainerId) {
 
 /* Il PT attuale del cliente (al massimo uno). Ritorna null oppure
    { id, name } — name = full_name o username letto dal profilo del PT
-   (richiede la policy "Il cliente legge il profilo del proprio PT"). */
+   (richiede la policy "Il cliente legge il profilo del proprio PT");
+   in mancanza, si usa il nome arrivato con il link invito (cache locale). */
 export async function fetchMyTrainer(clientId) {
   const { data } = await supabase.from("trainer_clients")
     .select("trainer_id, created_at").eq("client_id", clientId)
@@ -47,7 +59,11 @@ export async function fetchMyTrainer(clientId) {
   if (!data) return null;
   const { data: prof } = await supabase.from("profiles")
     .select("username, full_name").eq("id", data.trainer_id).maybeSingle();
-  return { id: data.trainer_id, name: prof?.full_name || prof?.username || null };
+  /* fallback: nome arrivato col link invito (serve se la policy "Il cliente legge
+     il profilo del proprio PT" non è ancora stata applicata sul database) */
+  let cached = null;
+  try { cached = localStorage.getItem("gq_my_pt_name"); } catch {}
+  return { id: data.trainer_id, name: prof?.full_name || prof?.username || cached || null };
 }
 
 /* L'utente si scollega dal proprio PT (stop o preparazione al cambio) */

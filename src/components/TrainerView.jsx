@@ -82,7 +82,8 @@ export function TrainerView({ user, fireToast }) {
 
 /* ---------------- Modale invito: link + QR code ---------------- */
 function InviteModal({ user, fireToast, onClose }) {
-  const link = inviteLink(user.id);
+  /* il nome viaggia nel link: il cliente vede subito chi lo seguirà */
+  const link = inviteLink(user.id, user.full_name || user.username);
   const [qr, setQr] = useState(null);
 
   useEffect(() => {

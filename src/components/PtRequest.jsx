@@ -71,13 +71,13 @@ function PtRequestModal({ user, fireToast, onClose, onSent }) {
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
         <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 12 }}>
-          {tr("Presentati brevemente: esperienza, certificazioni, dove alleni. L'amministratore valuterà la richiesta.")}
+          {tr("Puoi presentarti brevemente: esperienza, certificazioni, dove alleni.")} <span className="t-faint">{tr("(facoltativo)")}</span> {tr("L'amministratore valuterà la richiesta.")}
         </div>
         <textarea className="hud-input" rows={4} value={msg} onChange={(e) => setMsg(e.target.value)}
-          placeholder={tr("Es. PT certificato ISSA, alleno presso ...")}
+          placeholder={tr("Es. PT certificato ISSA, alleno presso ... (opzionale)")}
           style={{ width: "100%", resize: "vertical", marginBottom: 12 }} />
         {err && <div className="tiny" style={{ color: "#ff8a8a", marginBottom: 10, lineHeight: 1.5 }}>⚠ {err}</div>}
-        <Btn primary onClick={send} disabled={busy || msg.trim().length < 10} style={{ width: "100%" }}>
+        <Btn primary onClick={send} disabled={busy} style={{ width: "100%" }}>
           {busy ? <Loader2 size={12} className="spin" style={{ display: "inline", verticalAlign: -2 }} />
                 : <Send size={12} style={{ display: "inline", verticalAlign: -2 }} />} {tr("Invia richiesta")}
         </Btn>
@@ -127,7 +127,7 @@ export function PtRequestsAdmin({ fireToast }) {
                 <span className="tiny t-bright" style={{ fontWeight: 700 }}>{r.email}</span>
                 <span className="micro t-faint">{new Date(r.created_at).toLocaleDateString("it-IT")}</span>
               </div>
-              <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 10, whiteSpace: "pre-wrap" }}>{r.message}</div>
+              <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 10, whiteSpace: "pre-wrap" }}>{r.message?.trim() ? r.message : <span className="t-faint">{tr("(nessuna presentazione)")}</span>}</div>
               <div className="row g8">
                 <Btn small primary disabled={busyId === r.id} onClick={() => decide(r, true)} style={{ flex: 1 }}>
                   {busyId === r.id ? <Loader2 size={12} className="spin" style={{ display: "inline", verticalAlign: -2 }} />
