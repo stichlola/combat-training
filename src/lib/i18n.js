@@ -754,6 +754,10 @@ const EN_DESC = {
   "(nessuna presentazione)": "(no introduction)",
   "Un personal trainer": "A personal trainer",
   "ti ha invitato: confermando potrà vedere le tue schede e seguire i tuoi allenamenti. Potrai scollegarti quando vuoi.": "invited you: by confirming they will see your routines and follow your workouts. You can unlink anytime.",
+  "ti ha invitato: accedi o crea un account per accettare.": "invited you: sign in or create an account to accept.",
+  "PER ACCETTARE L'INVITO SERVE UN ACCOUNT — I TUOI DATI RESTANO SINCRONIZZATI SU OGNI DISPOSITIVO": "AN ACCOUNT IS REQUIRED TO ACCEPT THE INVITE — YOUR DATA STAYS SYNCED ON EVERY DEVICE",
+  "Questo è il tuo link invito": "This is your own invite link",
+  "Condividilo con un cliente: non puoi essere il tuo PT": "Share it with a client: you can't be your own PT",
 };
 
 Object.assign(EN_UI, EN_CONTENT, EN_DESC);

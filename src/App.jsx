@@ -666,7 +666,13 @@ export default function App() {
       /* invito PT in sospeso (link #pt=...): chiedi conferma dopo il login */
       const pt = pendingInvite();
       if (pt && pt !== authUser.id && role !== "pt") setPendingPt(pt);
-      else if (pt) clearInvite();
+      else if (pt) {
+        clearInvite();
+        /* il PT che apre il PROPRIO link: prima spariva in silenzio e sembrava
+           un malfunzionamento — ora viene spiegato con un toast */
+        if (pt === authUser.id)
+          fireToast({ title: tr("Questo è il tuo link invito"), sub: tr("Condividilo con un cliente: non puoi essere il tuo PT") });
+      }
       setHydrated(true);
     };
     /* ospite: nessun account, dati solo su questo dispositivo */
@@ -1677,7 +1683,11 @@ const AuthField = ({ icon: Icon, ...props }) => (
 );
 
 function AuthScreen({ fireToast, onGuest }) {
-  const [mode, setMode] = useState("login"); // login | register | forgot
+  /* invito PT in sospeso (link #pt=... aperto da sloggati): va detto subito
+     che serve un account per accettare, e si parte dalla registrazione */
+  const invitePending = !!pendingInvite();
+  const inviteName = pendingInviteName();
+  const [mode, setMode] = useState(invitePending ? "register" : "login"); // login | register | forgot
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [pw, setPw] = useState("");
@@ -1727,6 +1737,20 @@ function AuthScreen({ fireToast, onGuest }) {
           </div>
           <div className="micro" style={{ marginTop: 6 }}>{tr("TRAINING HUD SYSTEM")}</div>
         </div>
+
+        {invitePending && (
+          <div className="cham-s" style={{
+            marginBottom: 14, padding: "12px 16px", textAlign: "center",
+            background: "var(--active)", border: "1px solid var(--cyan)",
+            boxShadow: "0 0 14px rgba(87,200,242,.22)",
+          }}>
+            <Users size={18} color="var(--cyan)" style={{ margin: "0 auto 6px" }} />
+            <div className="f-hud t-cyan" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".18em" }}>{tr("INVITO PERSONAL TRAINER")}</div>
+            <div className="tiny t-dim" style={{ marginTop: 4, lineHeight: 1.6 }}>
+              <b className="t-bright">{inviteName || tr("Un personal trainer")}</b> {tr("ti ha invitato: accedi o crea un account per accettare.")}
+            </div>
+          </div>
+        )}
 
         <div className="panel panel-accent cham stack" style={{ padding: 24 }}>
           <div className="hud-title" style={{ textAlign: "center", fontSize: 13 }}>
@@ -1811,10 +1835,20 @@ function AuthScreen({ fireToast, onGuest }) {
           )}
         </div>
         <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--soft)" }}>
-          <Btn full onClick={onGuest}>{tr("Continua senza account ›")}</Btn>
-          <div className="micro t-faint" style={{ textAlign: "center", marginTop: 8, lineHeight: 1.6 }}>
-            {tr("PROVA SUBITO · I DATI RESTANO SU QUESTO DISPOSITIVO")}
-          </div>
+          {/* con un invito PT in sospeso l'account è obbligatorio: l'ingresso
+              ospite non potrebbe mai accettarlo e creerebbe solo confusione */}
+          {invitePending ? (
+            <div className="micro t-faint" style={{ textAlign: "center", lineHeight: 1.6 }}>
+              {tr("PER ACCETTARE L'INVITO SERVE UN ACCOUNT — I TUOI DATI RESTANO SINCRONIZZATI SU OGNI DISPOSITIVO")}
+            </div>
+          ) : (
+            <>
+              <Btn full onClick={onGuest}>{tr("Continua senza account ›")}</Btn>
+              <div className="micro t-faint" style={{ textAlign: "center", marginTop: 8, lineHeight: 1.6 }}>
+                {tr("PROVA SUBITO · I DATI RESTANO SU QUESTO DISPOSITIVO")}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
