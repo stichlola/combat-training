@@ -1,15 +1,29 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Timer, Play, Pause } from "lucide-react";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay } from "../ui";
 
 /* ---------------- Timer interset ---------------- */
-/* Di default nascosto: si apre dal pulsante (inline in sessione, flottante altrove) */
-export function FloatingTimer({ inline }) {
+/* Di default nascosto: si apre dal pulsante (inline in sessione, flottante altrove).
+   Espone una ref con .start(seconds) per avviarlo programmaticamente al completamento di una serie. */
+export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) {
   const [open, setOpen] = useState(false);
   const [dur, setDur] = useState(90);
   const [left, setLeft] = useState(90);
   const [running, setRunning] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    start: (seconds) => {
+      setDur(seconds);
+      setLeft(seconds);
+      setRunning(true);
+      setOpen(true);
+    },
+    reset: () => {
+      setLeft(dur);
+      setRunning(false);
+    },
+  }));
 
   useEffect(() => {
     if (!running) return;
@@ -69,4 +83,4 @@ export function FloatingTimer({ inline }) {
       {panel}
     </Overlay>
   );
-}
+});

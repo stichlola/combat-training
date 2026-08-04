@@ -94,7 +94,7 @@ button.btn{text-align:center}
   border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;
   min-width:290px;box-sizing:border-box}
 .set-grid-t{display:grid;grid-template-columns:18px 42px 1fr 64px 48px;gap:8px;align-items:center}
-.icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer}
+.icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer;min-width:36px;min-height:36px}
 
 /* --- info esercizio: pulsante ben visibile --- */
 .info-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border:1px solid var(--line);
@@ -232,7 +232,7 @@ body.dragging *{cursor:grabbing!important}
    Tema CHIARO stile Material con colore NEUTRO: grigi grafite al posto
    del colore d'accento, elevazioni al posto dei bordi, bottoni a pillola,
    card 16px, dialoghi 28px, tipografia Roboto. */
-.vanilla{color-scheme:light;
+.standard{color-scheme:light;
   --bg:#f7f7f8;--panel:#ffffff;--panel2:#f1eff2;--line:#e5e3e6;--line2:#c9c7cb;
   --cyan:#333136;--cyan-hi:#333136;--bright:#1d1b20;--text:#49454f;
   --dim:#625b71;--faint:#938f99;--amber:#7a5901;--green:#146c2e;--red:#b3261e;
@@ -240,50 +240,50 @@ body.dragging *{cursor:grabbing!important}
   --soft:#efecef;--soft2:#e3e1e4;--hairline:#efecef;--input:#eae8eb;
   --modal:#f3f2f4;--done:#d9f0dc;--warm-bg:#fff3d6;--warm-line:#e8c766;
   font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
-.vanilla::before,.vanilla::after{display:none}
-.vanilla .f-hud,.vanilla .hud-label,.vanilla .hud-title,.vanilla .micro,.vanilla .btn,.vanilla .brand,
-.vanilla .bnav-btn,.vanilla .snav-btn,.vanilla .hud-input,.vanilla .chip{
+.standard::before,.standard::after{display:none}
+.standard .f-hud,.standard .hud-label,.standard .hud-title,.standard .micro,.standard .btn,.standard .brand,
+.standard .bnav-btn,.standard .snav-btn,.standard .hud-input,.standard .chip{
   font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-.vanilla .hud-label,.vanilla .hud-title,.vanilla .micro,.vanilla .btn,.vanilla .brand,
-.vanilla .bnav-btn,.vanilla .snav-btn{letter-spacing:.04em}
-.vanilla .hud-label,.vanilla .hud-title,.vanilla .btn,.vanilla .bnav-btn,.vanilla .snav-btn{text-transform:none}
-.vanilla .hud-label{font-weight:700}
-.vanilla .cham{clip-path:none;border-radius:16px}
-.vanilla .cham-s{clip-path:none;border-radius:12px}
-.vanilla .seg{clip-path:none;border-radius:4px}
-.vanilla .panel{background:#ffffff;border:none;border-radius:16px;
+.standard .hud-label,.standard .hud-title,.standard .micro,.standard .btn,.standard .brand,
+.standard .bnav-btn,.standard .snav-btn{letter-spacing:.04em}
+.standard .hud-label,.standard .hud-title,.standard .btn,.standard .bnav-btn,.standard .snav-btn{text-transform:none}
+.standard .hud-label{font-weight:700}
+.standard .cham{clip-path:none;border-radius:16px}
+.standard .cham-s{clip-path:none;border-radius:12px}
+.standard .seg{clip-path:none;border-radius:4px}
+.standard .panel{background:#ffffff;border:none;border-radius:16px;
   box-shadow:0 1px 2px rgba(0,0,0,.14),0 1px 3px 1px rgba(0,0,0,.08)}
-.vanilla .panel-accent{background:#f1eff2;border-color:transparent}
-.vanilla .panel::before{display:none}
-.vanilla .btn{border-radius:999px;letter-spacing:.01em;font-weight:600}
-.vanilla .btn-primary{background:#333136;border-color:transparent;color:#fff;
+.standard .panel-accent{background:#f1eff2;border-color:transparent}
+.standard .panel::before{display:none}
+.standard .btn{border-radius:999px;letter-spacing:.01em;font-weight:600}
+.standard .btn-primary{background:#333136;border-color:transparent;color:#fff;
   box-shadow:0 1px 2px rgba(0,0,0,.2),0 1px 3px 1px rgba(0,0,0,.1)}
-.vanilla .btn-primary:hover{box-shadow:0 1px 3px rgba(0,0,0,.2),0 4px 8px 3px rgba(0,0,0,.1)}
-.vanilla .btn-ghost{background:#e9e7ea;color:#1d1b20;border-color:transparent}
-.vanilla .btn-ghost:hover{background:#dfdde0}
-.vanilla .hud-input{background:var(--input);border:1px solid transparent;border-radius:12px;font-weight:500;color:#1d1b20}
-.vanilla .hud-input:focus{border-color:transparent;box-shadow:inset 0 -2px 0 var(--cyan);background:#eae8eb}
-.vanilla .hud-header{background:rgba(247,247,248,.88);border-bottom-color:var(--soft)}
-.vanilla .bottom-nav{background:#efecef;border-top:none}
-.vanilla .brand{letter-spacing:.06em;font-weight:700}
-.vanilla .streak-pill{border-radius:999px}
-.vanilla .modal-box{border:none;border-radius:28px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
-.vanilla .float-timer{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
-.vanilla .timer-pop{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
-.vanilla .setmenu{border:none;border-radius:16px;box-shadow:0 2px 6px 2px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.2)}
-.vanilla .float-cam-btn,.vanilla .float-timer-btn{border:none;border-radius:16px;background:#e4e2e6;
+.standard .btn-primary:hover{box-shadow:0 1px 3px rgba(0,0,0,.2),0 4px 8px 3px rgba(0,0,0,.1)}
+.standard .btn-ghost{background:#e9e7ea;color:#1d1b20;border-color:transparent}
+.standard .btn-ghost:hover{background:#dfdde0}
+.standard .hud-input{background:var(--input);border:1px solid transparent;border-radius:12px;font-weight:500;color:#1d1b20}
+.standard .hud-input:focus{border-color:transparent;box-shadow:inset 0 -2px 0 var(--cyan);background:#eae8eb}
+.standard .hud-header{background:rgba(247,247,248,.88);border-bottom-color:var(--soft)}
+.standard .bottom-nav{background:#efecef;border-top:none}
+.standard .brand{letter-spacing:.06em;font-weight:700}
+.standard .streak-pill{border-radius:999px}
+.standard .modal-box{border:none;border-radius:28px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
+.standard .float-timer{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
+.standard .timer-pop{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
+.standard .setmenu{border:none;border-radius:16px;box-shadow:0 2px 6px 2px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.2)}
+.standard .float-cam-btn,.standard .float-timer-btn{border:none;border-radius:16px;background:#e4e2e6;
   color:#1d1b20;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.15)}
-.vanilla .set-chip{border:none;border-radius:8px}
-.vanilla .chip{border-radius:8px}
+.standard .set-chip{border:none;border-radius:8px}
+.standard .chip{border-radius:8px}
 /* chip selezionato stile M3: contenitore tonale, testo scuro (niente nero pieno) */
-.vanilla .chip-on{background:#e4e2e6;color:#1d1b20;border-color:transparent}
-.vanilla .set-warmup{background:var(--warm-bg)}
+.standard .chip-on{background:#e4e2e6;color:#1d1b20;border-color:transparent}
+.standard .set-warmup{background:var(--warm-bg)}
 .bnav-ico{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:28px;
   margin:-4px 0;border-radius:999px}
-.vanilla .bnav-btn.on .bnav-ico{background:#e4e2e6}
-.vanilla .bnav-btn div:last-child{display:none}
+.standard .bnav-btn.on .bnav-ico{background:#e4e2e6}
+.standard .bnav-btn div:last-child{display:none}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
-body.vanilla{background:#f7f7f8}
+body.standard{background:#f7f7f8}
 
 `;
 

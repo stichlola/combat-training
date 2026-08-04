@@ -2,17 +2,19 @@ import React from "react";
 import { Flame, Check, Trash2 } from "lucide-react";
 import { exMode } from "../lib/exercises";
 import { tr } from "../lib/i18n";
+import { Overlay } from "../ui";
 
 /* ---------------- Mini menu azioni di una serie (riscaldamento / elimina) ----------------
-   Si apre al tap sul chip numero/"W" della serie, posizionato vicino al punto toccato. */
-export function SetMenu({ pos, isTime, warmup, onToggleWarmup, onDelete, onClose }) {
+   Si apre al tap sul chip numero/"W" della serie, centrato nella viewport.
+   Portale su <body>: gli antenati con transform (fade-in) sposterebbero il fixed. */
+export function SetMenu({ isTime, warmup, onToggleWarmup, onDelete, onClose }) {
   const W = 200, H = isTime ? 56 : 100;
-  const left = Math.min(Math.max(8, pos.x - W / 2), window.innerWidth - W - 8);
-  const top = Math.min(Math.max(8, pos.y + 10), window.innerHeight - H - 8);
+  const left = Math.max(8, (window.innerWidth - W) / 2);
+  const top = Math.max(8, (window.innerHeight - H) / 2);
   return (
-    <>
+    <Overlay>
       <div className="setmenu-back" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
-      <div className="setmenu cham" style={{ left, top }}>
+      <div className="setmenu cham" style={{ left, top, width: W }}>
         {!isTime && (
           <button onClick={() => { onToggleWarmup(); onClose(); }}>
             <Flame size={13} color="#ffd76a" />
@@ -24,7 +26,7 @@ export function SetMenu({ pos, isTime, warmup, onToggleWarmup, onDelete, onClose
           <Trash2 size={13} /> {tr("Elimina serie")}
         </button>
       </div>
-    </>
+    </Overlay>
   );
 }
 

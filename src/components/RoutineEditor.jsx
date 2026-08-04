@@ -41,7 +41,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
         ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
         : isHold(name)
           ? { name, group, mode: "hold", note: "", sets: holdSets() }
-          : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+          : { name, group, note: "", rest: 90, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
     });
 
   /* Sostituisce l'esercizio ei con uno nuovo: conserva le serie se resta
@@ -123,7 +123,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
           onClose={() => setProgIdx(null)} />
       )}
       {setMenu && (
-        <SetMenu pos={setMenu} isTime={draft.exercises[setMenu.ei].mode === "time"}
+        <SetMenu isTime={draft.exercises[setMenu.ei].mode === "time"}
           warmup={!!draft.exercises[setMenu.ei].sets[setMenu.si].warmup}
           onToggleWarmup={() => toggleWarmup(setMenu.ei, setMenu.si)}
           onDelete={() => removeSet(setMenu.ei, setMenu.si)}
@@ -177,10 +177,10 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {draft.exercises.map((ex, ei) => (
         <Panel key={tr(ex.name)} accent style={{ padding: 12 }}>
-          <div className="row between g8" style={{ marginBottom: 4 }}>
-            <div className="row g6">
+          <div className="row between g8" style={{ marginBottom: 4, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div className="row g6 grow wrap" style={{ marginRight: 14, minWidth: 0 }}>
               <span className="drag-handle" title={tr("Trascina per riordinare")}
-                onPointerDown={(e) => dlStart(e, moveEx)}><GripVertical size={15} /></span>
+                onPointerDown={(e) => dlStart(e, moveEx)} style={{ flexShrink: 0 }}><GripVertical size={15} /></span>
               <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
               <span className="micro t-cyan" style={{ alignSelf: "center" }}>{tr(ex.group || "").toUpperCase()}</span>
               <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
@@ -188,7 +188,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
                 <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", alignSelf: "center" }}>PROG ×{ex.progression.weeks?.length || 1}</span>
               )}
             </div>
-            <div className="row g8" style={{ flexShrink: 0 }}>
+            <div className="row g8" style={{ flexShrink: 0, marginLeft: "auto", paddingTop: 2 }}>
               <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
                 title={tr("Progressione settimanale")}
                 style={{ cursor: "pointer", color: draft.progression?.enabled && ex.progression?.weeks?.length ? "#ffd76a" : "#5d87a3" }}>
@@ -200,9 +200,23 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
                 style={{ cursor: "pointer", color: "#6e3028" }}><Trash2 size={14} /></span>
             </div>
           </div>
-          <input className="hud-input cham-s" value={ex.note || ""}
-            onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, note: e.target.value }) }))}
-            placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 8, color: "#8fb2c9" }} />
+          <div className="row g8" style={{ marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input className="hud-input cham-s grow" value={ex.note || ""}
+              onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, note: e.target.value }) }))}
+              placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", color: "#8fb2c9", minWidth: 0 }} />
+            <div className="row g4" style={{ alignItems: "center", flexShrink: 0 }}>
+              <span className="micro t-faint">REC</span>
+              <input type="number" inputMode="numeric"
+                value={ex.rest ?? 90}
+                onChange={(e) => upd((d) => ({
+                  ...d,
+                  exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, rest: e.target.value === "" ? "" : Number(e.target.value) }),
+                }))}
+                className="hud-input cham-s"
+                style={{ width: 50, textAlign: "center", padding: "6px 4px", fontSize: 12 }} />
+              <span className="micro t-faint">s</span>
+            </div>
+          </div>
           {isDumbbell(ex.name) && !exMode(ex) && (
             <div className="micro t-faint" style={{ marginBottom: 8, lineHeight: 1.5 }}>ⓘ {tr("Inserisci il peso del singolo manubrio — il totale è calcolato da sé")}</div>
           )}

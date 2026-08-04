@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Plus, Check, Play, Trash2, Trophy, Info, Pause, GripVertical, ArrowLeftRight } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ExercisePicker } from "./ExercisePicker";
@@ -12,7 +12,7 @@ import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
 
 /* ---------------- Sessione di allenamento attiva ---------------- */
-export function SessionView({ vanilla, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
+export function SessionView({ standard, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
   const [info, setInfo] = useState(null);
   const [confirmExit, setConfirmExit] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -23,6 +23,7 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi (aggiungi/sostituisci)
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [confirmExDel, setConfirmExDel] = useState(null); // eliminazione esercizio in attesa di conferma
+  const timerRef = useRef(null); // ref per triggerare il timer di recupero programmaticamente
 
   /* Marca la serie come riscaldamento (W) o normale */
   const toggleWarmup = (ei, si) => upd((s) => ({
@@ -41,7 +42,7 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
         ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
         : isHold(name)
           ? { name, group, mode: "hold", note: "", sets: holdSets() }
-          : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+          : { name, group, note: "", rest: 90, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
     }));
     fireToast({ title: tr("◈ ESERCIZIO AGGIUNTO"), sub: tr(name) });
   };
@@ -122,6 +123,9 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
     if (!st.done) {
       addXp(10);
       if (runKey === `${ei}-${si}`) setRunKey(null);
+      // Avvia automaticamente il timer di recupero con il rest time dell'esercizio
+      const restSec = ex.rest || 90;
+      timerRef.current?.start(restSec);
       if (ex.mode !== "time" && !st.warmup && (st.w || 0) > (prs[ex.name] || 0)) {
         setPrs((p) => ({ ...p, [ex.name]: st.w }));
         setSessionPrCount((c) => c + 1);
@@ -228,14 +232,14 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       {setMenu && (
-        <SetMenu pos={setMenu} isTime={["time", "hold"].includes(exMode(session.exercises[setMenu.ei]))}
+        <SetMenu isTime={["time", "hold"].includes(exMode(session.exercises[setMenu.ei]))}
           warmup={!!session.exercises[setMenu.ei].sets[setMenu.si].warmup}
           onToggleWarmup={() => toggleWarmup(setMenu.ei, setMenu.si)}
           onDelete={() => removeSet(setMenu.ei, setMenu.si)}
           onClose={() => setSetMenu(null)} />
       )}
-      {results && <ResultsScreen vanilla={vanilla} results={results} onClose={() => { setSession(null); exitToHome(); }} />}
-      <FloatingTimer />
+      {results && <ResultsScreen standard={standard} results={results} onClose={() => { setSession(null); exitToHome(); }} />}
+      <FloatingTimer ref={timerRef} />
       <MachineScan premium={premium} variant="float" fireToast={fireToast}
         currentNames={session.exercises.map((e) => e.name)}
         onAdd={(name, group) => upd((s) => ({
@@ -244,7 +248,7 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
             ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
             : isHold(name)
               ? { name, group, mode: "hold", note: "", sets: holdSets() }
-              : { name, group, note: "", sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
+              : { name, group, note: "", rest: 90, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
         }))} />
 
 
@@ -333,11 +337,11 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {session.exercises.map((ex, ei) => (
         <Panel key={ei}>
-          <div className="row between g8" style={{ marginBottom: 10, alignItems: "flex-start" }}>
+          <div className="row between g8" style={{ marginBottom: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
             <span className="drag-handle" title={tr("Trascina per riordinare")}
-              onPointerDown={(e) => dlStart(e, moveEx)} style={{ marginTop: 4 }}><GripVertical size={15} /></span>
-            <div className="grow">
-              <div className="row g6" style={{ marginBottom: 5 }}>
+              onPointerDown={(e) => dlStart(e, moveEx)} style={{ marginTop: 4, flexShrink: 0 }}><GripVertical size={15} /></span>
+            <div className="grow" style={{ marginRight: 14, minWidth: 0 }}>
+              <div className="row g6 wrap" style={{ marginBottom: 5 }}>
                 <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{tr(ex.name)}</span>
                 <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
                 {ex.progWeek && (
@@ -347,14 +351,29 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
                   </span>
                 )}
               </div>
-              <div className="micro">{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</div>
+              <div className="micro" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <span>{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</span>
+                <span className="row g4" style={{ alignItems: "center" }}>
+                  <span className="t-faint">·</span>
+                  <span className="t-faint">REC</span>
+                  <input type="number" inputMode="numeric"
+                    value={ex.rest ?? 90}
+                    onChange={(e) => upd((s) => ({
+                      ...s,
+                      exercises: s.exercises.map((x, i) => i !== ei ? x : { ...x, rest: e.target.value === "" ? "" : Number(e.target.value) }),
+                    }))}
+                    className="hud-input cham-s"
+                    style={{ width: 46, textAlign: "center", padding: "4px 2px", fontSize: 11 }} />
+                  <span className="t-faint">s</span>
+                </span>
+              </div>
             </div>
             {confirmExDel === ei ? (
               <button onClick={() => { removeExercise(ei); setConfirmExDel(null); }}
-                className="info-btn cham-s tap" style={{ color: "#ff8f7d", borderColor: "#6e3028", flexShrink: 0, marginTop: 2 }}>
+                className="info-btn cham-s tap" style={{ color: "#ff8f7d", borderColor: "#6e3028", flexShrink: 0, marginTop: 2, marginLeft: "auto" }}>
                 {tr("Conferma eliminazione")}</button>
             ) : (
-              <div className="row" style={{ gap: 18, flexShrink: 0, paddingTop: 4 }}>
+              <div className="row" style={{ gap: 14, flexShrink: 0, paddingTop: 4, marginLeft: "auto" }}>
                 <span onClick={() => { setReplaceIdx(replaceIdx === ei ? null : ei); setShowPicker(true); }}
                   className="tap icon-tap" title={tr("Sostituisci esercizio")}
                   style={{ cursor: "pointer", color: replaceIdx === ei ? "#ffd76a" : "#5d87a3" }}>
@@ -362,7 +381,7 @@ export function SessionView({ vanilla, onWorkoutDone, premium, session, setSessi
                 <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
                   style={{ cursor: "pointer", color: "#6e4038" }}><Trash2 size={16} /></span>
                 {prs[ex.name] && !exMode(ex) && (
-                  <span style={{ marginLeft: 6, paddingLeft: 14, borderLeft: "1px solid var(--soft2)", display: "inline-flex", alignItems: "center" }}>
+                  <span style={{ marginLeft: 4, paddingLeft: 12, borderLeft: "1px solid var(--soft2)", display: "inline-flex", alignItems: "center" }}>
                     <Trophy size={16} color="#ffd76a" />
                   </span>
                 )}

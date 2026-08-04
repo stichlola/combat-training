@@ -24,7 +24,7 @@ import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
 const UI_MODES = [
   { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
     desc: "Esperienza gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
-  { id: "vanilla", label: "Vanilla", flag: "◻", Icon: Square,
+  { id: "standard", label: "Standard", flag: "◻", Icon: Square,
     desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material" },
 ];
 import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar } from "./ui";
@@ -796,19 +796,20 @@ export default function App() {
   const rank = LEVEL_TITLES[Math.min(4, Math.floor(level / 6))];
 
   /* PT: interfaccia pulita e professionale — solo clienti e profilo, niente gamification */
-  const vanilla = body.uiMode === "vanilla"; // interfaccia pulita: stessa struttura, zero gamification
-  /* i portali (Overlay → document.body) ereditano il tema: la classe vanilla va anche su <body> */
+  /* retrocompatibilità: i profili salvati col vecchio id "vanilla" valgono come "standard" */
+  const standard = body.uiMode === "standard" || body.uiMode === "vanilla"; // interfaccia pulita: stessa struttura, zero gamification
+  /* i portali (Overlay → document.body) ereditano il tema: la classe standard va anche su <body> */
   useEffect(() => {
-    document.body.classList.toggle("vanilla", vanilla);
-    return () => document.body.classList.remove("vanilla");
-  }, [vanilla]);
+    document.body.classList.toggle("standard", standard);
+    return () => document.body.classList.remove("standard");
+  }, [standard]);
   const navItems = isPT ? [
     { id: "clients", label: "Clienti", icon: Users },
     { id: "profile", label: "Profilo", icon: User },
   ] : [
     { id: "training", label: "Training", icon: Dumbbell },
     { id: "nutrition", label: "Nutrition", icon: Utensils },
-    ...(vanilla ? [] : [{ id: "game", label: "Game", icon: Gamepad2 }]),
+    ...(standard ? [] : [{ id: "game", label: "Game", icon: Gamepad2 }]),
     { id: "profile", label: "Profilo", icon: User },
   ];
 
@@ -825,7 +826,7 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className={"hud-root" + (vanilla ? " vanilla" : "")}>
+      <div className={"hud-root" + (standard ? " standard" : "")}>
         <style>{CSS}</style>
         <HudToast toast={toast} />
         <AuthScreen fireToast={fireToast} onGuest={() => { window.__gqKeepGuest = true; window.__gqHydrateGuest && window.__gqHydrateGuest(); }} />
@@ -835,7 +836,7 @@ export default function App() {
 
   if (!body.onboarded && !isPT) { // il PT non ha bisogno dei dati corporei: salta l'onboarding
     return (
-      <div className={"hud-root" + (vanilla ? " vanilla" : "")}>
+      <div className={"hud-root" + (standard ? " standard" : "")}>
         <style>{CSS}</style>
         <HudToast toast={toast} />
         <OnboardingWizard body={body} setBody={setBody} username={user.username} fireToast={fireToast} />
@@ -844,7 +845,7 @@ export default function App() {
   }
 
   return (
-    <div className={"hud-root" + (vanilla ? " vanilla" : "")}>
+    <div className={"hud-root" + (standard ? " standard" : "")}>
       <style>{CSS}</style>
       <HudToast toast={toast} />
 
@@ -930,8 +931,8 @@ export default function App() {
             <div className="xp-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 11, letterSpacing: ".25em" }}>PERSONAL TRAINER</span>
             </div>
-          ) : vanilla ? (
-            <div className="xp-wrap" /> /* vanilla: niente barra XP/livello */
+          ) : standard ? (
+            <div className="xp-wrap" /> /* standard: niente barra XP/livello */
           ) : (
             <div className="xp-wrap">
               <div className="row between" style={{ marginBottom: 4 }}>
@@ -946,7 +947,7 @@ export default function App() {
               )}
             </div>
           )}
-          {!isPT && !vanilla && (
+          {!isPT && !standard && (
             <div className="row g8" style={{ flexShrink: 0 }}>
               <button onClick={() => setQuestsOpen(true)} className="streak-pill cham-s tap" title={tr("Sfide e medaglie")}
                 style={{ cursor: "pointer", borderColor: "#8a6d1f", boxShadow: "0 0 10px rgba(255,215,106,.2)", padding: "8px 14px", gap: 8 }}>
@@ -981,7 +982,7 @@ export default function App() {
 
         <main className="main-area">
           {tab === "clients" && isPT && <TrainerView user={user} fireToast={fireToast} />}
-          {tab === "training" && <Training vanilla={vanilla} onWorkoutDone={applyWorkoutToQuests} premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
+          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
@@ -1031,7 +1032,7 @@ export default function App() {
 }
 
 /* ================================ TRAINING ================================ */
-function Training({ vanilla, onWorkoutDone, premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
+function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
   const [view, setView] = useState("home");
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
@@ -1088,7 +1089,7 @@ function Training({ vanilla, onWorkoutDone, premium, addXp, fireToast, routines,
   };
 
   if (view === "session" && session) {
-    return <SessionView vanilla={vanilla} onWorkoutDone={onWorkoutDone} premium={premium} session={session} setSession={setSession} prs={prs} setPrs={setPrs}
+    return <SessionView standard={standard} onWorkoutDone={onWorkoutDone} premium={premium} session={session} setSession={setSession} prs={prs} setPrs={setPrs}
       addXp={addXp} fireToast={fireToast}
       routines={routines} setRoutines={setRoutines} setHistory={setHistory}
       exitToHome={() => setView("home")} />;
@@ -1809,7 +1810,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             </div>
             <div>
               <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 16, letterSpacing: ".1em" }}>{user.username}</div>
-              {body.uiMode !== "vanilla" && <div className="micro">LV.{level} {rank} · STREAK {streak} GIORNI</div>}
+              {body.uiMode !== "standard" && <div className="micro">LV.{level} {rank} · STREAK {streak} GIORNI</div>}
               <div className="tiny t-faint">{user.email}</div>
             </div>
           </div>

@@ -4,7 +4,7 @@ import { tr } from "../lib/i18n";
 import { Btn, Overlay, QBar } from "../ui";
 
 /* ---------------- Schermata risultati post-allenamento (stile Halo Reach) ---------------- */
-export function ResultsScreen({ results, onClose, vanilla }) {
+export function ResultsScreen({ results, onClose, standard }) {
   const [go, setGo] = useState(false);            // avvia le animazioni delle barre
   const [shownXp, setShownXp] = useState(results.xpBefore);
   const [shownLvl, setShownLvl] = useState(results.levelBefore);
@@ -35,7 +35,7 @@ export function ResultsScreen({ results, onClose, vanilla }) {
         <div className="micro t-faint" style={{ textAlign: "center", marginBottom: 18 }}>{results.name}</div>
 
         {/* XP animato */}
-        {!vanilla && (
+        {!standard && (
         <div className="cham-s" style={{ padding: "12px 14px", background: "var(--card)", border: `1px solid ${flash ? "#ffd76a" : "var(--soft2)"}`, marginBottom: 16, transition: "border-color .3s" }}>
           <div className="row between" style={{ marginBottom: 6 }}>
             <span className={`f-hud ${flash ? "t-amber" : "t-cyan"}`} style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
@@ -56,7 +56,7 @@ export function ResultsScreen({ results, onClose, vanilla }) {
         )}
 
         {/* progresso quest animato */}
-        {!vanilla && (<>
+        {!standard && (<>
         <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Avanzamento sfide")}</div>
         <div className="stack-s" style={{ marginBottom: 16 }}>
           {results.quests.map((q, i) => (
