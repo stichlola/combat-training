@@ -661,16 +661,33 @@ export default function App() {
         role,
       });
       if (role === "pt") { setPtMode(true); setTab("clients"); }
-      /* il PT attuale dell'utente (max uno): mostrato in header e profilo */
-      if (role !== "pt") fetchMyTrainer(authUser.id).then(setMyTrainer);
-      /* invito PT in sospeso (link #pt=...): chiedi conferma dopo il login */
-      const pt = pendingInvite();
-      if (pt && pt !== authUser.id && role !== "pt") setPendingPt(pt);
-      else if (pt) {
+      /* PT attuale dell'utente + invito PT in sospeso (link #pt=...):
+         dopo login/registrazione il collegamento è AUTOMATICO — la conferma
+         serve solo quando l'utente ha già un PT e sta per cambiarlo */
+      const ptInv = pendingInvite();
+      if (role !== "pt") {
+        fetchMyTrainer(authUser.id).then(async (current) => {
+          setMyTrainer(current);
+          if (!ptInv || ptInv === authUser.id) return;
+          /* mutex condiviso (anche tra tab e doppie hydrate): il collegamento
+             parte una sola volta — un secondo tentativo fallirebbe per chiave
+             duplicata mostrando un errore fasullo */
+          try { if (localStorage.getItem("gq_pt_linking")) return; localStorage.setItem("gq_pt_linking", "1"); } catch {}
+          if (current && current.id !== ptInv) { localStorage.removeItem("gq_pt_linking"); setPendingPt(ptInv); return; } // cambio PT: chiedi conferma
+          const nm = pendingInviteName();
+          const ok = await linkToTrainer(authUser.id, authUser.email, ptInv);
+          localStorage.removeItem("gq_pt_linking");
+          if (!ok) return fireToast({ title: tr("Collegamento non riuscito"), sub: tr("Riprova dal link invito") });
+          clearInvite();
+          if (nm) { try { localStorage.setItem("gq_my_pt_name", nm); } catch {} }
+          setMyTrainer(await fetchMyTrainer(authUser.id));
+          fireToast({ title: tr("◈ PT COLLEGATO"), sub: nm ? `${nm} ${tr("ora segue i tuoi allenamenti")}` : tr("Il tuo PT ora segue i tuoi allenamenti") });
+        });
+      }
+      /* il PT che apre il PROPRIO link (o un PT che apre inviti): spiegalo, non ignorarlo */
+      if (ptInv && (ptInv === authUser.id || role === "pt")) {
         clearInvite();
-        /* il PT che apre il PROPRIO link: prima spariva in silenzio e sembrava
-           un malfunzionamento — ora viene spiegato con un toast */
-        if (pt === authUser.id)
+        if (ptInv === authUser.id)
           fireToast({ title: tr("Questo è il tuo link invito"), sub: tr("Condividilo con un cliente: non puoi essere il tuo PT") });
       }
       setHydrated(true);
@@ -906,24 +923,22 @@ export default function App() {
       )}
       <InstallBanner ip={ip} />
 
-      {/* Invito PT aperto da link/QR: conferma del collegamento (o del CAMBIO PT) */}
+      {/* CAMBIO PT: l'unico caso in cui serve conferma — il collegamento
+          normale da link invito è automatico dopo login/registrazione */}
       {pendingPt && !isPT && (
         <Overlay>
         <div className="modal-back">
           <div className="modal-box cham fade-in" style={{ textAlign: "center" }}>
             <Users size={26} color="var(--cyan)" style={{ margin: "0 auto 12px" }} />
             <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>
-              {myTrainer && myTrainer.id !== pendingPt ? tr("CAMBIO PERSONAL TRAINER") : tr("INVITO PERSONAL TRAINER")}
+              {tr("CAMBIO PERSONAL TRAINER")}
             </div>
             <div className="tiny t-dim" style={{ margin: "10px 0 18px", lineHeight: 1.7 }}>
-              {myTrainer && myTrainer.id !== pendingPt
-                ? <>{tr("Attualmente sei seguito da")} <b className="t-amber">{myTrainer.name || tr("il tuo PT")}</b>. {tr("Confermando passerai al nuovo personal trainer: potrà vedere le tue schede e seguire i tuoi allenamenti.")}</>
-                : <><b className="t-cyan">{pendingInviteName() || tr("Un personal trainer")}</b> {tr("ti ha invitato: confermando potrà vedere le tue schede e seguire i tuoi allenamenti. Potrai scollegarti quando vuoi.")}</>}
+              {tr("Attualmente sei seguito da")} <b className="t-amber">{myTrainer?.name || tr("il tuo PT")}</b>. {tr("Confermando passerai al nuovo personal trainer: potrà vedere le tue schede e seguire i tuoi allenamenti.")}
             </div>
             <div className="row g8">
               <Btn onClick={() => { clearInvite(); setPendingPt(null); }} style={{ flex: 1 }}>{tr("Rifiuta")}</Btn>
               <Btn primary style={{ flex: 2 }} onClick={async () => {
-                const changing = myTrainer && myTrainer.id !== pendingPt;
                 const inviteName = pendingInviteName(); // nome del PT viaggiato col link
                 const ok = await linkToTrainer(user.id, user.email, pendingPt);
                 clearInvite(); setPendingPt(null);
@@ -934,11 +949,9 @@ export default function App() {
                   setMyTrainer(await fetchMyTrainer(user.id)); // aggiorna chip header/profilo
                 }
                 fireToast(ok
-                  ? changing
-                    ? { title: tr("◈ PT CAMBIATO"), sub: tr("Il nuovo PT ora segue i tuoi allenamenti") }
-                    : { title: tr("◈ COLLEGAMENTO CONFERMATO"), sub: tr("Il tuo PT ora segue i tuoi allenamenti") }
+                  ? { title: tr("◈ PT CAMBIATO"), sub: tr("Il nuovo PT ora segue i tuoi allenamenti") }
                   : { title: tr("Collegamento non riuscito"), sub: tr("Riprova dal link invito") });
-              }}>{myTrainer && myTrainer.id !== pendingPt ? tr("Conferma cambio PT") : tr("Conferma collegamento")}</Btn>
+              }}>{tr("Conferma cambio PT")}</Btn>
             </div>
           </div>
         </div>
@@ -1747,7 +1760,7 @@ function AuthScreen({ fireToast, onGuest }) {
             <Users size={18} color="var(--cyan)" style={{ margin: "0 auto 6px" }} />
             <div className="f-hud t-cyan" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".18em" }}>{tr("INVITO PERSONAL TRAINER")}</div>
             <div className="tiny t-dim" style={{ marginTop: 4, lineHeight: 1.6 }}>
-              <b className="t-bright">{inviteName || tr("Un personal trainer")}</b> {tr("ti ha invitato: accedi o crea un account per accettare.")}
+              <b className="t-bright">{inviteName || tr("Un personal trainer")}</b> {tr("ti ha invitato: accedi o crea un account e verrai collegato automaticamente.")}
             </div>
           </div>
         )}
