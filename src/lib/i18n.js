@@ -10,6 +10,12 @@ export const tr = (s) => (CURRENT_LANG === "en" && s && s in EN_UI ? EN_UI[s] : 
 const EN_UI = {
   "Paga con carta — Stripe": "Pay by card — Stripe",
   "OPPURE": "OR",
+  "Salta ›": "Skip ›",
+  "Completa i dati dopo, dal profilo": "Fill in the data later from your profile",
+  "Crea account — è gratis": "Create account — it's free",
+  "Hai già un account? Accedi": "Already have an account? Log in",
+  "oppure paga senza account": "or pay without an account",
+  "La richiesta per diventare personal trainer richiede un account: serve la valutazione dell'amministratore.": "Becoming a personal trainer requires an account: the admin must review the request.",
   "Errore Stripe, riprova.": "Stripe error, please retry.",
   "Pagamento annullato": "Payment cancelled",
   "Pagamento non confermato": "Payment not confirmed",

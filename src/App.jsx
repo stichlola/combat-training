@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, Square, CreditCard
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -24,7 +24,7 @@ import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
 const UI_MODES = [
   { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
     desc: "Esperienza gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
-  { id: "standard", label: "Standard", flag: "◻", Icon: Square,
+  { id: "standard", label: "Standard", flag: "◻", Icon: LayoutTemplate,
     desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material" },
 ];
 import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar } from "./ui";
@@ -285,7 +285,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
   );
 }
 
-function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast, initialCode }) {
+function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast, initialCode, onCreateAccount }) {
   const [code, setCode] = useState(initialCode || null); // codice emesso per acquisto senza account
   const [redeem, setRedeem] = useState("");
   const [redeemMsg, setRedeemMsg] = useState(null);
@@ -410,6 +410,25 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
 
+        {/* Ospite: prima di tutto si chiede l'account (gratis). Chi vuole può
+            comunque pagare senza account e riceve un codice da riscattare dopo */}
+        {isGuest && onCreateAccount && (
+          <Panel accent style={{ borderColor: "var(--cyan)", margin: "12px 0" }}>
+            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12 }}>{tr("SERVE UN ACCOUNT")}</div>
+            <div className="tiny t-dim" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {tr("In modalità ospite puoi allenarti e comporre i pasti a mano. Le funzioni AI richiedono un account gratuito; con Premium hai limiti ampi su tutto.")}
+            </div>
+            <Btn primary full style={{ marginTop: 10 }} onClick={() => { onClose(); onCreateAccount(); }}>
+              {tr("Crea account — è gratis")}
+            </Btn>
+            <div className="row" style={{ alignItems: "center", gap: 10, margin: "10px 0 0" }}>
+              <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+              <span className="micro t-faint">{tr("oppure paga senza account")}</span>
+              <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+            </div>
+          </Panel>
+        )}
+
         {usage && (
           <div className="cham-s micro" style={{ margin: "12px 0", padding: "8px 10px", background: "var(--card)", border: "1px solid var(--soft)", lineHeight: 1.8 }}>
             {tr("QUESTA SETTIMANA")} — {tr("SCHEDA AI")}: {usage.used.workout}/{usage.limits.workout}
@@ -524,6 +543,8 @@ export default function App() {
   const premium = { is: isPremium, until: premiumUntil, guest: isGuest,
     open: () => setGateOpen(true),
     needAccount: () => { setGateOpen(true); } };
+  /* esce dalla modalità ospite e torna alla schermata di accesso/registrazione */
+  const exitGuest = () => { window.__gqKeepGuest = false; setUser(null); setHydrated(false); };
   const [session, setSession] = useState(null);   // sessione attiva: persiste su Supabase, si riprende al rientro
   const [history, setHistory] = useState([]);
   const [quests, setQuests] = useState(() => freshQuests(QUEST_POOL_DAILY, QUEST_POOL_WEEKLY));
@@ -857,7 +878,7 @@ export default function App() {
               <div className="f-hud t-cyan" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em" }}>{tr("MODALITÀ OSPITE")}</div>
               <div className="micro t-faint" style={{ marginTop: 2 }}>{tr("Dati solo su questo dispositivo · funzioni AI disattivate")}</div>
             </div>
-            <Btn small primary onClick={() => { window.__gqKeepGuest = false; setUser(null); setHydrated(false); }}>
+            <Btn small primary onClick={exitGuest}>
               {tr("Crea account")}
             </Btn>
           </div>
@@ -899,7 +920,7 @@ export default function App() {
       )}
       {questsOpen && <QuestModal quests={quests} stats={stats} prs={prs} level={level} streak={streak} onClose={() => setQuestsOpen(false)} />}
       {gateOpen && <StoreModal premium={premium} isGuest={isGuest} fireToast={fireToast} onClose={() => setGateOpen(false)}
-        onUnlocked={(until) => setPremiumUntil(until)} initialCode={stripeCode} />}
+        onUnlocked={(until) => setPremiumUntil(until)} initialCode={stripeCode} onCreateAccount={exitGuest} />}
 
       {/* TOP HUD BAR */}
       <header className="hud-header">
@@ -1007,7 +1028,22 @@ export default function App() {
                   if (ok) { setMyTrainer(null); fireToast({ title: tr("◈ PT SCOLLEGATO"), sub: tr("Nessun personal trainer ti segue ora") }); }
                   else fireToast({ title: tr("Operazione non riuscita"), sub: tr("Riprova tra poco") });
                 }}
-                ptCard={<PtRequestCard user={user} fireToast={fireToast} />} />
+                /* ospite: la richiesta PT richiede un account (valutazione admin):
+                   si mostra la card bloccata che porta alla registrazione */
+                ptCard={isGuest ? (
+                  <Panel>
+                    <div className="row g8">
+                      <ShieldCheck size={15} color="var(--faint)" />
+                      <span className="hud-label" style={{ marginBottom: 0, color: "var(--faint)" }}>{tr("AREA PERSONAL TRAINER")}</span>
+                    </div>
+                    <div className="tiny t-dim" style={{ lineHeight: 1.6, margin: "8px 0 10px" }}>
+                      {tr("La richiesta per diventare personal trainer richiede un account: serve la valutazione dell'amministratore.")}
+                    </div>
+                    <Btn small primary onClick={exitGuest}>{tr("Crea account — è gratis")}</Btn>
+                  </Panel>
+                ) : (
+                  <PtRequestCard user={user} fireToast={fireToast} />
+                )} />
             </>
           ))}
         </main>
@@ -1710,19 +1746,39 @@ function AuthScreen({ fireToast, onGuest }) {
               {error && <div className="tiny t-red">⚠ {error}</div>}
 
               <Btn primary full disabled={loading} onClick={submit}>
-                {loading ? "..." : mode === "login" ? "Accedi" : mode === "register" ? "Registrati" : "Invia link di reset"}
+                {loading ? "..." : mode === "login" ? "Accedi" : mode === "register" ? "Crea account" : "Invia link di reset"}
               </Btn>
 
-              <div className="row between">
-                {mode === "login" ? (
-                  <>
-                    <button className="link-btn tap" onClick={() => { setMode("forgot"); reset(); }}>{tr("Password dimenticata?")}</button>
-                    <button className="link-btn tap" onClick={() => { setMode("register"); reset(); }}>{tr("Crea account ›")}</button>
-                  </>
-                ) : (
-                  <button className="link-btn tap" onClick={() => { setMode("login"); reset(); }}>{tr("‹ Torna al login")}</button>
-                )}
-              </div>
+              {mode === "login" && (
+                <div style={{ textAlign: "center" }}>
+                  <button className="link-btn tap" onClick={() => { setMode("forgot"); reset(); }}>{tr("Password dimenticata?")}</button>
+                </div>
+              )}
+
+              {/* passaggio login ⇄ registrazione: sempre ben visibile */}
+              {mode !== "forgot" && !sent && (
+                <>
+                  <div className="row" style={{ alignItems: "center", gap: 10, margin: "4px 0" }}>
+                    <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+                    <span className="micro t-faint">{tr("OPPURE")}</span>
+                    <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+                  </div>
+                  {mode === "login" ? (
+                    <Btn full onClick={() => { setMode("register"); reset(); }}
+                      style={{ borderColor: "var(--cyan)", color: "var(--cyan-hi)", boxShadow: "0 0 12px rgba(87,200,242,.25)" }}>
+                      {tr("Crea account — è gratis")}
+                    </Btn>
+                  ) : (
+                    <Btn full onClick={() => { setMode("login"); reset(); }}>
+                      {tr("Hai già un account? Accedi")}
+                    </Btn>
+                  )}
+                </>
+              )}
+
+              {mode === "forgot" && (
+                <button className="link-btn tap" onClick={() => { setMode("login"); reset(); }}>{tr("‹ Torna al login")}</button>
+              )}
             </>
           )}
         </div>
@@ -3274,6 +3330,10 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
     fireToast({ title: tr("◈ PROFILO CONFIGURATO"), sub: "Benvenuto a bordo, " + username });
   };
 
+  /* Il setup non è mai bloccante: si può sempre saltare (i dati si
+     completano dopo dal profilo); lingua e tema scelti restano applicati */
+  const skip = () => setBody((b) => ({ ...b, lang, uiMode: d.uiMode, onboarded: true }));
+
   const Chips = ({ k, options }) => (
     <div className="row wrap g6">
       {options.map((o) => (
@@ -3290,7 +3350,12 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
     <div className="auth-wrap">
       <div className="auth-box fade-in" style={{ maxWidth: 440 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <div className="f-hud t-cyan" style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".25em" }}>{tr("SETUP PROFILO")}</div>
+          <div className="row between" style={{ alignItems: "center" }}>
+            <div style={{ width: 56 }} />
+            <div className="f-hud t-cyan" style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".25em" }}>{tr("SETUP PROFILO")}</div>
+            <button onClick={skip} className="link-btn tap" style={{ width: 56, textAlign: "right" }}
+              title={tr("Completa i dati dopo, dal profilo")}>{tr("Salta ›")}</button>
+          </div>
           <div className="row center g6" style={{ marginTop: 10 }}>
             {[1, 2, 3, 4, 5].map((s) => (
               <div key={s} className="seg" style={{ width: 40, flex: "none",
@@ -3324,7 +3389,8 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
               <div className="tiny t-faint">{tr("Potrai cambiarlo quando vuoi dal profilo")}</div>
               <div className="stack-s">
                 {UI_MODES.map((o) => (
-                  <button key={o.id} onClick={() => set("uiMode", o.id)}
+                  /* anteprima immediata: il tema si applica all'istante a tutta l'app */
+                  <button key={o.id} onClick={() => { set("uiMode", o.id); setBody((b) => ({ ...b, uiMode: o.id })); }}
                     className="tap cham-s" style={{ cursor: "pointer", width: "100%", padding: "12px 14px", textAlign: "left",
                       border: "1px solid " + (d.uiMode === o.id ? "var(--cyan)" : "var(--soft2)"),
                       background: d.uiMode === o.id ? "var(--active)" : "var(--card2)" }}>

@@ -23,6 +23,13 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
     ws.map((w, i) => i !== wi ? w : { sets: w.sets.map((s, j) => j !== si ? s : { ...s, [field]: val === "" ? "" : Number(val) }) }));
   const addWeek = () => setWeeks((ws) => [...ws, { sets: ws[ws.length - 1].sets.map((s) => ({ ...s })) }]);
   const removeWeek = (wi) => setWeeks((ws) => ws.length <= 1 ? ws : ws.filter((_, i) => i !== wi));
+  /* singola serie dentro la settimana: si aggiunge clonando l'ultima,
+     si può togliere finché ne resta almeno una */
+  const addSet = (wi) => setWeeks((ws) => ws.map((w, i) => i !== wi ? w : {
+    sets: [...w.sets, { ...w.sets[w.sets.length - 1], done: false }],
+  }));
+  const removeSet = (wi, si) => setWeeks((ws) => ws.map((w, i) =>
+    i !== wi || w.sets.length <= 1 ? w : { sets: w.sets.filter((_, j) => j !== si) }));
 
   /* Incremento lineare automatico: prende la settimana 1 e genera le successive
      con +kg o +reps/+sec a ogni settimana (stile schede PT) */
@@ -30,8 +37,10 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
   const autoField = mode === undefined ? "w" : "sec"; // forza→kg, hold/time→sec (reps via pulsante dedicato)
   const autoFill = (field) => setWeeks((ws) => {
     const first = ws[0].sets;
+    /* ogni settimana mantiene il proprio numero di serie: come base si usa la
+       stessa serie della settimana 1 quando esiste, altrimenti il valore proprio */
     return ws.map((w, i) => ({
-      sets: first.map((s) => ({ ...s, [field]: (Number(s[field]) || 0) + inc * i })),
+      sets: w.sets.map((s, j) => ({ ...s, [field]: (Number((first[j] || s)[field]) || 0) + inc * i })),
     }));
   });
 
@@ -72,6 +81,10 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
               {wk.sets.map((s, si) => (
                 <div key={si} className="row g8" style={{ marginBottom: 5, alignItems: "center" }}>
                   <span className="micro t-faint" style={{ width: 18, textAlign: "center" }}>{si + 1}</span>
+                  {wk.sets.length > 1 && (
+                    <span onClick={() => removeSet(wi, si)} className="tap icon-tap" title={tr("Elimina serie")}
+                      style={{ cursor: "pointer", color: "#6e3028", order: 99, marginLeft: "auto" }}><Trash2 size={12} /></span>
+                  )}
                   {mode === "time" ? (
                     <>
                       <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec ? Math.round(s.sec / 60) : ""}
@@ -104,6 +117,9 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
                   )}
                 </div>
               ))}
+              <button onClick={() => addSet(wi)} className="link-btn tap" style={{ fontSize: 10, marginTop: 2 }}>
+                {tr("+ SERIE")}
+              </button>
             </div>
           ))}
         </div>
