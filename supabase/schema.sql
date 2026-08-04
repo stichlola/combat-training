@@ -167,12 +167,33 @@ create policy "Il cliente si scollega da un PT"
   on public.trainer_clients for delete
   using (auth.uid() = client_id);
 
--- 4) POLICY user_data — PREDISPOSIZIONE: il PT legge le schede dei clienti.
--- La policy di UPDATE (modifica diretta) verrà aggiunta in seguito.
+-- 4) POLICY user_data — il PT legge E modifica le schede dei clienti.
+-- (l'app scrive solo la colonna routines; la policy copre la riga intera:
+--  il PT è per definizione una figura fidata del cliente)
 drop policy if exists "Il PT legge i dati dei propri clienti" on public.user_data;
 create policy "Il PT legge i dati dei propri clienti"
   on public.user_data for select
   using (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
+  ));
+
+drop policy if exists "Il PT inserisce i dati dei propri clienti" on public.user_data;
+create policy "Il PT inserisce i dati dei propri clienti"
+  on public.user_data for insert
+  with check (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
+  ));
+
+drop policy if exists "Il PT aggiorna i dati dei propri clienti" on public.user_data;
+create policy "Il PT aggiorna i dati dei propri clienti"
+  on public.user_data for update
+  using (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
+  ))
+  with check (exists (
     select 1 from public.trainer_clients tc
     where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
   ));
@@ -288,4 +309,26 @@ create policy "Il cliente legge il profilo del proprio PT"
   using (exists (
     select 1 from public.trainer_clients tc
     where tc.client_id = auth.uid() and tc.trainer_id = id
+  ));
+
+-- 3) Il PT crea/modifica le schede dei clienti dalla sua area
+--    (senza queste il salvataggio lato PT fallisce per RLS)
+drop policy if exists "Il PT inserisce i dati dei propri clienti" on public.user_data;
+create policy "Il PT inserisce i dati dei propri clienti"
+  on public.user_data for insert
+  with check (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
+  ));
+
+drop policy if exists "Il PT aggiorna i dati dei propri clienti" on public.user_data;
+create policy "Il PT aggiorna i dati dei propri clienti"
+  on public.user_data for update
+  using (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
+  ))
+  with check (exists (
+    select 1 from public.trainer_clients tc
+    where tc.trainer_id = auth.uid() and tc.client_id = user_data.user_id
   ));
