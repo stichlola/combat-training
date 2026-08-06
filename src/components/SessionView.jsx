@@ -344,37 +344,12 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {session.exercises.map((ex, ei) => (
         <Panel key={ei}>
-          <div className="row between g8" style={{ marginBottom: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
+          {/* riga 1: nome + azioni · riga 2 (a tutta larghezza): INFO · settimana · gruppo/PR · recupero */}
+          <div className="row between g8" style={{ marginBottom: 6, alignItems: "flex-start" }}>
             <span className="drag-handle" title={tr("Trascina per riordinare")}
               onPointerDown={(e) => dlStart(e, moveEx)} style={{ marginTop: 4, flexShrink: 0 }}><GripVertical size={15} /></span>
             <div className="grow" style={{ marginRight: 14, minWidth: 0 }}>
-              <div style={{ marginBottom: 7 }}>
-                <span className="t-bright" style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>{tr(ex.name)}</span>
-              </div>
-              {/* seconda riga: INFO · settimana · gruppo/PR · recupero — tutto in linea,
-                  su mobile scorre in orizzontale invece di incolonnarsi */}
-              <div className="micro ex-meta">
-                <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
-                {ex.progWeek && (
-                  <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a" }}
-                    title={tr("Progressione settimanale attiva")}>
-                    {tr("SETTIMANA")} {ex.progWeek}{ex.progTotal ? `/${ex.progTotal}` : ""}
-                  </span>
-                )}
-                <span className="t-dim ex-meta-grow">{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</span>
-                <span className="row g4" style={{ alignItems: "center" }}>
-                  <span className="t-faint">REC</span>
-                  <input type="number" inputMode="numeric"
-                    value={ex.rest ?? 90}
-                    onChange={(e) => upd((s) => ({
-                      ...s,
-                      exercises: s.exercises.map((x, i) => i !== ei ? x : { ...x, rest: e.target.value === "" ? "" : Number(e.target.value) }),
-                    }))}
-                    className="hud-input cham-s"
-                    style={{ width: 46, textAlign: "center", padding: "4px 2px", fontSize: 11 }} />
-                  <span className="t-faint">s</span>
-                </span>
-              </div>
+              <span className="t-bright" style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>{tr(ex.name)}</span>
             </div>
             {confirmExDel === ei ? (
               <button onClick={() => { removeExercise(ei); setConfirmExDel(null); }}
@@ -395,6 +370,30 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                 )}
               </div>
             )}
+          </div>
+          {/* seconda riga a tutta larghezza: non viene più schiacciata dalle icone azione;
+              se proprio non ci sta scorre in orizzontale invece di tagliarsi */}
+          <div className="micro ex-meta" style={{ marginBottom: 10, marginLeft: 23 }}>
+            <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
+            {ex.progWeek && (
+              <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a" }}
+                title={`${tr("SETTIMANA")} ${ex.progWeek}${ex.progTotal ? `/${ex.progTotal}` : ""} — ${tr("Progressione settimanale attiva")}`}>
+                SETT. {ex.progWeek}{ex.progTotal ? `/${ex.progTotal}` : ""}
+              </span>
+            )}
+            <span className="t-dim ex-meta-grow">{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</span>
+            <span className="row g4" style={{ alignItems: "center" }}>
+              <span className="t-faint">REC</span>
+              <input type="number" inputMode="numeric"
+                value={ex.rest ?? 90}
+                onChange={(e) => upd((s) => ({
+                  ...s,
+                  exercises: s.exercises.map((x, i) => i !== ei ? x : { ...x, rest: e.target.value === "" ? "" : Number(e.target.value) }),
+                }))}
+                className="hud-input cham-s"
+                style={{ width: 42, textAlign: "center", padding: "4px 2px", fontSize: 11 }} />
+              <span className="t-faint">s</span>
+            </span>
           </div>
           <input className="hud-input cham-s" value={ex.note || ""} onChange={(e) => updateNote(ei, e.target.value)}
             placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9" }} />

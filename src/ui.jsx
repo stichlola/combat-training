@@ -83,7 +83,7 @@ button.btn{text-align:center}
 /* --- modali e overlay --- */
 .modal-back{position:fixed;inset:0;background:rgba(2,6,10,.82);backdrop-filter:blur(3px);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-box{width:100%;max-width:430px;background:var(--modal);border:1px solid var(--cyan);box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto}
-.float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
+.float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
@@ -103,11 +103,13 @@ button.btn{text-align:center}
 .info-btn:hover{border-color:var(--cyan);box-shadow:0 0 8px rgba(87,200,242,.25)}
 
 /* --- riga meta esercizio in sessione: tutto su una riga, scorre in orizzontale se serve --- */
-.ex-meta{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;
+.ex-meta{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 .ex-meta::-webkit-scrollbar{display:none}
 .ex-meta>*{flex-shrink:0}
 .ex-meta .ex-meta-grow{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ex-meta .info-btn{padding:3px 7px}
+.ex-meta .chip{padding:2px 6px;letter-spacing:.08em}
 
 /* --- riordino trascinando (card e serie) --- */
 .drag-handle{display:inline-flex;align-items:center;justify-content:center;padding:6px 3px;
@@ -287,7 +289,9 @@ body.dragging *{cursor:grabbing!important}
 .standard .set-warmup{background:var(--warm-bg)}
 .bnav-ico{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:28px;
   margin:-4px 0;border-radius:999px}
-.standard .bnav-btn.on .bnav-ico{background:#e4e2e6}
+/* voce attiva del menu: riempita col colore primario dell'app, icona scura sopra */
+.standard .bnav-btn.on .bnav-ico{background:#57c8f2;color:#08222f}
+.standard .bnav-btn.on{color:#08222f !important}
 .standard .bnav-btn div:last-child{display:none}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
 body.standard{background:#f7f7f8}

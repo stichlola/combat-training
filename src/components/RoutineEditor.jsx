@@ -148,7 +148,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
       {/* Progressione settimanale: interruttore e inizio valgono per TUTTA la scheda;
           le settimane dei singoli esercizi si gestiscono dall'icona 📈 su ogni card */}
       <div className="cham-s" style={{
-        padding: "10px 12px",
+        padding: "10px 12px", marginBottom: 14,
         background: draft.progression?.enabled ? "rgba(255,215,106,.08)" : "var(--card2)",
         border: `1px solid ${draft.progression?.enabled ? "#ffd76a" : "var(--soft)"}`,
       }}>

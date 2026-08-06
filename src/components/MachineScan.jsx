@@ -81,16 +81,16 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
     setBusy(false);
   };
 
-  /* il FAB è una pill "fotocamera + AI" e rispetta l'altezza richiesta (fabBottom):
-     in modifica scheda sta più in basso, in sessione resta sopra il timer */
+  /* il FAB mostra fotocamera + "AI" ed è grande esattamente come il pulsante del timer;
+     rispetta l'altezza richiesta (fabBottom): in modifica scheda sta più in basso */
   const trigger = variant === "float" ? (
     <button onClick={() => setIntro(true)} className="float-cam-btn cham-s tap" title={tr("Scansiona macchinario")}
-      style={{ bottom: fabBottom, width: "auto", padding: "0 13px", gap: 6 }}>
+      style={{ bottom: fabBottom }}>
       {busy
         ? <Loader2 size={18} color="#ffd76a" className="spin" />
         : <>
-            <Camera size={17} color="var(--cyan)" />
-            <span className="f-hud t-cyan" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em" }}>AI</span>
+            <Camera size={15} color="var(--cyan)" />
+            <span className="f-hud t-cyan" style={{ fontSize: 8, fontWeight: 700, letterSpacing: ".06em", lineHeight: 1 }}>AI</span>
           </>}
     </button>
   ) : (
