@@ -20,8 +20,8 @@ export function PtRequestCard({ user, fireToast }) {
     <Panel>
       <div className="row between">
         <div className="row g8">
-          <ShieldCheck size={15} color="var(--cyan)" />
-          <span className="hud-label" style={{ marginBottom: 0 }}>{tr("AREA PERSONAL TRAINER")}</span>
+          <ShieldCheck size={15} color="var(--pt)" />
+          <span className="hud-label" style={{ marginBottom: 0, color: "var(--pt)" }}>{tr("AREA PERSONAL TRAINER")}</span>
         </div>
         {req?.status === "pending" && <span className="chip cham-s" style={{ fontSize: 9 }}>{tr("IN VALUTAZIONE")}</span>}
         {req?.status === "rejected" && <span className="chip cham-s" style={{ fontSize: 9, color: "#ff8a8a", borderColor: "#5a2a2a" }}>{tr("RIFIUTATA")}</span>}
@@ -34,7 +34,7 @@ export function PtRequestCard({ user, fireToast }) {
             : tr("Sei un personal trainer? Invia la richiesta: verrà valutata dall'amministratore prima dell'attivazione.")}
       </div>
       {req?.status !== "pending" && (
-        <Btn small onClick={() => setOpen(true)}>
+        <Btn small pt onClick={() => setOpen(true)}>
           <ShieldCheck size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Diventa Personal Trainer")}
         </Btn>
       )}
@@ -65,7 +65,7 @@ function PtRequestModal({ user, fireToast, onClose, onSent }) {
     <div className="modal-back" onClick={onClose}>
       <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ marginBottom: 4 }}>
-          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>
+          <div className="f-hud t-pt" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>
             <ShieldCheck size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("RICHIESTA PERSONAL TRAINER")}
           </div>
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
@@ -77,7 +77,7 @@ function PtRequestModal({ user, fireToast, onClose, onSent }) {
           placeholder={tr("Es. PT certificato ISSA, alleno presso ... (opzionale)")}
           style={{ width: "100%", resize: "vertical", marginBottom: 12 }} />
         {err && <div className="tiny" style={{ color: "#ff8a8a", marginBottom: 10, lineHeight: 1.5 }}>⚠ {err}</div>}
-        <Btn primary onClick={send} disabled={busy} style={{ width: "100%" }}>
+        <Btn pt onClick={send} disabled={busy} style={{ width: "100%" }}>
           {busy ? <Loader2 size={12} className="spin" style={{ display: "inline", verticalAlign: -2 }} />
                 : <Send size={12} style={{ display: "inline", verticalAlign: -2 }} />} {tr("Invia richiesta")}
         </Btn>

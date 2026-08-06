@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp } from "lucide-react";
+import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
+import { PtNoteModal } from "./PtNoteModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
 import { MachineScan } from "./MachineScan";
@@ -11,12 +12,16 @@ import { exMode, holdSets, isDumbbell, isHold } from "../lib/exercises";
 import { tr } from "../lib/i18n";
 import { Btn, Panel } from "../ui";
 
-/* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ---------------- */
-export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, showScan = true }) {
+/* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ----------------
+   ptMode: lo usa il personal trainer sulle schede del cliente — sblocca per ogni
+   esercizio la sezione arancione "note PT" (note mirate + video esecuzione). */
+export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, showScan = true, ptMode = false }) {
   const [draft, setDraft] = useState(() => initial
     ? JSON.parse(JSON.stringify(initial))
     : { id: Date.now(), name: "", exercises: [] });
   const [info, setInfo] = useState(null);
+  const [ptInfo, setPtInfo] = useState(null); // esercizio con popup note PT aperto (lettura)
+  const [ptEditIdx, setPtEditIdx] = useState(null); // esercizio con sezione note PT espansa
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi: si apre in popup
@@ -126,6 +131,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
+      {ptInfo && <PtNoteModal ex={ptInfo} onClose={() => setPtInfo(null)} />}
       {progIdx != null && draft.exercises[progIdx] && (
         <ProgressionModal ex={draft.exercises[progIdx]}
           onSave={(p) => { upd((d) => ({ ...d, exercises: d.exercises.map((e, i) => i !== progIdx ? e : { ...e, progression: p }) })); setProgIdx(null); }}
@@ -186,13 +192,19 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {draft.exercises.map((ex, ei) => (
         <Panel key={tr(ex.name)} accent style={{ padding: 12 }}>
+          {/* gruppo sopra il titolo, allineato come in allenamento */}
+          <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 27 }}>{tr(ex.group || "").toUpperCase()}</div>
           <div className="row between g8" style={{ marginBottom: 4, alignItems: "flex-start", flexWrap: "wrap" }}>
             <div className="row g6 grow wrap" style={{ marginRight: 14, minWidth: 0 }}>
               <span className="drag-handle" title={tr("Trascina per riordinare")}
                 onPointerDown={(e) => dlStart(e, moveEx)} style={{ flexShrink: 0 }}><GripVertical size={15} /></span>
               <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
-              <span className="micro t-cyan" style={{ alignSelf: "center" }}>{tr(ex.group || "").toUpperCase()}</span>
               <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
+              {!ptMode && (ex.ptNote || ex.ptVideo) && (
+                <button onClick={() => setPtInfo(ex)} className="pt-btn tap" title={tr("Note e video del tuo PT")}>
+                  <StickyNote size={11} /> INFO PT
+                </button>
+              )}
               {ex.progression?.enabled && (
                 <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", alignSelf: "center" }}>PROG ×{ex.progression.weeks?.length || 1}</span>
               )}
@@ -228,6 +240,34 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
           </div>
           {isDumbbell(ex.name) && !exMode(ex) && (
             <div className="micro t-faint" style={{ marginBottom: 8, lineHeight: 1.5 }}>ⓘ {tr("Inserisci il peso del singolo manubrio — il totale è calcolato da sé")}</div>
+          )}
+          {/* Note PT (solo lato personal trainer): mirate all'esercizio — il cliente
+              le vedrà dal pulsante arancione INFO PT, insieme all'eventuale video */}
+          {ptMode && (
+            <div style={{ marginBottom: 10 }}>
+              <button onClick={() => setPtEditIdx(ptEditIdx === ei ? null : ei)}
+                className={ex.ptNote || ex.ptVideo ? "pt-btn tap" : "dash-btn cham-s tap"}
+                style={ex.ptNote || ex.ptVideo ? { padding: "7px 10px", fontSize: 10 } : { borderColor: "var(--pt)", color: "var(--pt)", padding: 7 }}>
+                <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} /> {tr("NOTE PT")}{(ex.ptNote || ex.ptVideo) ? " ✓" : ""}
+              </button>
+              {ptEditIdx === ei && (
+                <div className="pt-box fade-in" style={{ marginTop: 8 }}>
+                  <div className="hud-label" style={{ marginBottom: 4, fontSize: 8, color: "var(--pt)" }}>
+                    {tr("Note per il cliente — dove sbaglia, come migliorare, a cosa prestare attenzione")}
+                  </div>
+                  <textarea className="hud-input cham-s" rows={3} value={ex.ptNote || ""}
+                    onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptNote: e.target.value }) }))}
+                    placeholder={tr("Es. tieni i gomiti a 45°, non rimbalzare il bilanciere, scendi lento 3s...")}
+                    style={{ resize: "vertical", fontSize: 12, lineHeight: 1.6, marginBottom: 8 }} />
+                  <div className="hud-label" style={{ marginBottom: 4, fontSize: 8, color: "var(--pt)" }}>
+                    {tr("Video esecuzione personalizzato (link YouTube, Vimeo o mp4) — opzionale")}
+                  </div>
+                  <input className="hud-input cham-s" value={ex.ptVideo || ""}
+                    onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptVideo: e.target.value }) }))}
+                    placeholder="https://youtube.com/watch?v=..." style={{ fontSize: 12, padding: "6px 8px" }} />
+                </div>
+              )}
+            </div>
           )}
           <div data-dl>
           {ex.sets.map((s, si) => (

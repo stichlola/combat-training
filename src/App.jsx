@@ -948,7 +948,7 @@ export default function App() {
               {tr("CAMBIO PERSONAL TRAINER")}
             </div>
             <div className="tiny t-dim" style={{ margin: "10px 0 18px", lineHeight: 1.7 }}>
-              {tr("Attualmente sei seguito da")} <b className="t-amber">{myTrainer?.name || tr("il tuo PT")}</b>. {tr("Confermando passerai al nuovo personal trainer: potrà vedere le tue schede e seguire i tuoi allenamenti.")}
+              {tr("Attualmente sei seguito da")} <b className="t-pt">{myTrainer?.name || tr("il tuo PT")}</b>. {tr("Confermando passerai al nuovo personal trainer: potrà vedere le tue schede e seguire i tuoi allenamenti.")}
             </div>
             <div className="row g8">
               <Btn onClick={() => { clearInvite(); setPendingPt(null); }} style={{ flex: 1 }}>{tr("Rifiuta")}</Btn>
@@ -1241,7 +1241,7 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
         </div>
 
         <div className="row g8">
-          <Btn small onClick={() => setView("import")} style={{ flex: 1, opacity: .85 }} title={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}>
+          <Btn small onClick={() => setView("import")} style={{ flex: 1, borderColor: "var(--pt)", color: "var(--pt)" }} title={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}>
             <Upload size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("IMPORTA SCHEDA PT")}
           </Btn>
           <Btn small onClick={() => setView("ai")} style={{ flex: 1, opacity: .85 }} title={tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")}>
@@ -1302,8 +1302,10 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
 
       </div>
 
-      {/* RIGHT: ultimi allenamenti + PR + libreria (la libreria sta sotto le altre card) */}
+      {/* RIGHT: libreria + ultimi allenamenti + PR (la libreria sta sopra le altre card) */}
       <div className="col stack">
+        <ExerciseLibrary />
+
         <CollapsiblePanel id="missionlog" label={standard ? tr("Ultimi allenamenti") : tr("Mission log — ultimi allenamenti")}>
           {(!history || history.length === 0) && (
             <div className="tiny t-faint" style={{ padding: "8px 0" }}>
@@ -2107,8 +2109,8 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             <div className="hud-label" style={{ marginBottom: 10 }}>{tr("▸ Il tuo personal trainer")}</div>
             <div className="row between g8" style={{ alignItems: "center" }}>
               <div className="row g12" style={{ alignItems: "center" }}>
-                <div className="cham-s" style={{ width: 38, height: 38, background: "var(--active)", border: "1px solid var(--cyan)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Users size={18} color="var(--cyan-hi)" />
+                <div className="cham-s" style={{ width: 38, height: 38, background: "var(--pt-soft)", border: "1px solid var(--pt)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Users size={18} color="var(--pt)" />
                 </div>
                 <div>
                   <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".08em" }}>
@@ -2173,7 +2175,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
                 {["M", "F"].map((s) => (
                   <button key={s} onClick={() => setDraft((d) => ({ ...d, sesso: s }))}
                     className={`tap cham-s chip ${draft.sesso === s ? "chip-on" : ""}`}
-                    style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "9px 0", fontSize: 13 }}>
+                    style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "8px 0", fontSize: 13 }}>
                     {s}
                   </button>
                 ))}

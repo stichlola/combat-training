@@ -33,7 +33,7 @@ export function TrainerView({ user, fireToast }) {
 
       <div className="row between">
         <h2 className="hud-title">{tr("▸ I tuoi clienti")}</h2>
-        <Btn small primary onClick={() => setInviteOpen(true)}>
+        <Btn small pt onClick={() => setInviteOpen(true)}>
           <UserPlus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Invita cliente")}
         </Btn>
       </div>
@@ -42,13 +42,13 @@ export function TrainerView({ user, fireToast }) {
 
       {clients !== null && clients.length === 0 && (
         <Panel accent style={{ textAlign: "center", padding: 28 }}>
-          <Users size={26} color="var(--cyan)" style={{ margin: "0 auto 12px" }} />
-          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("NESSUN CLIENTE COLLEGATO")}</div>
+          <Users size={26} color="var(--pt)" style={{ margin: "0 auto 12px" }} />
+          <div className="f-hud t-pt" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("NESSUN CLIENTE COLLEGATO")}</div>
           <div className="tiny t-dim" style={{ marginTop: 8, lineHeight: 1.6 }}>
             {tr("Condividi il tuo link invito o il QR code: il cliente si registra (o accede) e conferma il collegamento.")}
           </div>
           <div style={{ marginTop: 16 }}>
-            <Btn primary onClick={() => setInviteOpen(true)}>{tr("Invita il primo cliente")}</Btn>
+            <Btn pt onClick={() => setInviteOpen(true)}>{tr("Invita il primo cliente")}</Btn>
           </div>
         </Panel>
       )}
@@ -58,7 +58,7 @@ export function TrainerView({ user, fireToast }) {
           <Panel hover>
             <div className="row g12" style={{ alignItems: "center" }}>
               <div className="cham-s" style={{ padding: 10, background: "var(--card)", border: "1px solid var(--soft)", flexShrink: 0 }}>
-                <Users size={16} color="var(--cyan)" />
+                <Users size={16} color="var(--pt)" />
               </div>
               <div className="grow">
                 <div className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>
@@ -102,7 +102,7 @@ function InviteModal({ user, fireToast, onClose }) {
     <div className="modal-back" onClick={onClose}>
       <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ marginBottom: 4 }}>
-          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>
+          <div className="f-hud t-pt" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>
             <QrCode size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("INVITA UN CLIENTE")}
           </div>
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
@@ -114,7 +114,7 @@ function InviteModal({ user, fireToast, onClose }) {
         <div className="cham-s" style={{ padding: "8px 10px", background: "var(--card)", border: "1px solid var(--soft)", wordBreak: "break-all", fontSize: 11, color: "var(--dim)", marginBottom: 12 }}>
           {link}
         </div>
-        <Btn primary onClick={copy} style={{ width: "100%" }}>
+        <Btn pt onClick={copy} style={{ width: "100%" }}>
           <Copy size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Copia link invito")}
         </Btn>
       </div>
@@ -169,7 +169,7 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
 
   /* --- editor scheda (nuova o esistente) --- */
   if (editIdx !== null) return (
-    <RoutineEditor premium={null} fireToast={fireToast} showScan={false}
+    <RoutineEditor premium={null} fireToast={fireToast} showScan={false} ptMode
       initial={editIdx >= 0 ? routines[editIdx] : null}
       onClose={() => setEditIdx(null)}
       onSave={(draft) => {
@@ -239,13 +239,13 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
       {/* Note private del PT */}
       <Panel>
         <div className="hud-label row g6" style={{ marginBottom: 6 }}>
-          <StickyNote size={13} color="var(--cyan)" /> {tr("Note private (solo tu le vedi)")}
+          <StickyNote size={13} color="var(--pt)" /> {tr("Note private (solo tu le vedi)")}
         </div>
         <textarea className="hud-input cham-s" value={note} onChange={(e) => setNote(e.target.value)} rows={4}
           placeholder={tr("Es. obiettivi, infortuni, preferenze, progressi osservati...")}
           style={{ resize: "vertical", fontSize: 13, lineHeight: 1.6 }} />
         {dirty && (
-          <Btn small primary onClick={save} style={{ marginTop: 8 }}>{tr("Salva note")}</Btn>
+          <Btn small pt onClick={save} style={{ marginTop: 8 }}>{tr("Salva note")}</Btn>
         )}
       </Panel>
 
@@ -253,7 +253,7 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
       <Panel>
         <div className="row between" style={{ marginBottom: 8 }}>
           <div className="hud-label row g6" style={{ marginBottom: 0 }}>
-            <Dumbbell size={13} color="var(--cyan)" /> {tr("Schede del cliente")}
+            <Dumbbell size={13} color="var(--pt)" /> {tr("Schede del cliente")}
           </div>
           <Btn small onClick={() => setEditIdx(-1)}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
         </div>
@@ -277,7 +277,7 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
               </span>
               <div className="row g8" style={{ flexShrink: 0 }}>
                 <span className="micro t-dim">{r.exercises.length} {tr("ESERCIZI")}</span>
-                <span onClick={() => setEditIdx(ri)} className="tap" style={{ cursor: "pointer", padding: "2px 6px", color: "var(--cyan-hi)" }} title={tr("Modifica scheda")}>
+                <span onClick={() => setEditIdx(ri)} className="tap" style={{ cursor: "pointer", padding: "2px 6px", color: "var(--pt)" }} title={tr("Modifica scheda")}>
                   <Pencil size={14} />
                 </span>
                 {delId === r.id ? (
@@ -325,7 +325,7 @@ export function TrainerProfile({ user, onLogout, fireToast }) {
       <Panel accent>
         <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 16, letterSpacing: ".1em" }}>{user.username}</div>
         <div className="tiny t-faint" style={{ marginTop: 2 }}>{user.email}</div>
-        <span className="chip cham-s" style={{ marginTop: 10, display: "inline-block", borderColor: "var(--cyan)", color: "var(--cyan)" }}>PERSONAL TRAINER</span>
+        <span className="chip cham-s" style={{ marginTop: 10, display: "inline-block", borderColor: "var(--pt)", color: "var(--pt)" }}>PERSONAL TRAINER</span>
       </Panel>
       <Btn onClick={() => setInviteOpen(true)}>
         <QrCode size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Il mio link / QR invito")}

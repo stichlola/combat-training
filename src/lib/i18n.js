@@ -761,6 +761,18 @@ const EN_DESC = {
   "Conferma scollegamento": "Confirm unlink",
   "Scollegati dal PT": "Unlink from PT",
   "◈ PT SCOLLEGATO": "◈ PT UNLINKED",
+  "NOTE PT": "PT NOTES",
+  "INFO PT": "PT INFO",
+  "Note e video del tuo PT": "Your PT's notes and video",
+  "NOTE DEL TUO PT": "YOUR PT'S NOTES",
+  "Video esecuzione": "Execution video",
+  "APRI IL VIDEO": "OPEN VIDEO",
+  "Note per il cliente — dove sbaglia, come migliorare, a cosa prestare attenzione":
+    "Notes for the client — where they go wrong, how to improve, what to watch for",
+  "Es. tieni i gomiti a 45°, non rimbalzare il bilanciere, scendi lento 3s...":
+    "E.g. keep elbows at 45°, don't bounce the bar, lower slowly 3s...",
+  "Video esecuzione personalizzato (link YouTube, Vimeo o mp4) — opzionale":
+    "Custom execution video (YouTube, Vimeo or mp4 link) — optional",
   "Nessun personal trainer ti segue ora": "No personal trainer is following you now",
   "Operazione non riuscita": "Operation failed",
   "Riprova tra poco": "Try again shortly",

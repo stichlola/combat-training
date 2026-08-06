@@ -13,6 +13,8 @@ export const CSS = `
   --card:#04101b; --card2:#060f18; --active:#0c2a3d; --active2:#0c1c2b;
   --soft:#0e2233; --soft2:#1b3a52; --hairline:#0a1826; --input:#050d15;
   --modal:#071523; --done:#0a2418; --warm-bg:#241c0a; --warm-line:#8a6d2f;
+  /* arancione personal trainer: tutte le parti PT usano questo colore */
+  --pt:#f97316; --pt-hi:#fb923c; --pt-deep:#ea580c; --pt-soft:rgba(249,115,22,.13);
 }
 *{box-sizing:border-box}
 .hud-root{min-height:100vh;background:var(--bg);color:var(--text);
@@ -48,6 +50,8 @@ export const CSS = `
 .btn-sm{font-size:11px;padding:6px 12px}
 .btn-primary{background:linear-gradient(180deg,#57c8f2,#2f8fbf);color:#04121d;border-color:var(--cyan-hi)}
 .btn-primary:hover{box-shadow:0 0 14px rgba(87,200,242,.45)}
+.btn-pt{background:linear-gradient(135deg,var(--pt-hi),var(--pt));color:#fff;border-color:transparent;box-shadow:0 2px 6px rgba(234,88,12,.35)}
+.btn-pt:hover{background:linear-gradient(135deg,var(--pt),var(--pt-deep))}
 .btn-ghost{background:var(--active2);color:var(--cyan-hi)}
 .btn-ghost:hover{border-color:var(--cyan)}
 .btn:disabled{opacity:.3;cursor:default}
@@ -239,11 +243,21 @@ body.dragging *{cursor:grabbing!important}
 @media(min-width:480px){.hide-sm{display:inline}}
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:10}
 .auth-box{width:100%;max-width:400px}
-.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
-.field-grid>div{display:flex;flex-direction:column;justify-content:flex-end}
-.field-grid .hud-label{min-height:24px;display:flex;align-items:flex-end;gap:3px}
-.field-grid .hud-input{height:42px}
-@media(max-width:400px){.field-grid{grid-template-columns:1fr}}
+/* dati corporei & co.: compatti, 4 per riga (3 su schermi minuscoli) */
+.field-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:end}
+.field-grid>div{display:flex;flex-direction:column;justify-content:flex-end;min-width:0}
+.field-grid .hud-label{min-height:22px;display:flex;align-items:flex-end;gap:2px;font-size:8px !important;letter-spacing:.1em}
+.field-grid .hud-input{height:38px;padding:4px 2px;font-size:13px}
+@media(max-width:359px){.field-grid{grid-template-columns:repeat(3,1fr)}}
+
+/* arancione PT: pulsante pieno (note PT) e box con bordo arancione */
+.t-pt{color:var(--pt)}
+.pt-btn{display:inline-flex;align-items:center;gap:4px;border:none;border-radius:8px;cursor:pointer;
+  background:linear-gradient(135deg,var(--pt-hi),var(--pt));color:#fff;
+  font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:700;letter-spacing:.12em;
+  padding:5px 8px;box-shadow:0 1px 4px rgba(234,88,12,.4)}
+.pt-btn:active{transform:scale(.95)}
+.pt-box{background:var(--pt-soft);border:1px solid var(--pt);border-radius:10px;padding:10px 12px}
 .link-btn{cursor:pointer;color:var(--faint);font-size:12px;letter-spacing:.05em}
 .link-btn:hover{color:var(--cyan-hi)}
 
@@ -264,6 +278,7 @@ body.dragging *{cursor:grabbing!important}
   --card:#eef3f7;--card2:#e4ebf2;--active:#e0f1fc;--active2:#eef7fd;
   --soft:#ebf1f6;--soft2:#dde6ee;--hairline:#ebf1f6;--input:#ffffff;
   --modal:#f7fafc;--done:#dcf2e3;--warm-bg:#fdf2d9;--warm-line:#eab308;
+  --pt:#ea580c;--pt-hi:#f97316;--pt-deep:#c2410c;--pt-soft:#ffeadb;
   font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
 .standard::before,.standard::after{display:none}
 .standard .f-hud,.standard .hud-label,.standard .hud-title,.standard .micro,.standard .btn,.standard .brand,
@@ -333,9 +348,9 @@ export const Panel = ({ children, accent, hover, className = "", style }) => (
   </div>
 );
 
-export const Btn = ({ children, onClick, primary, small, full, disabled, style }) => (
+export const Btn = ({ children, onClick, primary, pt, small, full, disabled, style }) => (
   <button onClick={onClick} disabled={disabled}
-    className={`btn cham-s tap ${primary ? "btn-primary" : "btn-ghost"} ${small ? "btn-sm" : ""} ${full ? "btn-full" : ""}`}
+    className={`btn cham-s tap ${pt ? "btn-pt" : primary ? "btn-primary" : "btn-ghost"} ${small ? "btn-sm" : ""} ${full ? "btn-full" : ""}`}
     style={style}>
     {children}
   </button>
