@@ -317,6 +317,8 @@ const EN_UI = {
     "Upload a document (PDF, photo, text) — AI turns it into a workout",
   "Generatore AI": "AI generator",
   "▸ Mission log — ultimi allenamenti": "▸ Mission log — recent workouts",
+  "Ultimi allenamenti": "Recent workouts",
+  "Mission log — ultimi allenamenti": "Mission log — recent workouts",
   "Nessun allenamento registrato. Completa il primo workout per iniziare il log.":
     "No workouts recorded. Complete your first workout to start the log.",
   "▸ Libreria esercizi": "▸ Exercise library",

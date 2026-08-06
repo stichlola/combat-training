@@ -1302,10 +1302,9 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
 
       </div>
 
-      {/* RIGHT: history + library + PR — il Mission log resta solo in Combat Training */}
+      {/* RIGHT: ultimi allenamenti + PR + libreria (la libreria sta sotto le altre card) */}
       <div className="col stack">
-        {!standard && (
-        <CollapsiblePanel id="missionlog" label={tr("Mission log — ultimi allenamenti")}>
+        <CollapsiblePanel id="missionlog" label={standard ? tr("Ultimi allenamenti") : tr("Mission log — ultimi allenamenti")}>
           {(!history || history.length === 0) && (
             <div className="tiny t-faint" style={{ padding: "8px 0" }}>
               {tr("Nessun allenamento registrato. Completa il primo workout per iniziare il log.")}
@@ -1330,9 +1329,6 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
             </button>
           ))}
         </CollapsiblePanel>
-        )}
-
-        <ExerciseLibrary />
 
         <CollapsiblePanel id="prs" label="Personal records" icon={<Trophy size={13} color="#ffd76a" />}>
           {Object.keys(prs).length === 0 && (
@@ -1347,6 +1343,8 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
             </div>
           ))}
         </CollapsiblePanel>
+
+        <ExerciseLibrary />
       </div>
     </div>
   );

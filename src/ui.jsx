@@ -241,13 +241,17 @@ body.dragging *{cursor:grabbing!important}
    Tema CHIARO stile Material con colore NEUTRO: grigi grafite al posto
    del colore d'accento, elevazioni al posto dei bordi, bottoni a pillola,
    card 16px, dialoghi 28px, tipografia Roboto. */
+/* ============================== FIT TRAINING (base) ==============================
+   Tema CHIARO moderno: neutri freddi slate + accento azzurro primario dell'app,
+   input bianchi con anello di focus, bottoni primari in gradiente azzurro,
+   card bianche con ombre morbide, tipografia Roboto. */
 .standard{color-scheme:light;
-  --bg:#f7f7f8;--panel:#ffffff;--panel2:#f1eff2;--line:#e5e3e6;--line2:#c9c7cb;
-  --cyan:#333136;--cyan-hi:#333136;--bright:#1d1b20;--text:#49454f;
-  --dim:#625b71;--faint:#938f99;--amber:#7a5901;--green:#146c2e;--red:#b3261e;
-  --card:#f1eff2;--card2:#ebe9ec;--active:#e4e2e6;--active2:#efecef;
-  --soft:#efecef;--soft2:#e3e1e4;--hairline:#efecef;--input:#eae8eb;
-  --modal:#f3f2f4;--done:#d9f0dc;--warm-bg:#fff3d6;--warm-line:#e8c766;
+  --bg:#f4f7fa;--panel:#ffffff;--panel2:#edf2f7;--line:#e2e9f0;--line2:#c3d0dd;
+  --cyan:#0284c7;--cyan-hi:#0369a1;--bright:#0f172a;--text:#3f4c5e;
+  --dim:#5b6b80;--faint:#8b98a9;--amber:#b45309;--green:#15803d;--red:#dc2626;
+  --card:#eef3f7;--card2:#e4ebf2;--active:#e0f1fc;--active2:#eef7fd;
+  --soft:#ebf1f6;--soft2:#dde6ee;--hairline:#ebf1f6;--input:#ffffff;
+  --modal:#f7fafc;--done:#dcf2e3;--warm-bg:#fdf2d9;--warm-line:#eab308;
   font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
 .standard::before,.standard::after{display:none}
 .standard .f-hud,.standard .hud-label,.standard .hud-title,.standard .micro,.standard .btn,.standard .brand,
@@ -260,41 +264,53 @@ body.dragging *{cursor:grabbing!important}
 .standard .cham{clip-path:none;border-radius:16px}
 .standard .cham-s{clip-path:none;border-radius:12px}
 .standard .seg{clip-path:none;border-radius:4px}
-.standard .panel{background:#ffffff;border:none;border-radius:16px;
-  box-shadow:0 1px 2px rgba(0,0,0,.14),0 1px 3px 1px rgba(0,0,0,.08)}
-.standard .panel-accent{background:#f1eff2;border-color:transparent}
+.standard .panel{background:#ffffff;border:1px solid #eef2f6;border-radius:16px;
+  box-shadow:0 1px 2px rgba(15,23,42,.06),0 4px 14px rgba(15,23,42,.06)}
+.standard .panel-accent{background:#f0f8fd;border-color:#d8ecfa}
 .standard .panel::before{display:none}
-.standard .btn{border-radius:999px;letter-spacing:.01em;font-weight:600}
-.standard .btn-primary{background:#333136;border-color:transparent;color:#fff;
-  box-shadow:0 1px 2px rgba(0,0,0,.2),0 1px 3px 1px rgba(0,0,0,.1)}
-.standard .btn-primary:hover{box-shadow:0 1px 3px rgba(0,0,0,.2),0 4px 8px 3px rgba(0,0,0,.1)}
-.standard .btn-ghost{background:#e9e7ea;color:#1d1b20;border-color:transparent}
-.standard .btn-ghost:hover{background:#dfdde0}
-.standard .hud-input{background:var(--input);border:1px solid transparent;border-radius:12px;font-weight:500;color:#1d1b20}
-.standard .hud-input:focus{border-color:transparent;box-shadow:inset 0 -2px 0 var(--cyan);background:#eae8eb}
-.standard .hud-header{background:rgba(247,247,248,.88);border-bottom-color:var(--soft)}
-.standard .bottom-nav{background:#efecef;border-top:none}
-.standard .brand{letter-spacing:.06em;font-weight:700}
+/* bottoni: primario in gradiente azzurro, ghost in slate chiaro */
+.standard .btn{border-radius:999px;letter-spacing:.01em;font-weight:600;transition:all .15s ease}
+.standard .btn-primary{background:linear-gradient(135deg,#0ea5e9,#0284c7);border-color:transparent;color:#fff;
+  box-shadow:0 2px 6px rgba(2,132,199,.32),0 1px 2px rgba(2,132,199,.2)}
+.standard .btn-primary:hover{background:linear-gradient(135deg,#0284c7,#0369a1);
+  box-shadow:0 4px 12px rgba(2,132,199,.38),0 1px 3px rgba(2,132,199,.22)}
+.standard .btn-ghost{background:#e8eef4;color:#1d2935;border-color:transparent}
+.standard .btn-ghost:hover{background:#dbe6f0;color:#0369a1}
+.standard .link-btn{color:var(--cyan)}
+.standard .link-btn:hover{color:var(--cyan-hi)}
+/* input moderni: bianchi, bordo sottile, anello azzurro al focus */
+.standard .hud-input{background:#ffffff;border:1px solid #d5dfe9;border-radius:12px;font-weight:500;color:#0f172a;
+  transition:border-color .15s ease,box-shadow .15s ease}
+.standard .hud-input::placeholder{color:#9aa7b8}
+.standard .hud-input:hover{border-color:#b7c8d8}
+.standard .hud-input:focus{border-color:#0284c7;box-shadow:0 0 0 3px rgba(2,132,199,.16);background:#ffffff;outline:none}
+.standard select.hud-input,.standard textarea.hud-input{appearance:auto}
+.standard .hud-header{background:rgba(255,255,255,.86);border-bottom-color:var(--line)}
+.standard .bottom-nav{background:rgba(255,255,255,.94);border-top:1px solid var(--line)}
+.standard .brand{letter-spacing:.06em;font-weight:700;color:#0369a1}
 .standard .streak-pill{border-radius:999px}
-.standard .modal-box{border:none;border-radius:28px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
-.standard .float-timer{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
-.standard .timer-pop{border:none;border-radius:20px;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.2)}
-.standard .setmenu{border:none;border-radius:16px;box-shadow:0 2px 6px 2px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.2)}
-.standard .float-cam-btn,.standard .float-timer-btn{border:none;border-radius:16px;background:#e4e2e6;
-  color:#1d1b20;box-shadow:0 4px 8px 3px rgba(0,0,0,.1),0 1px 3px rgba(0,0,0,.15)}
+.standard .modal-box{border:none;border-radius:28px;background:#ffffff;box-shadow:0 8px 20px rgba(15,23,42,.14),0 2px 6px rgba(15,23,42,.1)}
+.standard .float-timer{border:none;border-radius:20px;background:#ffffff;box-shadow:0 6px 16px rgba(15,23,42,.12),0 1px 3px rgba(15,23,42,.1)}
+.standard .timer-pop{border:none;border-radius:20px;background:#ffffff;box-shadow:0 6px 16px rgba(15,23,42,.12),0 1px 3px rgba(15,23,42,.1)}
+.standard .setmenu{border:none;border-radius:16px;background:#ffffff;box-shadow:0 4px 12px rgba(15,23,42,.12),0 1px 2px rgba(15,23,42,.1)}
+.standard .float-cam-btn,.standard .float-timer-btn{border:1px solid #e2e9f0;border-radius:16px;background:#ffffff;
+  color:#1d2935;box-shadow:0 4px 10px rgba(15,23,42,.1),0 1px 3px rgba(15,23,42,.08)}
 .standard .set-chip{border:none;border-radius:8px}
 .standard .chip{border-radius:8px}
-/* chip selezionato stile M3: contenitore tonale, testo scuro (niente nero pieno) */
-.standard .chip-on{background:#e4e2e6;color:#1d1b20;border-color:transparent}
+/* selezioni tonali azzurre (chip attivi, voci scelte) */
+.standard .chip-on{background:#e0f1fc;color:#0369a1;border-color:transparent;font-weight:600}
+.standard .dash-btn{color:var(--cyan);border-color:rgba(2,132,199,.35);background:#f6fbfe}
+.standard .dash-btn:hover{color:var(--cyan-hi);border-color:rgba(2,132,199,.6);background:#eef7fd}
 .standard .set-warmup{background:var(--warm-bg)}
+.standard .info-btn{background:#eef7fd;color:#0369a1;border-color:#cde7f7}
 .bnav-ico{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:28px;
   margin:-4px 0;border-radius:999px}
-/* voce attiva del menu: riempita col colore primario dell'app, icona scura sopra */
-.standard .bnav-btn.on .bnav-ico{background:#57c8f2;color:#08222f}
-.standard .bnav-btn.on{color:#08222f !important}
+/* voce attiva del menu: pill tonale azzurra col colore primario dell'app */
+.standard .bnav-btn.on .bnav-ico{background:#d9edfb;color:#0369a1}
+.standard .bnav-btn.on{color:#0369a1 !important}
 .standard .bnav-btn div:last-child{display:none}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
-body.standard{background:#f7f7f8}
+body.standard{background:#f4f7fa}
 
 `;
 

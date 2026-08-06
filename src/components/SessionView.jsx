@@ -382,7 +382,8 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               </span>
             )}
             <span className="t-dim ex-meta-grow">{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</span>
-            <span className="row g4" style={{ alignItems: "center" }}>
+            {/* recupero: sempre ancorato a destra nella riga */}
+            <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
               <span className="t-faint">REC</span>
               <input type="number" inputMode="numeric"
                 value={ex.rest ?? 90}
