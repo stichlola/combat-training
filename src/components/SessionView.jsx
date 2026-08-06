@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Plus, Check, Play, Trash2, Trophy, Info, Pause, GripVertical, ArrowLeftRight } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
-import { ExercisePicker } from "./ExercisePicker";
+import { ExercisePickerModal } from "./ExercisePicker";
 import { FloatingTimer } from "./FloatingTimer";
 import { MachineScan } from "./MachineScan";
 import { ResultsScreen } from "./ResultsScreen";
@@ -41,17 +41,19 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   }));
 
   /* Gestione esercizi in sessione: aggiungi / elimina / sostituisci */
-  const addExercise = (name, group) => {
-    if (session.exercises.some((e) => e.name === name)) return; // niente duplicati
-    upd((s) => ({
-      ...s,
-      exercises: [...s.exercises, group === "Cardio"
-        ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
-        : isHold(name)
-          ? { name, group, mode: "hold", note: "", sets: holdSets() }
-          : { name, group, note: "", rest: 90, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
-    }));
-    fireToast({ title: tr("◈ ESERCIZIO AGGIUNTO"), sub: tr(name) });
+  const makeEx = (name, group) => group === "Cardio"
+    ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
+    : isHold(name)
+      ? { name, group, mode: "hold", note: "", sets: holdSets() }
+      : { name, group, note: "", rest: 90, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] };
+
+  /* Aggiunta multipla dal popup: una toast sola alla fine, niente duplicati */
+  const addExercises = (list) => {
+    const fresh = list.filter(({ name }) => !session.exercises.some((e) => e.name === name));
+    setShowPicker(false);
+    if (!fresh.length) return;
+    upd((s) => ({ ...s, exercises: [...s.exercises, ...fresh.map(({ name, group }) => makeEx(name, group))] }));
+    fireToast({ title: tr("◈ ESERCIZI AGGIUNTI"), sub: fresh.map((f) => tr(f.name)).join(", ") });
   };
 
   const removeExercise = (ei) => {
@@ -80,14 +82,12 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       }),
     }));
     setReplaceIdx(null);
+    setShowPicker(false);
     fireToast({ title: tr("◈ ESERCIZIO SOSTITUITO"), sub: tr(name) });
   };
 
-  /* Tap su un chip dell'elenco: sostituisce se in modalità sostituzione, altrimenti aggiunge */
-  const pickEx = (name, group) => {
-    if (replaceIdx != null) { replaceExercise(replaceIdx, name, group); return; }
-    addExercise(name, group);
-  };
+  /* Scelta dal popup in modalità sostituzione */
+  const pickReplace = (name, group) => { if (replaceIdx != null) replaceExercise(replaceIdx, name, group); };
 
   /* Cronometro cardio: incrementa elapsed della riga attiva */
   useEffect(() => {
@@ -249,14 +249,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       <FloatingTimer ref={timerRef} />
       <MachineScan premium={premium} variant="float" fireToast={fireToast}
         currentNames={session.exercises.map((e) => e.name)}
-        onAdd={(name, group) => upd((s) => ({
-          ...s,
-          exercises: [...s.exercises, group === "Cardio"
-            ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
-            : isHold(name)
-              ? { name, group, mode: "hold", note: "", sets: holdSets() }
-              : { name, group, note: "", rest: 90, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
-        }))} />
+        onAdd={(name, group) => upd((s) => ({ ...s, exercises: [...s.exercises, makeEx(name, group)] }))} />
 
 
       {/* Conferma uscita: la sessione resta attiva */}
@@ -356,16 +349,16 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             </div>
             {confirmExDel === ei ? (
               <button onClick={() => { removeExercise(ei); setConfirmExDel(null); }}
-                className="info-btn cham-s tap" style={{ color: "#ff8f7d", borderColor: "#6e3028", flexShrink: 0, marginTop: 2, marginLeft: "auto" }}>
+                className="info-btn cham-s tap" style={{ color: "var(--cyan)", borderColor: "var(--cyan)", flexShrink: 0, marginTop: 2, marginLeft: "auto" }}>
                 {tr("Conferma eliminazione")}</button>
             ) : (
               <div className="row" style={{ gap: 14, flexShrink: 0, paddingTop: 4, marginLeft: "auto" }}>
-                <span onClick={() => { setReplaceIdx(replaceIdx === ei ? null : ei); setShowPicker(true); }}
+                <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }}
                   className="tap icon-tap" title={tr("Sostituisci esercizio")}
-                  style={{ cursor: "pointer", color: replaceIdx === ei ? "#ffd76a" : "#5d87a3" }}>
+                  style={{ cursor: "pointer", color: "var(--dim)" }}>
                   <ArrowLeftRight size={16} /></span>
                 <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
-                  style={{ cursor: "pointer", color: "#6e4038" }}><Trash2 size={16} /></span>
+                  style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={16} /></span>
                 {prs[ex.name] && !exMode(ex) && (
                   <span style={{ marginLeft: 4, paddingLeft: 12, borderLeft: "1px solid var(--soft2)", display: "inline-flex", alignItems: "center" }}>
                     <Trophy size={16} color="#ffd76a" />
@@ -476,25 +469,20 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       ))}
       </div>
 
-      {/* Gestione esercizi in sessione: elenco accessibile tramite icona */}
-      {replaceIdx != null && session.exercises[replaceIdx] && (
-        <div ref={replaceRef} style={{ scrollMarginTop: 90 }}>
-        <Panel accent style={{ borderColor: "#ffd76a", padding: 10 }}>
-          <div className="row between g8">
-            <div className="tiny t-amber" style={{ fontWeight: 700, lineHeight: 1.5 }}>
-              {tr("SOSTITUZIONE ATTIVA")}: {tr(session.exercises[replaceIdx].name)}<br />
-              <span className="t-faint" style={{ fontWeight: 500 }}>{tr("scegli il nuovo esercizio dall'elenco")}</span>
-            </div>
-            <Btn small onClick={() => setReplaceIdx(null)} style={{ flexShrink: 0 }}>{tr("Annulla")}</Btn>
-          </div>
-        </Panel>
-        </div>
-      )}
-      <button onClick={() => { setShowPicker(!showPicker); if (showPicker) setReplaceIdx(null); }}
+      {/* Gestione esercizi in sessione: l'elenco si apre in un popup (anche per la sostituzione) */}
+      <button onClick={() => { setReplaceIdx(null); setShowPicker(true); }}
         className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
-        {showPicker ? tr("‹ CHIUDI ELENCO") : <><Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}</>}
+        <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}
       </button>
-      {showPicker && <ExercisePicker activeNames={session.exercises.map((e) => e.name)} onPick={pickEx} />}
+      {showPicker && (
+        <ExercisePickerModal
+          activeNames={session.exercises.map((e) => e.name)}
+          mode={replaceIdx != null ? "replace" : "add"}
+          replacing={replaceIdx != null ? session.exercises[replaceIdx]?.name : null}
+          onPick={pickReplace}
+          onAdd={addExercises}
+          onClose={() => { setShowPicker(false); setReplaceIdx(null); }} />
+      )}
 
       {/* Termina anche in fondo: niente scroll fino in cima a fine allenamento */}
       <Btn primary full onClick={() => setFinishing(true)} style={{ padding: 14 }}>{tr("Termina ✓")}</Btn>

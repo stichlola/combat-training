@@ -214,11 +214,11 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
         <Btn small onClick={onBack}><ArrowLeft size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Clienti")}</Btn>
         {confirmRm ? (
           <div className="row g8">
-            <Btn small onClick={remove} style={{ borderColor: "#6e3028", color: "#ff8f7d" }}>{tr("Conferma rimozione")}</Btn>
+            <Btn small onClick={remove} style={{ borderColor: "var(--line2)", color: "var(--dim)" }}>{tr("Conferma rimozione")}</Btn>
             <Btn small onClick={() => setConfirmRm(false)}>{tr("Annulla")}</Btn>
           </div>
         ) : (
-          <Btn small onClick={() => setConfirmRm(true)} style={{ borderColor: "#6e3028", color: "#ff8f7d" }}>
+          <Btn small onClick={() => setConfirmRm(true)} style={{ borderColor: "var(--line2)", color: "var(--dim)" }}>
             <Trash2 size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Rimuovi")}
           </Btn>
         )}
@@ -282,7 +282,7 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
                 </span>
                 {delId === r.id ? (
                   <span onClick={() => setPending(routines.filter((x) => x.id !== r.id))} className="tap"
-                    style={{ cursor: "pointer", padding: "2px 6px", color: "#ff8f7d", fontSize: 11, fontWeight: 700 }}>
+                    style={{ cursor: "pointer", padding: "2px 6px", color: "var(--cyan)", fontSize: 11, fontWeight: 700 }}>
                     {tr("Conferma?")}
                   </span>
                 ) : (
@@ -330,7 +330,7 @@ export function TrainerProfile({ user, onLogout, fireToast }) {
       <Btn onClick={() => setInviteOpen(true)}>
         <QrCode size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Il mio link / QR invito")}
       </Btn>
-      <Btn onClick={onLogout} style={{ borderColor: "#6e3028", color: "#ff8f7d" }}>
+      <Btn onClick={onLogout} style={{ borderColor: "var(--line2)", color: "var(--dim)" }}>
         <LogOut size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Esci")}
       </Btn>
     </div>

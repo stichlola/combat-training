@@ -1222,7 +1222,7 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
             <div className="row g8" style={{ marginTop: 14 }}>
               {confirmAbandon ? (
                 <>
-                  <Btn onClick={abandonSession} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>{tr("Conferma abbandono")}</Btn>
+                  <Btn onClick={abandonSession} style={{ flex: 1, borderColor: "var(--line2)", color: "var(--dim)" }}>{tr("Conferma abbandono")}</Btn>
                   <Btn onClick={() => setConfirmAbandon(false)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
                 </>
               ) : (
@@ -1277,7 +1277,7 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
             <div className="row between" style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--soft)" }}>
               {confirmDel === r.id ? (
                 <div className="row g8" style={{ width: "100%" }}>
-                  <Btn small onClick={() => deleteRoutine(r.id)} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>{tr("Elimina scheda")}</Btn>
+                  <Btn small onClick={() => deleteRoutine(r.id)} style={{ flex: 1, borderColor: "var(--line2)", color: "var(--dim)" }}>{tr("Elimina scheda")}</Btn>
                   <Btn small onClick={() => setConfirmDel(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
                 </div>
               ) : (
@@ -1989,7 +1989,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
               {body.avatar && (
                 <span onClick={removeAvatar} title={tr("Rimuovi foto profilo")}
                   style={{ position: "absolute", top: 0, right: 0, width: 15, height: 15, background: "rgba(4,9,15,.72)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <X size={9} color="#ff8f7d" />
+                  <X size={9} color="#bfe6f7" />
                 </span>
               )}
             </div>
@@ -2693,7 +2693,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
                   </div>
                   <div className="row g8" style={{ alignItems: "center" }}>
                     <Est item={it} />
-                    <span onClick={() => delCustom(c.name, i)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={13} /></span>
+                    <span onClick={() => delCustom(c.name, i)} className="tap icon-tap" style={{ color: "var(--faint)" }}><X size={13} /></span>
                   </div>
                 </div>
               ))}
@@ -2854,14 +2854,14 @@ function MealEditor({ meal, options, todayIdx, onClose, onSave }) {
               placeholder={tr("Alimento")} style={{ flex: 2, fontSize: 13, padding: "7px 8px" }} />
             <input className="hud-input cham-s" value={f.q} onChange={(e) => upd(sel, fi, "q", e.target.value)}
               placeholder={tr("Quantità")} style={{ flex: 1, fontSize: 13, padding: "7px 8px", textAlign: "center" }} />
-            <span onClick={() => delFood(sel, fi)} className="tap icon-tap" style={{ color: "#6e4038" }}><X size={14} /></span>
+            <span onClick={() => delFood(sel, fi)} className="tap icon-tap" style={{ color: "var(--faint)" }}><X size={14} /></span>
           </div>
         ))}
         <button onClick={() => addFood(sel)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>＋ {tr("ALIMENTO")}</button>
 
         <div className="row g8" style={{ marginTop: 16 }}>
           {opts.length > 1 && (
-            <Btn small onClick={() => delOpt(sel)} style={{ flex: 1, borderColor: "#6e3028", color: "#ff8f7d" }}>
+            <Btn small onClick={() => delOpt(sel)} style={{ flex: 1, borderColor: "var(--line2)", color: "var(--dim)" }}>
               {tr("Elimina opzione")}
             </Btn>
           )}

@@ -386,6 +386,8 @@ const EN_UI = {
   "IN SCHEDA": "IN ROUTINE",
   "＋ Aggiungi all'allenamento": "＋ Add to workout",
   "◈ ESERCIZIO AGGIUNTO": "◈ EXERCISE ADDED",
+  "◈ ESERCIZI AGGIUNTI": "◈ EXERCISES ADDED",
+  "Seleziona gli esercizi e conferma": "Select the exercises and confirm",
   "MACCHINARIO NON RICONOSCIUTO": "MACHINE NOT RECOGNIZED",
   "Sembra:": "Looks like:",
   "Prova a inquadrare il macchinario per intero, da davanti.":

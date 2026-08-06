@@ -82,7 +82,7 @@ button.btn{text-align:center}
 .fade-in{animation:fi .3s ease both}
 /* --- modali e overlay --- */
 .modal-back{position:fixed;inset:0;background:rgba(2,6,10,.82);backdrop-filter:blur(3px);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-box{width:100%;max-width:430px;background:var(--modal);border:1px solid var(--cyan);box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto}
+.modal-box{width:100%;max-width:430px;background:var(--modal);border:1px solid var(--cyan);box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto;color:var(--text)}
 .float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -139,7 +139,7 @@ body.dragging *{cursor:grabbing!important}
   background:none;border:none;color:var(--dim);font-family:'Rajdhani',sans-serif;font-size:13px;
   font-weight:700;letter-spacing:.08em;text-align:left;cursor:pointer}
 .setmenu button:hover{background:var(--active);color:var(--bright)}
-.setmenu button.danger{color:#ff8f7d}
+.setmenu button.danger{color:var(--dim)}
 /* testata sessione sticky: comandi (Esci/nome/Termina) e statistiche sempre visibili nello scroll */
 .sticky-hud{padding:8px 0}
 
@@ -222,6 +222,18 @@ body.dragging *{cursor:grabbing!important}
 .scroll-y{max-height:300px;overflow-y:auto;padding-right:4px}
 .scroll-y::-webkit-scrollbar{width:4px}
 .scroll-y::-webkit-scrollbar-thumb{background:var(--line)}
+
+/* popup selezione esercizi: lista stile libreria dentro una modale a colonna */
+.picker-modal{display:flex;flex-direction:column;overflow:hidden;max-height:85vh}
+.picker-list{flex:1;overflow-y:auto;margin:0 -4px;padding:0 4px;min-height:120px}
+.picker-list::-webkit-scrollbar{width:4px}
+.picker-list::-webkit-scrollbar-thumb{background:var(--line)}
+.picker-row{padding:7px 8px;border-bottom:1px solid var(--hairline);cursor:pointer;font-size:14px;border-radius:8px}
+.picker-row:active{background:var(--soft)}
+.picker-row-on{background:var(--active)}
+.picker-check{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line2);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:all .15s}
+.picker-check.on{background:var(--cyan);border-color:var(--cyan)}
 
 .hide-sm{display:none}
 @media(min-width:480px){.hide-sm{display:inline}}

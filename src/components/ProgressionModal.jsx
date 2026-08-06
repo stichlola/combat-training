@@ -75,7 +75,7 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
                 </span>
                 {wi > 0 && (
                   <span onClick={() => removeWeek(wi)} className="tap icon-tap" title={tr("Elimina settimana")}
-                    style={{ cursor: "pointer", color: "#6e3028" }}><Trash2 size={13} /></span>
+                    style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={13} /></span>
                 )}
               </div>
               {wk.sets.map((s, si) => (
@@ -83,7 +83,7 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
                   <span className="micro t-faint" style={{ width: 18, textAlign: "center" }}>{si + 1}</span>
                   {wk.sets.length > 1 && (
                     <span onClick={() => removeSet(wi, si)} className="tap icon-tap" title={tr("Elimina serie")}
-                      style={{ cursor: "pointer", color: "#6e3028", order: 99, marginLeft: "auto" }}><Trash2 size={12} /></span>
+                      style={{ cursor: "pointer", color: "var(--faint)", order: 99, marginLeft: "auto" }}><Trash2 size={12} /></span>
                   )}
                   {mode === "time" ? (
                     <>

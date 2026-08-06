@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
-import { ExercisePicker } from "./ExercisePicker";
+import { ExercisePickerModal } from "./ExercisePicker";
 import { MachineScan } from "./MachineScan";
 import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
@@ -19,15 +19,8 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
   const [info, setInfo] = useState(null);
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
-  const [showPicker, setShowPicker] = useState(true); // elenco esercizi: aperto di default in modifica
+  const [showPicker, setShowPicker] = useState(false); // elenco esercizi: si apre in popup
   const [progIdx, setProgIdx] = useState(null); // esercizio con modale progressione aperta
-  const replaceRef = useRef(null); // card "SOSTITUZIONE ATTIVA": ci si scrolla appena si attiva
-
-  /* clic sull'icona di sostituzione → elenco aperto + scroll automatico alla card che spiega */
-  useEffect(() => {
-    if (replaceIdx != null && replaceRef.current)
-      replaceRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [replaceIdx]);
 
   const upd = (fn) => setDraft((d) => fn(d));
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
@@ -71,12 +64,21 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
       }),
     }));
     setReplaceIdx(null);
+    setShowPicker(false);
   };
 
-  /* Tap su un chip dell'elenco: sostituisce se in modalità sostituzione, altrimenti aggiungi/togli */
+  /* Scansione macchinario: aggiunge l'esercizio riconosciuto */
   const pickEx = (name, group) => {
     if (replaceIdx != null) { replaceExercise(replaceIdx, name, group); return; }
     toggleEx(name, group);
+  };
+
+  /* Scelta dal popup: sostituzione singola oppure aggiunta multipla con conferma */
+  const pickReplace = (name, group) => { if (replaceIdx != null) replaceExercise(replaceIdx, name, group); };
+  const addExercises = (list) => {
+    list.forEach(({ name, group }) => { if (!hasEx(name)) toggleEx(name, group); });
+    setShowPicker(false);
+    if (list.length) fireToast({ title: tr("◈ ESERCIZI AGGIUNTI"), sub: list.map((f) => tr(f.name)).join(", ") });
   };
 
   const updateSet = (ei, si, field, val) => upd((d) => ({
@@ -198,13 +200,13 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
             <div className="row g8" style={{ flexShrink: 0, marginLeft: "auto", paddingTop: 2 }}>
               <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
                 title={tr("Progressione settimanale")}
-                style={{ cursor: "pointer", color: draft.progression?.enabled && ex.progression?.weeks?.length ? "#ffd76a" : "#5d87a3" }}>
+                style={{ cursor: "pointer", color: draft.progression?.enabled && ex.progression?.weeks?.length ? "#ffd76a" : "var(--dim)" }}>
                 <TrendingUp size={14} /></span>
-              <span onClick={() => { setReplaceIdx(replaceIdx === ei ? null : ei); if (replaceIdx !== ei) setShowPicker(true); }} className="tap icon-tap"
-                title={tr("Sostituisci esercizio")} style={{ cursor: "pointer", color: replaceIdx === ei ? "#ffd76a" : "#5d87a3" }}>
+              <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }} className="tap icon-tap"
+                title={tr("Sostituisci esercizio")} style={{ cursor: "pointer", color: "var(--dim)" }}>
                 <ArrowLeftRight size={14} /></span>
               <span onClick={() => toggleEx(ex.name, ex.group)} className="tap icon-tap" title={tr("Elimina esercizio")}
-                style={{ cursor: "pointer", color: "#6e3028" }}><Trash2 size={14} /></span>
+                style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={14} /></span>
             </div>
           </div>
           <div className="row g8" style={{ marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -275,24 +277,21 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
       ))}
       </div>
 
-      {replaceIdx != null && draft.exercises[replaceIdx] && (
-        <div ref={replaceRef} style={{ scrollMarginTop: 90 }}>
-        <Panel accent style={{ borderColor: "#ffd76a", padding: 10 }}>
-          <div className="row between g8">
-            <div className="tiny t-amber" style={{ fontWeight: 700, lineHeight: 1.5 }}>
-              {tr("SOSTITUZIONE ATTIVA")}: {tr(draft.exercises[replaceIdx].name)}<br />
-              <span className="t-faint" style={{ fontWeight: 500 }}>{tr("scegli il nuovo esercizio dall'elenco")}</span>
-            </div>
-            <Btn small onClick={() => setReplaceIdx(null)} style={{ flexShrink: 0 }}>{tr("Annulla")}</Btn>
-          </div>
-        </Panel>
-        </div>
-      )}
-      <button onClick={() => setShowPicker(!showPicker)}
+      {/* L'elenco esercizi si apre in un popup: aggiunta multipla con conferma,
+          sostituzione con un tap (il popup si apre da sé cliccando l'icona) */}
+      <button onClick={() => { setReplaceIdx(null); setShowPicker(true); }}
         className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
-        {showPicker ? tr("‹ CHIUDI ELENCO") : <><Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}</>}
+        <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}
       </button>
-      {showPicker && <ExercisePicker activeNames={draft.exercises.map((e) => e.name)} onPick={pickEx} />}
+      {showPicker && (
+        <ExercisePickerModal
+          activeNames={draft.exercises.map((e) => e.name)}
+          mode={replaceIdx != null ? "replace" : "add"}
+          replacing={replaceIdx != null ? draft.exercises[replaceIdx]?.name : null}
+          onPick={pickReplace}
+          onAdd={addExercises}
+          onClose={() => { setShowPicker(false); setReplaceIdx(null); }} />
+      )}
       {showScan && (
         <MachineScan premium={premium} variant="float" fabBottom={88} fireToast={fireToast}
           currentNames={draft.exercises.map((e) => e.name)}
