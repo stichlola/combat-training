@@ -1345,8 +1345,6 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
             </div>
           ))}
         </CollapsiblePanel>
-
-        <ExerciseLibrary />
       </div>
     </div>
   );

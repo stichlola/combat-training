@@ -341,7 +341,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       {session.exercises.map((ex, ei) => (
         <Panel key={ei}>
           {/* riga 0: gruppo · PR (sopra il nome) · riga 1: nome + azioni · riga 2: INFO · settimana · recupero */}
-          <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 23 }}>
+          <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 29 }}>
             {tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}
           </div>
           <div className="row between g8" style={{ marginBottom: 6, alignItems: "flex-start" }}>

@@ -13,8 +13,8 @@ export const CSS = `
   --card:#04101b; --card2:#060f18; --active:#0c2a3d; --active2:#0c1c2b;
   --soft:#0e2233; --soft2:#1b3a52; --hairline:#0a1826; --input:#050d15;
   --modal:#071523; --done:#0a2418; --warm-bg:#241c0a; --warm-line:#8a6d2f;
-  /* arancione personal trainer: tutte le parti PT usano questo colore */
-  --pt:#f97316; --pt-hi:#fb923c; --pt-deep:#ea580c; --pt-soft:rgba(249,115,22,.13);
+  /* ambra personal trainer (arancione tendente al giallo): tutte le parti PT lo usano */
+  --pt:#f59e0b; --pt-hi:#fbbf24; --pt-deep:#d97706; --pt-soft:rgba(245,158,11,.16);
 }
 *{box-sizing:border-box}
 .hud-root{min-height:100vh;background:var(--bg);color:var(--text);
@@ -278,7 +278,7 @@ body.dragging *{cursor:grabbing!important}
   --card:#eef3f7;--card2:#e4ebf2;--active:#e0f1fc;--active2:#eef7fd;
   --soft:#ebf1f6;--soft2:#dde6ee;--hairline:#ebf1f6;--input:#ffffff;
   --modal:#f7fafc;--done:#dcf2e3;--warm-bg:#fdf2d9;--warm-line:#eab308;
-  --pt:#ea580c;--pt-hi:#f97316;--pt-deep:#c2410c;--pt-soft:#ffeadb;
+  --pt:#d97706;--pt-hi:#f59e0b;--pt-deep:#b45309;--pt-soft:#fef3c7;
   font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
 .standard::before,.standard::after{display:none}
 .standard .f-hud,.standard .hud-label,.standard .hud-title,.standard .micro,.standard .btn,.standard .brand,
