@@ -1,7 +1,7 @@
 {
-  "name": "Combat Training — Training HUD",
-  "short_name": "Combat Training",
-  "description": "Fitness tracker gamificato in stile HUD",
+  "name": "Fit Training",
+  "short_name": "Fit Training",
+  "description": "Diario di allenamento completo — versione base pulita o gamificata (Combat Training)",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

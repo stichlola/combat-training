@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -21,23 +21,25 @@ import { ACHIEVEMENTS, BASE_FACTS, DEFAULT_PRS, DEFAULT_ROUTINES, EMPTY_STATS, L
 import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
 
 /* Le due "versioni" dell'app: stessa struttura, con o senza gamification */
+/* L'app si chiama FIT TRAINING: la versione standard (pulita) è la base e il
+   default. Combat Training è la variante gamificata, invariata. */
 const UI_MODES = [
+  { id: "standard", label: "Fit Training", flag: "◻", Icon: LayoutTemplate,
+    desc: "La versione base: interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material" },
   { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
-    desc: "Esperienza gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
-  { id: "standard", label: "Standard", flag: "◻", Icon: LayoutTemplate,
-    desc: "Interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material" },
+    desc: "La versione gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
 ];
 import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar } from "./ui";
 const Trophy3D = React.lazy(() => import("./Trophy3D"));   // three.js caricato solo quando serve
 
 /* ================================== APP ================================== */
 
-function BootScreen({ progress, fact }) {
+function BootScreen({ progress, fact, combat }) {
   return (
     <div className="hud-root" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
       <div className="fade-in" style={{ width: "min(420px, 86vw)", textAlign: "center" }}>
         <Dumbbell size={34} color="var(--cyan)" style={{ margin: "0 auto 10px", filter: "drop-shadow(0 0 8px rgba(87,200,242,.6))" }} />
-        <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".35em" }}>COMBAT TRAINING</div>
+        <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".35em" }}>{combat ? "COMBAT TRAINING" : "FIT TRAINING"}</div>
         <div className="micro" style={{ marginTop: 4, marginBottom: 26 }}>{tr("INIZIALIZZAZIONE SISTEMA")}</div>
 
         {/* barra segmentata stile scudo */}
@@ -827,6 +829,16 @@ export default function App() {
   useEffect(() => { if (body.lang && body.lang !== lang) setLang(body.lang); }, [body.lang]);
   setLangGlobal(lang);
 
+  /* ultima versione usata (Fit/Combat): cache di dispositivo per mostrare il
+     brand giusto già nello splash e nella login, prima dell'idratazione */
+  const [cachedUiMode] = useState(() => { try { return localStorage.getItem("gq_ui_mode") || ""; } catch { return ""; } });
+  useEffect(() => {
+    try {
+      if (body.uiMode) localStorage.setItem("gq_ui_mode", body.uiMode);
+    } catch {}
+  }, [body.uiMode]);
+  const brandCombat = (body.uiMode || cachedUiMode) === "combat";
+
   useEffect(() => { window.__gqXpSnap = { xp, level }; }, [xp, level]);
 
   /* ricompense: avvisa quando se ne sblocca una nuova (derivate da stats/prs/livello, niente DB) */
@@ -844,9 +856,9 @@ export default function App() {
   const need = xpForLevel(level);
   const rank = LEVEL_TITLES[Math.min(4, Math.floor(level / 6))];
 
-  /* PT: interfaccia pulita e professionale — solo clienti e profilo, niente gamification */
-  /* retrocompatibilità: i profili salvati col vecchio id "vanilla" valgono come "standard" */
-  const standard = body.uiMode === "standard" || body.uiMode === "vanilla"; // interfaccia pulita: stessa struttura, zero gamification
+  /* FIT TRAINING è la base: la versione standard (pulita) è il default.
+     Combat Training (gamificata) si attiva solo con uiMode === "combat". */
+  const standard = body.uiMode !== "combat"; // interfaccia pulita: stessa struttura, zero gamification
   /* i portali (Overlay → document.body) ereditano il tema: la classe standard va anche su <body> */
   useEffect(() => {
     document.body.classList.toggle("standard", standard);
@@ -879,7 +891,7 @@ export default function App() {
     return (
       <>
         <style>{CSS}</style>
-        <BootScreen progress={bootProg} fact={bootFacts[factIdx % bootFacts.length]} />
+        <BootScreen progress={bootProg} fact={bootFacts[factIdx % bootFacts.length]} combat={brandCombat} />
       </>
     );
   }
@@ -889,7 +901,7 @@ export default function App() {
       <div className={"hud-root" + (standard ? " standard" : "")}>
         <style>{CSS}</style>
         <HudToast toast={toast} />
-        <AuthScreen fireToast={fireToast} onGuest={() => { window.__gqKeepGuest = true; window.__gqHydrateGuest && window.__gqHydrateGuest(); }} />
+        <AuthScreen fireToast={fireToast} combat={brandCombat} onGuest={() => { window.__gqKeepGuest = true; window.__gqHydrateGuest && window.__gqHydrateGuest(); }} />
       </div>
     );
   }
@@ -923,7 +935,7 @@ export default function App() {
           </div>
         </div>
       )}
-      <InstallBanner ip={ip} />
+      <InstallBanner ip={ip} combat={brandCombat} />
 
       {/* CAMBIO PT: l'unico caso in cui serve conferma — il collegamento
           normale da link invito è automatico dopo login/registrazione */}
@@ -967,7 +979,7 @@ export default function App() {
       <header className="hud-header">
         <div className="hud-header-inner">
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <div className="brand">COMBAT<span className="t-faint">//</span>TRAINING</div>
+            <div className="brand">{standard ? "FIT" : "COMBAT"}<span className="t-faint">//</span>TRAINING</div>
             {myTrainer && !isPT && (
               <button onClick={() => setTab("profile")} className="tap row g6"
                 title={tr("Il tuo personal trainer")}
@@ -1697,7 +1709,7 @@ const AuthField = ({ icon: Icon, ...props }) => (
   </div>
 );
 
-function AuthScreen({ fireToast, onGuest }) {
+function AuthScreen({ fireToast, onGuest, combat }) {
   /* invito PT in sospeso (link #pt=... aperto da sloggati): va detto subito
      che serve un account per accettare, e si parte dalla registrazione */
   const invitePending = !!pendingInvite();
@@ -1748,9 +1760,9 @@ function AuthScreen({ fireToast, onGuest }) {
       <div className="auth-box fade-in">
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".3em" }}>
-            COMBAT<span className="t-faint">//</span>TRAINING
+            {combat ? "COMBAT" : "FIT"}<span className="t-faint">//</span>TRAINING
           </div>
-          <div className="micro" style={{ marginTop: 6 }}>{tr("TRAINING HUD SYSTEM")}</div>
+          <div className="micro" style={{ marginTop: 6 }}>{combat ? tr("TRAINING HUD SYSTEM") : tr("IL TUO DIARIO DI ALLENAMENTO")}</div>
         </div>
 
         {invitePending && (
@@ -1943,7 +1955,7 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             </div>
             <div>
               <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 16, letterSpacing: ".1em" }}>{user.username}</div>
-              {body.uiMode !== "standard" && <div className="micro">LV.{level} {rank} · STREAK {streak} GIORNI</div>}
+              {body.uiMode === "combat" && <div className="micro">LV.{level} {rank} · STREAK {streak} GIORNI</div>}
               <div className="tiny t-faint">{user.email}</div>
             </div>
           </div>
@@ -1964,20 +1976,50 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
               </button>
             ))}
           </div>
-          <div className="row g8" style={{ margin: "10px 0" }}>
-            <span className="hud-label" style={{ alignSelf: "center" }}>{tr("Stile")}</span>
-            {UI_MODES.map((o) => (
-              <button key={o.id} onClick={() => setBody((b) => ({ ...b, uiMode: o.id }))}
-                className={"tap cham-s chip " + ((body.uiMode || "combat") === o.id ? "chip-on" : "")}
-                style={{ cursor: "pointer", padding: "6px 12px", fontSize: 12 }}
-                title={tr(o.desc)}>
-                <o.Icon size={12} style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />{tr(o.label)}
-              </button>
-            ))}
-          </div>
           <div className="row g8 wrap">
             <Btn small onClick={onRedoSetup}>{tr("◈ Rifai setup profilo")}</Btn>
             <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} />{tr("Esci")}</Btn>
+          </div>
+        </Panel>
+
+        {/* VERSIONE DELL'APP — card dedicata ed evidenziata: da qui si passa in
+            qualsiasi momento da Fit Training (base) a Combat Training (gamificata) */}
+        <Panel style={{
+          border: "1px solid #ffd76a",
+          boxShadow: "0 0 18px rgba(255,215,106,.28), inset 0 0 24px rgba(255,215,106,.06)",
+          background: "linear-gradient(180deg, rgba(255,215,106,.07), rgba(255,215,106,.02))",
+        }}>
+          <div className="row g8" style={{ alignItems: "center", marginBottom: 4 }}>
+            <Sparkles size={16} color="#ffd76a" />
+            <div className="f-hud t-amber" style={{ fontWeight: 700, fontSize: 14, letterSpacing: ".14em" }}>
+              {tr("VERSIONE DELL'APP")}
+            </div>
+          </div>
+          <div className="tiny t-faint" style={{ marginBottom: 12, lineHeight: 1.6 }}>
+            {tr("L'app ha due versioni: puoi cambiare quando vuoi, i tuoi dati e i tuoi allenamenti restano sempre gli stessi.")}
+          </div>
+          <div className="stack g10">
+            {UI_MODES.map((o) => {
+              const active = (body.uiMode === "combat" ? "combat" : "standard") === o.id;
+              return (
+                <button key={o.id} onClick={() => setBody((b) => ({ ...b, uiMode: o.id }))}
+                  className="tap cham-s"
+                  style={{
+                    cursor: "pointer", textAlign: "left", padding: "12px 14px",
+                    border: "1px solid " + (active ? "#ffd76a" : "var(--soft2)"),
+                    background: active ? "rgba(255,215,106,.12)" : "var(--card2)",
+                    boxShadow: active ? "0 0 12px rgba(255,215,106,.22)" : "none",
+                  }}>
+                  <div className="row between g8" style={{ alignItems: "center" }}>
+                    <div className={active ? "t-amber" : "t-bright"} style={{ fontSize: 14, fontWeight: 700 }}>
+                      <o.Icon size={14} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr(o.label)}
+                    </div>
+                    {active && <span className="micro t-amber" style={{ fontWeight: 700 }}>{tr("ATTIVA ◈")}</span>}
+                  </div>
+                  <div className="tiny t-faint" style={{ marginTop: 4, lineHeight: 1.55 }}>{tr(o.desc)}</div>
+                </button>
+              );
+            })}
           </div>
         </Panel>
 
@@ -3372,7 +3414,7 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
   const [step, setStep] = useState(1);
   const [lang, setLang] = useState(body.lang || "it");
   const [d, setD] = useState({
-    uiMode: body.uiMode || "combat",
+    uiMode: body.uiMode || "standard", // Fit Training è la base di default
     sesso: body.sesso || "M", eta: body.eta || "", altezza: body.altezza || "",
     peso: body.peso || "", bf: body.bf || "",
     attivita: body.attivita || "Moderata",
@@ -3462,8 +3504,11 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
           )}
           {step === 2 && (
             <>
-              <div className="hud-title" style={{ fontSize: 12 }}>{tr("Stile dell'app")}</div>
-              <div className="tiny t-faint">{tr("Potrai cambiarlo quando vuoi dal profilo")}</div>
+              <div className="hud-title" style={{ fontSize: 12 }}>{tr("Versione dell'app")}</div>
+              <div className="tiny t-faint" style={{ lineHeight: 1.6 }}>
+                {tr("L'app è")} <span className="t-cyan" style={{ fontWeight: 700 }}>FIT TRAINING</span>{tr(" di base: pulita e senza gamification. Se vuoi livelli, XP e sfide c'è")} <span className="t-amber" style={{ fontWeight: 700 }}>COMBAT TRAINING</span>.<br />
+                {tr("Qualunque scelta è sempre modificabile quando vuoi nelle impostazioni (profilo).")}
+              </div>
               <div className="stack-s">
                 {UI_MODES.map((o) => (
                   /* anteprima immediata: il tema si applica all'istante a tutta l'app */
@@ -3471,7 +3516,10 @@ function OnboardingWizard({ body, setBody, username, fireToast }) {
                     className="tap cham-s" style={{ cursor: "pointer", width: "100%", padding: "12px 14px", textAlign: "left",
                       border: "1px solid " + (d.uiMode === o.id ? "var(--cyan)" : "var(--soft2)"),
                       background: d.uiMode === o.id ? "var(--active)" : "var(--card2)" }}>
-                    <div className={d.uiMode === o.id ? "t-cyan" : "t-bright"} style={{ fontSize: 15, fontWeight: 700 }}><o.Icon size={14} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr(o.label)}</div>
+                    <div className={d.uiMode === o.id ? "t-cyan" : "t-bright"} style={{ fontSize: 15, fontWeight: 700 }}>
+                      <o.Icon size={14} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr(o.label)}
+                      {o.id === "standard" && d.uiMode === o.id && <span className="micro t-cyan" style={{ marginLeft: 8 }}>{tr("· BASE")}</span>}
+                    </div>
                     <div className="tiny t-faint" style={{ marginTop: 3, lineHeight: 1.5 }}>{tr(o.desc)}</div>
                   </button>
                 ))}
@@ -3589,7 +3637,7 @@ function useInstallPrompt() {
   return { canInstall: !!deferred, isIOS, standalone, dismissed, dismiss, install };
 }
 
-function InstallBanner({ ip }) {
+function InstallBanner({ ip, combat }) {
   if (ip.standalone || ip.dismissed) return null;
   if (!ip.canInstall && !ip.isIOS) return null;
   return (
@@ -3600,7 +3648,7 @@ function InstallBanner({ ip }) {
     }}>
       <div className="row between g12">
         <div className="grow">
-          <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".12em" }}>{tr("◈ INSTALLA COMBAT TRAINING")}</div>
+          <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".12em" }}>{combat ? tr("◈ INSTALLA COMBAT TRAINING") : tr("◈ INSTALLA FIT TRAINING")}</div>
           <div className="tiny t-dim" style={{ marginTop: 2, lineHeight: 1.5 }}>
             {ip.canInstall
               ? "Aggiungila alla schermata home come app"
