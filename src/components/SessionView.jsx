@@ -344,7 +344,10 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {session.exercises.map((ex, ei) => (
         <Panel key={ei}>
-          {/* riga 1: nome + azioni · riga 2 (a tutta larghezza): INFO · settimana · gruppo/PR · recupero */}
+          {/* riga 0: gruppo · PR (sopra il nome) · riga 1: nome + azioni · riga 2: INFO · settimana · recupero */}
+          <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 23 }}>
+            {tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}
+          </div>
           <div className="row between g8" style={{ marginBottom: 6, alignItems: "flex-start" }}>
             <span className="drag-handle" title={tr("Trascina per riordinare")}
               onPointerDown={(e) => dlStart(e, moveEx)} style={{ marginTop: 4, flexShrink: 0 }}><GripVertical size={15} /></span>
@@ -381,7 +384,6 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                 SETT. {ex.progWeek}{ex.progTotal ? `/${ex.progTotal}` : ""}
               </span>
             )}
-            <span className="t-dim ex-meta-grow">{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</span>
             {/* recupero: sempre ancorato a destra nella riga */}
             <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
               <span className="t-faint">REC</span>
