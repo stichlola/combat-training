@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
@@ -21,6 +21,13 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [showPicker, setShowPicker] = useState(true); // elenco esercizi: aperto di default in modifica
   const [progIdx, setProgIdx] = useState(null); // esercizio con modale progressione aperta
+  const replaceRef = useRef(null); // card "SOSTITUZIONE ATTIVA": ci si scrolla appena si attiva
+
+  /* clic sull'icona di sostituzione → elenco aperto + scroll automatico alla card che spiega */
+  useEffect(() => {
+    if (replaceIdx != null && replaceRef.current)
+      replaceRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [replaceIdx]);
 
   const upd = (fn) => setDraft((d) => fn(d));
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
@@ -193,7 +200,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
                 title={tr("Progressione settimanale")}
                 style={{ cursor: "pointer", color: draft.progression?.enabled && ex.progression?.weeks?.length ? "#ffd76a" : "#5d87a3" }}>
                 <TrendingUp size={14} /></span>
-              <span onClick={() => setReplaceIdx(replaceIdx === ei ? null : ei)} className="tap icon-tap"
+              <span onClick={() => { setReplaceIdx(replaceIdx === ei ? null : ei); if (replaceIdx !== ei) setShowPicker(true); }} className="tap icon-tap"
                 title={tr("Sostituisci esercizio")} style={{ cursor: "pointer", color: replaceIdx === ei ? "#ffd76a" : "#5d87a3" }}>
                 <ArrowLeftRight size={14} /></span>
               <span onClick={() => toggleEx(ex.name, ex.group)} className="tap icon-tap" title={tr("Elimina esercizio")}
@@ -269,6 +276,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
       </div>
 
       {replaceIdx != null && draft.exercises[replaceIdx] && (
+        <div ref={replaceRef} style={{ scrollMarginTop: 90 }}>
         <Panel accent style={{ borderColor: "#ffd76a", padding: 10 }}>
           <div className="row between g8">
             <div className="tiny t-amber" style={{ fontWeight: 700, lineHeight: 1.5 }}>
@@ -278,6 +286,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
             <Btn small onClick={() => setReplaceIdx(null)} style={{ flexShrink: 0 }}>{tr("Annulla")}</Btn>
           </div>
         </Panel>
+        </div>
       )}
       <button onClick={() => setShowPicker(!showPicker)}
         className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
@@ -285,7 +294,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
       </button>
       {showPicker && <ExercisePicker activeNames={draft.exercises.map((e) => e.name)} onPick={pickEx} />}
       {showScan && (
-        <MachineScan premium={premium} variant="float" fabBottom={92} fireToast={fireToast}
+        <MachineScan premium={premium} variant="float" fabBottom={88} fireToast={fireToast}
           currentNames={draft.exercises.map((e) => e.name)}
           onAdd={(name, group) => pickEx(name, group)} />
       )}

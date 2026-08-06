@@ -102,6 +102,13 @@ button.btn{text-align:center}
   font-size:9px;letter-spacing:.18em;cursor:pointer;flex-shrink:0}
 .info-btn:hover{border-color:var(--cyan);box-shadow:0 0 8px rgba(87,200,242,.25)}
 
+/* --- riga meta esercizio in sessione: tutto su una riga, scorre in orizzontale se serve --- */
+.ex-meta{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.ex-meta::-webkit-scrollbar{display:none}
+.ex-meta>*{flex-shrink:0}
+.ex-meta .ex-meta-grow{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* --- riordino trascinando (card e serie) --- */
 .drag-handle{display:inline-flex;align-items:center;justify-content:center;padding:6px 3px;
   margin:-2px 0;color:var(--faint);cursor:grab;touch-action:none;flex-shrink:0;

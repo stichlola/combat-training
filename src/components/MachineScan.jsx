@@ -46,6 +46,7 @@ export function MachineScan({ premium, variant, currentNames, onAdd, fireToast, 
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState(null);   // { machine, exercises } | { unknown, guess } | { error }
   const [openEx, setOpenEx] = useState(null);
+  const [intro, setIntro] = useState(false); // card che spiega la scansione prima di aprire la fotocamera
   const camRef = useRef(null);
 
   const analyze = async (f) => {
@@ -80,12 +81,20 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
     setBusy(false);
   };
 
+  /* il FAB è una pill "fotocamera + AI" e rispetta l'altezza richiesta (fabBottom):
+     in modifica scheda sta più in basso, in sessione resta sopra il timer */
   const trigger = variant === "float" ? (
-    <button onClick={() => camRef.current && camRef.current.click()} className="float-cam-btn cham-s tap" title={tr("Scansiona macchinario")}>
-      {busy ? <Loader2 size={20} color="#ffd76a" className="spin" /> : <Camera size={20} color="var(--cyan)" />}
+    <button onClick={() => setIntro(true)} className="float-cam-btn cham-s tap" title={tr("Scansiona macchinario")}
+      style={{ bottom: fabBottom, width: "auto", padding: "0 13px", gap: 6 }}>
+      {busy
+        ? <Loader2 size={18} color="#ffd76a" className="spin" />
+        : <>
+            <Camera size={17} color="var(--cyan)" />
+            <span className="f-hud t-cyan" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em" }}>AI</span>
+          </>}
     </button>
   ) : (
-    <Btn small onClick={() => camRef.current && camRef.current.click()} style={{ flexShrink: 0 }}>
+    <Btn small onClick={() => setIntro(true)} style={{ flexShrink: 0 }}>
       {busy ? <Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2 }} /> : <Camera size={13} style={{ display: "inline", verticalAlign: -2 }} />} Scan macchinario
     </Btn>
   );
@@ -95,6 +104,30 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
       <input ref={camRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
         onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) analyze(f); e.target.value = ""; }} />
       {variant === "float" ? <Overlay>{trigger}</Overlay> : trigger}
+
+      {/* al tap sulla fotocamera si apre prima il titolo che spiega la scansione,
+          poi da lì si apre la fotocamera vera e propria */}
+      {intro && (
+        <Overlay>
+        <div className="modal-back" onClick={() => setIntro(false)}>
+          <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".16em", fontSize: 14, marginBottom: 8 }}>
+              <Camera size={15} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />
+              {tr("SCANSIONE MACCHINARIO AI")}
+            </div>
+            <div className="tiny t-dim" style={{ lineHeight: 1.65, marginBottom: 16 }}>
+              {tr("Fotografa il macchinario o l'attrezzo che vuoi usare: l'intelligenza artificiale lo riconosce e ti propone gli esercizi giusti da aggiungere.")}
+            </div>
+            <div className="row g8">
+              <Btn onClick={() => setIntro(false)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+              <Btn primary onClick={() => { setIntro(false); camRef.current && camRef.current.click(); }} style={{ flex: 1 }}>
+                <Camera size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Apri fotocamera")}
+              </Btn>
+            </div>
+          </div>
+        </div>
+        </Overlay>
+      )}
 
       {(res || busy) && (
         <Overlay>

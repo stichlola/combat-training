@@ -24,6 +24,13 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [confirmExDel, setConfirmExDel] = useState(null); // eliminazione esercizio in attesa di conferma
   const timerRef = useRef(null); // ref per triggerare il timer di recupero programmaticamente
+  const replaceRef = useRef(null); // card "SOSTITUZIONE ATTIVA": ci si scrolla appena si attiva
+
+  /* clic sull'icona di sostituzione → la pagina scorre da sé fino alla card che spiega cosa fare */
+  useEffect(() => {
+    if (replaceIdx != null && replaceRef.current)
+      replaceRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [replaceIdx]);
 
   /* Marca la serie come riscaldamento (W) o normale */
   const toggleWarmup = (ei, si) => upd((s) => ({
@@ -341,8 +348,12 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             <span className="drag-handle" title={tr("Trascina per riordinare")}
               onPointerDown={(e) => dlStart(e, moveEx)} style={{ marginTop: 4, flexShrink: 0 }}><GripVertical size={15} /></span>
             <div className="grow" style={{ marginRight: 14, minWidth: 0 }}>
-              <div className="row g6 wrap" style={{ marginBottom: 5 }}>
-                <span className="t-bright" style={{ fontSize: 15, fontWeight: 700 }}>{tr(ex.name)}</span>
+              <div style={{ marginBottom: 7 }}>
+                <span className="t-bright" style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>{tr(ex.name)}</span>
+              </div>
+              {/* seconda riga: INFO · settimana · gruppo/PR · recupero — tutto in linea,
+                  su mobile scorre in orizzontale invece di incolonnarsi */}
+              <div className="micro ex-meta">
                 <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
                 {ex.progWeek && (
                   <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a" }}
@@ -350,11 +361,8 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                     {tr("SETTIMANA")} {ex.progWeek}{ex.progTotal ? `/${ex.progTotal}` : ""}
                   </span>
                 )}
-              </div>
-              <div className="micro" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span>{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</span>
+                <span className="t-dim ex-meta-grow">{tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}</span>
                 <span className="row g4" style={{ alignItems: "center" }}>
-                  <span className="t-faint">·</span>
                   <span className="t-faint">REC</span>
                   <input type="number" inputMode="numeric"
                     value={ex.rest ?? 90}
@@ -468,6 +476,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
 
       {/* Gestione esercizi in sessione: elenco accessibile tramite icona */}
       {replaceIdx != null && session.exercises[replaceIdx] && (
+        <div ref={replaceRef} style={{ scrollMarginTop: 90 }}>
         <Panel accent style={{ borderColor: "#ffd76a", padding: 10 }}>
           <div className="row between g8">
             <div className="tiny t-amber" style={{ fontWeight: 700, lineHeight: 1.5 }}>
@@ -477,6 +486,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             <Btn small onClick={() => setReplaceIdx(null)} style={{ flexShrink: 0 }}>{tr("Annulla")}</Btn>
           </div>
         </Panel>
+        </div>
       )}
       <button onClick={() => { setShowPicker(!showPicker); if (showPicker) setReplaceIdx(null); }}
         className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>

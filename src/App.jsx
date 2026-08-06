@@ -994,7 +994,9 @@ export default function App() {
           <button onClick={() => setTab("profile")} className="tap row g6"
             style={{ cursor: "pointer", color: isPremium ? "#ffd76a" : tab === "profile" ? "var(--cyan-hi)" : "var(--dim)", position: "relative", flexShrink: 0 }}>
             <span style={{ position: "relative", display: "inline-flex" }}>
-              <User size={15} />
+              {body.avatar
+                ? <img src={body.avatar} alt="" className="cham-s" style={{ width: 20, height: 20, objectFit: "cover" }} />
+                : <User size={15} />}
               {isPremium && <span className="f-hud" style={{
                 position: "absolute", top: -6, right: -7, fontSize: 8, fontWeight: 700,
                 color: "#ffd76a", textShadow: "0 0 6px rgba(255,215,106,.8)" }}>P</span>}
@@ -1300,8 +1302,9 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
 
       </div>
 
-      {/* RIGHT: history + library + PR */}
+      {/* RIGHT: history + library + PR — il Mission log resta solo in Combat Training */}
       <div className="col stack">
+        {!standard && (
         <CollapsiblePanel id="missionlog" label={tr("Mission log — ultimi allenamenti")}>
           {(!history || history.length === 0) && (
             <div className="tiny t-faint" style={{ padding: "8px 0" }}>
@@ -1327,6 +1330,7 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
             </button>
           ))}
         </CollapsiblePanel>
+        )}
 
         <ExerciseLibrary />
 
@@ -1921,6 +1925,27 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
   const num = (v) => (v === "" ? "" : Number(v));
   const setD = (k, v) => setDraft((d) => ({ ...d, [k]: num(v) }));
 
+  /* foto profilo: click sull'icona → upload, ridimensionata e salvata in body.avatar
+     (persiste in user_data per gli account, in locale per gli ospiti) */
+  const avatarRef = useRef(null);
+  const pickAvatar = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    try {
+      const { b64, type } = await resizeImage(f, 256);
+      const url = `data:${type};base64,${b64}`;
+      setBody((b) => ({ ...b, avatar: url }));
+      setDraft((d) => ({ ...d, avatar: url }));
+      fireToast({ title: tr("◈ FOTO PROFILO AGGIORNATA") });
+    } catch { fireToast({ title: tr("Immagine non valida"), sub: tr("Prova con un altro file") }); }
+  };
+  const removeAvatar = (e) => {
+    e.stopPropagation();
+    setBody((b) => { const n = { ...b }; delete n.avatar; return n; });
+    setDraft((d) => { const n = { ...d }; delete n.avatar; return n; });
+  };
+
   const bmi = draft.peso && draft.altezza ? (draft.peso / Math.pow(draft.altezza / 100, 2)).toFixed(1) : "—";
   const bmiLabel = bmi === "—" ? "" : bmi < 18.5 ? "SOTTOPESO" : bmi < 25 ? "NORMOPESO" : bmi < 30 ? "SOVRAPPESO" : "OBESITÀ";
 
@@ -1949,9 +1974,26 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
       {/* LEFT: account */}
       <div className="col stack">
         <Panel accent>
+          <input ref={avatarRef} type="file" accept="image/*" style={{ display: "none" }} onChange={pickAvatar} />
           <div className="row g12" style={{ marginBottom: 12 }}>
-            <div className="cham-s" style={{ width: 52, height: 52, background: "var(--active)", border: "1px solid var(--cyan)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <User size={24} color="var(--cyan-hi)" />
+            <div onClick={() => avatarRef.current && avatarRef.current.click()}
+              className="cham-s tap" title={tr("Cambia foto profilo")}
+              style={{ width: 52, height: 52, background: "var(--active)", border: "1px solid var(--cyan)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", position: "relative", flexShrink: 0 }}>
+              {body.avatar
+                ? <img src={body.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <User size={24} color="var(--cyan-hi)" />}
+              <span style={{
+                position: "absolute", bottom: 0, left: 0, right: 0, height: 15,
+                background: "rgba(4,9,15,.62)", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Upload size={9} color="#bfe6f7" />
+              </span>
+              {body.avatar && (
+                <span onClick={removeAvatar} title={tr("Rimuovi foto profilo")}
+                  style={{ position: "absolute", top: 0, right: 0, width: 15, height: 15, background: "rgba(4,9,15,.72)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <X size={9} color="#ff8f7d" />
+                </span>
+              )}
             </div>
             <div>
               <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 16, letterSpacing: ".1em" }}>{user.username}</div>
@@ -1980,6 +2022,44 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             <Btn small onClick={onRedoSetup}>{tr("◈ Rifai setup profilo")}</Btn>
             <Btn small onClick={onLogout}><LogOut size={12} style={{ display: "inline", verticalAlign: -2 }} />{tr("Esci")}</Btn>
           </div>
+        </Panel>
+
+        {/* Utilizzo AI settimanale + negozio: subito sotto la card profilo */}
+        <Panel>
+          <div className="row between" style={{ marginBottom: 10 }}>
+            <div className="hud-label">{tr("▸ Generazioni AI — questa settimana")}</div>
+            {usage && <span className="f-hud t-amber" style={{ fontSize: 11, fontWeight: 700 }}>CREDITI: {usage.credits}</span>}
+          </div>
+          {!usage && !usageErr && <div className="tiny t-faint">{tr("Caricamento utilizzo…")}</div>}
+          {usageErr && <div className="tiny t-red">⚠ Impossibile caricare l'utilizzo: {usageErr}</div>}
+          {usage && [
+            [tr("Generazione scheda AI"), "workout"],
+            [tr("Import scheda PT"), "import"],
+            [tr("Piano nutrizionale"), "nutrition"],
+            [tr("Scan macchinari"), "scan"],
+          ].map(([label, k]) => {
+            const lim = usage.limits[k], used = usage.used[k];
+            return (
+              <div key={k} style={{ marginBottom: 10 }}>
+                <div className="row between tiny" style={{ marginBottom: 4 }}>
+                  <span className="t-dim">{label}</span>
+                  <span className={lim === 0 ? "t-faint" : used >= lim ? "t-amber" : "t-bright"}>
+                    {lim === 0 ? "PREMIUM" : `${used} / ${lim}`}
+                  </span>
+                </div>
+                <div className="cham-s" style={{ height: 6, background: "var(--soft)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${lim ? Math.min(100, (used / lim) * 100) : 0}%`,
+                    background: used >= lim && lim > 0 ? "linear-gradient(90deg,#ffd76a,#ffb84d)" : "linear-gradient(90deg,var(--cyan),var(--cyan-hi))" }} />
+                </div>
+              </div>
+            );
+          })}
+          <div className="micro t-faint" style={{ margin: "2px 0 10px" }}>
+            {tr("I LIMITI SI AZZERANO OGNI SETTIMANA · OLTRE IL LIMITE SI USANO I CREDITI EXTRA")}
+          </div>
+          <Btn primary full onClick={() => premium && premium.open()}>
+            ◈ Negozio — crediti{premium && !premium.is ? " e Premium" : ""} ›
+          </Btn>
         </Panel>
 
         {/* VERSIONE DELL'APP — card dedicata ed evidenziata: da qui si passa in
@@ -2055,45 +2135,6 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
         )}
 
         {ptCard}
-
-        {/* Utilizzo AI settimanale + negozio */}
-        <Panel>
-          <div className="row between" style={{ marginBottom: 10 }}>
-            <div className="hud-label">{tr("▸ Generazioni AI — questa settimana")}</div>
-            {usage && <span className="f-hud t-amber" style={{ fontSize: 11, fontWeight: 700 }}>CREDITI: {usage.credits}</span>}
-          </div>
-          {!usage && !usageErr && <div className="tiny t-faint">{tr("Caricamento utilizzo…")}</div>}
-          {usageErr && <div className="tiny t-red">⚠ Impossibile caricare l'utilizzo: {usageErr}</div>}
-          {usage && [
-            [tr("Generazione scheda AI"), "workout"],
-            [tr("Import scheda PT"), "import"],
-            [tr("Piano nutrizionale"), "nutrition"],
-            [tr("Scan macchinari"), "scan"],
-          ].map(([label, k]) => {
-            const lim = usage.limits[k], used = usage.used[k];
-            return (
-              <div key={k} style={{ marginBottom: 10 }}>
-                <div className="row between tiny" style={{ marginBottom: 4 }}>
-                  <span className="t-dim">{label}</span>
-                  <span className={lim === 0 ? "t-faint" : used >= lim ? "t-amber" : "t-bright"}>
-                    {lim === 0 ? "PREMIUM" : `${used} / ${lim}`}
-                  </span>
-                </div>
-                <div className="cham-s" style={{ height: 6, background: "var(--soft)", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${lim ? Math.min(100, (used / lim) * 100) : 0}%`,
-                    background: used >= lim && lim > 0 ? "linear-gradient(90deg,#ffd76a,#ffb84d)" : "linear-gradient(90deg,var(--cyan),var(--cyan-hi))" }} />
-                </div>
-              </div>
-            );
-          })}
-          <div className="micro t-faint" style={{ margin: "2px 0 10px" }}>
-            {tr("I LIMITI SI AZZERANO OGNI SETTIMANA · OLTRE IL LIMITE SI USANO I CREDITI EXTRA")}
-          </div>
-          <Btn primary full onClick={() => premium && premium.open()}>
-            ◈ Negozio — crediti{premium && !premium.is ? " e Premium" : ""} ›
-          </Btn>
-        </Panel>
-
 
         <Panel>
           <div className="hud-label" style={{ marginBottom: 12 }}>{tr("▸ Impostazioni account")}</div>

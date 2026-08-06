@@ -1,19 +1,32 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
-import { Timer, Play, Pause } from "lucide-react";
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import { Timer, TimerOff, Play, Pause } from "lucide-react";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay } from "../ui";
 
 /* ---------------- Timer interset ---------------- */
-/* Di default nascosto: si apre dal pulsante (inline in sessione, flottante altrove).
-   Espone una ref con .start(seconds) per avviarlo programmaticamente al completamento di una serie. */
+/* Il pulsante flottante ATTIVA/DISATTIVA il timer di recupero automatico:
+   icona Timer (accesa) = al completamento di una serie il popup parte da solo;
+   icona TimerOff (spenta) = nessun popup. Il cambio d'icona rende lo stato evidente.
+   Espone una ref con .start(seconds) chiamata al completamento di una serie. */
 export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) {
   const [open, setOpen] = useState(false);
   const [dur, setDur] = useState(90);
   const [left, setLeft] = useState(90);
   const [running, setRunning] = useState(false);
+  const [autoOn, setAutoOn] = useState(true); // timer automatico attivo di default
+  const autoRef = useRef(true);               // mirror leggibile dalla ref imperativa
+
+  const toggleAuto = () => {
+    const n = !autoOn;
+    setAutoOn(n);
+    autoRef.current = n;
+    setOpen(n);            // feedback immediato: attivando si vede il pannello, disattivando sparisce
+    if (!n) setRunning(false);
+  };
 
   useImperativeHandle(ref, () => ({
     start: (seconds) => {
+      if (!autoRef.current) return; // timer disattivato dal pulsante: niente popup
       setDur(seconds);
       setLeft(seconds);
       setRunning(true);
@@ -64,10 +77,12 @@ export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) 
   if (inline) {
     return (
       <div className="timer-inline">
-        <Btn small onClick={() => setOpen(!open)} style={{ flexShrink: 0 }}>
-          <Timer size={13} color={running && left > 0 ? "#ffd76a" : undefined}
-            className={running && left > 0 ? "blink" : ""}
-            style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />
+        <Btn small onClick={toggleAuto} style={{ flexShrink: 0 }}>
+          {autoOn
+            ? <Timer size={13} color={running && left > 0 ? "#ffd76a" : undefined}
+                className={running && left > 0 ? "blink" : ""}
+                style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />
+            : <TimerOff size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />}
           {tr("Recupero")}
         </Btn>
         {panel}
@@ -77,8 +92,12 @@ export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) 
 
   return (
     <Overlay>
-      <button onClick={() => setOpen(!open)} className="float-timer-btn cham-s tap" title={tr("Timer di recupero")}>
-        <Timer size={20} color={running && left > 0 ? "#ffd76a" : "var(--cyan)"} className={running && left > 0 ? "blink" : ""} />
+      <button onClick={toggleAuto} className="float-timer-btn cham-s tap"
+        title={autoOn ? tr("Timer recupero ATTIVO — tocca per disattivare") : tr("Timer recupero DISATTIVATO — tocca per attivare")}
+        style={!autoOn ? { borderColor: "var(--soft2)", boxShadow: "none", opacity: .75 } : undefined}>
+        {autoOn
+          ? <Timer size={20} color={running && left > 0 ? "#ffd76a" : "var(--cyan)"} className={running && left > 0 ? "blink" : ""} />
+          : <TimerOff size={20} color="var(--dim)" />}
       </button>
       {panel}
     </Overlay>
