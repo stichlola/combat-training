@@ -2799,18 +2799,18 @@ function NutriSubTabs({ value, onChange }) {
   );
 }
 
-/* ---------------- Opzioni pasto: rotazione giornaliera + editor ---------------- */
+/* ---------------- Opzioni pasto: scelta della predefinita + editor ---------------- */
 /* Struttura: meals["Pranzo"] = [ [cibo,...], [cibo,...] ]  (una lista per opzione).
-   I piani vecchi con una sola lista piatta vengono normalizzati automaticamente. */
+   I piani vecchi con una sola lista piatta vengono normalizzati automaticamente.
+   nutri.mealDefaults["Pranzo"] = indice dell'opzione predefinita mostrata nel piano. */
 const asOptions = (v) =>
   Array.isArray(v) && v.length && Array.isArray(v[0]) ? v : [Array.isArray(v) ? v : []];
-/* indice del giorno: fa ruotare le opzioni senza salvare nulla */
-const dayIndex = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
-const optionForToday = (opts, offset = 0) => opts[(dayIndex() + offset) % opts.length] || [];
 
-function MealEditor({ meal, options, todayIdx, onClose, onSave }) {
+function MealEditor({ meal, options, defIdx = 0, onClose, onSave }) {
   const [opts, setOpts] = useState(() => JSON.parse(JSON.stringify(options)));
-  const [sel, setSel] = useState(todayIdx);
+  const [sel, setSel] = useState(Math.min(defIdx, Math.max(0, options.length - 1)));
+  /* opzione predefinita: è quella mostrata nella schermata del piano (★) */
+  const [def, setDef] = useState(Math.min(defIdx, Math.max(0, options.length - 1)));
 
   const upd = (oi, fi, field, val) => setOpts((o) =>
     o.map((opt, i) => i !== oi ? opt : opt.map((f, j) => j !== fi ? f : { ...f, [field]: val })));
@@ -2820,6 +2820,7 @@ function MealEditor({ meal, options, todayIdx, onClose, onSave }) {
   const delOpt = (oi) => {
     if (opts.length <= 1) return;
     setOpts((o) => o.filter((_, i) => i !== oi));
+    setDef((d) => (oi === d ? 0 : oi < d ? d - 1 : d));
     setSel((s) => (s >= opts.length - 1 ? opts.length - 2 : s));
   };
 
@@ -2832,20 +2833,31 @@ function MealEditor({ meal, options, todayIdx, onClose, onSave }) {
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
         <div className="tiny t-faint" style={{ marginBottom: 12 }}>
-          {opts.length} {tr("OPZIONI · RUOTANO OGNI GIORNO")}
+          {opts.length} {tr("OPZIONI · ★ = PREDEFINITA")}
         </div>
 
         {/* selettore opzioni */}
-        <div className="row wrap g6" style={{ marginBottom: 14 }}>
+        <div className="row wrap g6" style={{ marginBottom: 10 }}>
           {opts.map((_, i) => (
             <button key={i} onClick={() => setSel(i)}
               className={`tap cham-s chip ${sel === i ? "chip-on" : ""}`}
               style={{ cursor: "pointer", padding: "6px 12px", fontSize: 11 }}>
-              {tr("OPZIONE")} {i + 1}{i === todayIdx ? " ★" : ""}
+              {tr("OPZIONE")} {i + 1}{i === def ? " ★" : ""}
             </button>
           ))}
           <button onClick={addOpt} className="tap cham-s chip" style={{ cursor: "pointer", padding: "6px 12px", fontSize: 11 }}>＋</button>
         </div>
+
+        {/* scelta dell'opzione predefinita: è lei ad apparire nel piano */}
+        {opts.length > 1 && (sel !== def ? (
+          <button onClick={() => setDef(sel)} className="dash-btn cham-s tap" style={{ marginBottom: 12 }}>
+            ★ {tr("RENDI PREDEFINITA")}
+          </button>
+        ) : (
+          <div className="micro t-amber" style={{ marginBottom: 12, letterSpacing: ".08em" }}>
+            ★ {tr("OPZIONE PREDEFINITA — MOSTRATA NEL PIANO")}
+          </div>
+        ))}
 
         {/* alimenti dell'opzione selezionata */}
         {(opts[sel] || []).map((f, fi) => (
@@ -2865,7 +2877,7 @@ function MealEditor({ meal, options, todayIdx, onClose, onSave }) {
               {tr("Elimina opzione")}
             </Btn>
           )}
-          <Btn small primary onClick={() => onSave(opts.map((o) => o.filter((f) => f.nome.trim())))} style={{ flex: 2 }}>
+          <Btn small primary onClick={() => onSave(opts.map((o) => o.filter((f) => f.nome.trim())), def)} style={{ flex: 2 }}>
             {tr("Salva ✓")}
           </Btn>
         </div>
@@ -3060,6 +3072,7 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
   const [goal, setGoal] = useState(nutri ? nutri.goal : (body.obiettivo || "Massa"));
   const [days, setDays] = useState(nutri ? nutri.days : (body.giorniAllenamento || 3));
   const [loading, setLoading] = useState(false);
+  const [rescaling, setRescaling] = useState(false); // ricalcolo AI delle quantità dopo modifica target
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
   const [prefs, setPrefs] = useState(nutri && nutri.prefs ? nutri.prefs : "");  // preferenze / digiuno intermittente
@@ -3151,7 +3164,51 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
   };
 
   const startEdit = () => { setDraft({ ...nutri.targets }); setEditing(true); };
-  const saveEdit = () => {
+
+  /* Ricalcolo AI delle quantità: gli alimenti restano identici, cambiano solo
+     i grammi in proporzione ai nuovi target. Struttura validata: se l'AI
+     altera cibi/pasti (o non risponde) si ripiega sul riscalamento locale. */
+  const aiRescaleMeals = async (meals, from, to) => {
+    const data = await aiCall({
+      model: "claude-haiku-4-5-20251001", max_tokens: 4000,
+      messages: [{
+        role: "user",
+        content: `Piano alimentare attuale (JSON), calibrato su ${from.kcal} kcal · proteine ${from.p}g · carboidrati ${from.c}g · grassi ${from.f}g:
+${JSON.stringify(meals)}
+
+Nuovi target giornalieri: ${to.kcal} kcal · proteine ${to.p}g · carboidrati ${to.c}g · grassi ${to.f}g.
+
+COMPITO: riadatta le QUANTITÀ ("q") di ogni alimento ai nuovi target.
+REGOLE TASSATIVE:
+- NON modificare, aggiungere o rimuovere alimenti: ogni "nome" resta IDENTICO, stesso ordine, stessi pasti, stesse opzioni.
+- Cambia SOLO i valori "q" (es. "150g" → "185g"), in proporzione al macro prevalente dell'alimento (fonti proteiche seguono le proteine, fonti di carboidrati i carbo, grassi i grassi; verdure e fibre restano invariate).
+- Arrotonda a quantità pratiche: multipli di 5g per i solidi, 10ml per i liquidi, 0.5 per le unità (uova, scoop).
+Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'input, senza markdown né backtick.`,
+      }],
+    }, "nutrition");
+    if (data.error === "limit_reached") { if (premium) premium.open(); throw new Error("limit"); }
+    if (data.error) throw new Error(String(data.error));
+    const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    const parsed = parseLoose(text);
+    /* validazione rigorosa: stessi pasti, stesse opzioni, stessi alimenti */
+    const norm = {};
+    for (const [meal, opts] of Object.entries(meals)) {
+      const before = asOptions(opts);
+      const after = asOptions(parsed[meal]);
+      if (after.length !== before.length) throw new Error("Struttura cambiata");
+      norm[meal] = after.map((opt, oi) => {
+        if (opt.length !== before[oi].length) throw new Error("Struttura cambiata");
+        return opt.map((f, fi) => {
+          const orig = before[oi][fi] || {};
+          if ((f.nome || "").trim() !== (orig.nome || "").trim()) throw new Error("Alimenti cambiati");
+          return { ...orig, q: f.q || orig.q };
+        });
+      });
+    }
+    return norm;
+  };
+
+  const saveEdit = async () => {
     let kcal = Math.max(800, Math.round(Number(draft.kcal) || nutri.targets.kcal));
     let p = Math.max(0, Math.round(Number(draft.p) || 0));
     let c = Math.max(0, Math.round(Number(draft.c) || 0));
@@ -3167,11 +3224,19 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
       c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
     }
     const t = { kcal, p, c, f };
-    /* ricalcola subito le quantità dei cibi (i tipi restano invariati) */
-    const meals = rescaleMeals(nutri.meals, nutri.targets, t);
-    setNutri({ ...nutri, targets: t, meals });
-    setEditing(false);
-    fireToast({ title: tr("◈ TARGET AGGIORNATI"), sub: `${t.kcal} kcal · ${tr("pasti riadattati")}` });
+    /* ricalcola le quantità dei cibi (i tipi restano invariati): prima con
+       l'AI, in alternativa col riscalamento proporzionale locale */
+    const applyMeals = (meals, withAI) => {
+      setNutri({ ...nutri, targets: t, meals });
+      setEditing(false);
+      setRescaling(false);
+      fireToast({ title: tr("◈ TARGET AGGIORNATI"),
+        sub: `${t.kcal} kcal · ${tr(withAI ? "quantità ricalcolate con AI" : "pasti riadattati")}` });
+    };
+    if (premium && premium.guest) return applyMeals(rescaleMeals(nutri.meals, nutri.targets, t), false);
+    setRescaling(true);
+    try { applyMeals(await aiRescaleMeals(nutri.meals, nutri.targets, t), true); }
+    catch { applyMeals(rescaleMeals(nutri.meals, nutri.targets, t), false); }
   };
 
   if (importing) return (
@@ -3185,7 +3250,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
       }} />
   );
 
-  /* ---- Rigenera con AI: pagina dedicata che chiede le preferenze ---- */
+  /* ---- Rigenera con AI: identica alla schermata della prima generazione ---- */
   if (regenOpen && nutri) return (
     <div className="fade-in stack" style={{ maxWidth: 560 }}>
       <div className="row between">
@@ -3193,10 +3258,28 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
         <span className="hud-title">{tr("Rigenera piano")}</span>
         <div style={{ width: 64 }} />
       </div>
+      <NutriSubTabs value={subTab} onChange={(v) => { setSubTab(v); if (v !== "plan") setRegenOpen(false); }} />
       <Panel accent className="stack">
         <div className="tiny t-dim" style={{ lineHeight: 1.6 }}>
-          {tr("L'AI genera un nuovo piano sui tuoi target attuali")}:
-          <span className="t-cyan"> {nutri.targets.kcal} kcal · P{nutri.targets.p} C{nutri.targets.c} G{nutri.targets.f}</span>
+          L'AI calcola il tuo fabbisogno dai <span className="t-cyan">{tr("dati corporei del profilo")}</span> ({body.peso}kg · {body.altezza}cm · {body.eta} anni)
+          e dal volume di allenamento, poi genera un piano giornaliero con macro da palestra
+          (proteine 2g/kg, grassi 0.9g/kg, carboidrati a completamento).
+        </div>
+        <div>
+          <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Obiettivo")}</div>
+          <div className="row wrap g6">
+            {["Massa", "Mantenimento", "Definizione"].map((o) => (
+              <button key={o} onClick={() => setGoal(o)}
+                className={`tap cham-s chip ${goal === o ? "chip-on" : ""}`}
+                style={{ cursor: "pointer", fontSize: 12, padding: "6px 12px", fontFamily: "'Rajdhani',sans-serif", textTransform: "none", letterSpacing: ".02em" }}>
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="hud-label" style={{ marginBottom: 6 }}>Allenamenti/settimana · <span className="t-cyan">{days}</span></div>
+          <input type="range" min="2" max="6" value={days} onChange={(e) => setDays(Number(e.target.value))} />
         </div>
         <div>
           <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Preferenze alimentari")} <span className="t-faint">({tr("opzionale")})</span></div>
@@ -3205,12 +3288,25 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
             style={{ resize: "none", fontSize: 13 }} />
         </div>
         <Btn primary full disabled={loading}
-          onClick={async () => { await generate(true); setRegenOpen(false); }}>
+          onClick={async () => { await generate(false); setRegenOpen(false); }}>
           {loading
-            ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Rigenerazione...")}</span>
-            : tr("◈ Rigenera piano")}
+            ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Generazione...")}</span>
+            : tr("◈ Genera piano AI")}
         </Btn>
       </Panel>
+
+      <button onClick={() => setImporting(true)} className="tap" style={{ width: "100%", cursor: "pointer" }}>
+        <Panel accent hover>
+          <div className="row g12">
+            <Upload size={20} color="var(--cyan-hi)" />
+            <div className="grow">
+              <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("IMPORTA PIANO NUTRIZIONALE")}</div>
+              <div className="tiny t-dim">{tr("Carica il piano del tuo nutrizionista (PDF, foto, testo) — l'AI lo converte")}</div>
+            </div>
+            <ChevronRight size={16} color="var(--faint)" />
+          </div>
+        </Panel>
+      </button>
     </div>
   );
 
@@ -3220,7 +3316,6 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
       {nutri && (
         <div className="row between">
           <h2 className="hud-title">▸ Piano — {nutri.goal}</h2>
-          <Btn small onClick={() => setNutri(null)}>{tr("↻ Nuovo")}</Btn>
         </div>
       )}
       <div className="row g8">
@@ -3329,7 +3424,6 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
       <div className="col stack">
         <div className="row between">
           <h2 className="hud-title">▸ Piano — {nutri.goal}</h2>
-          <Btn small onClick={() => setNutri(null)}>{tr("↻ Nuovo")}</Btn>
         </div>
 
         <div className="row g8">
@@ -3349,7 +3443,11 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
             </div>
             {!editing
               ? <Btn small onClick={startEdit}>{tr("Modifica target")}</Btn>
-              : <Btn small primary onClick={saveEdit}>{tr("Salva ✓")}</Btn>}
+              : <Btn small primary onClick={saveEdit} disabled={rescaling}>
+                  {rescaling
+                    ? <span className="row center g6"><Loader2 size={12} className="spin" /> {tr("Ricalcolo AI...")}</span>
+                    : tr("Salva ✓")}
+                </Btn>}
           </div>
 
           {!editing ? (
@@ -3387,10 +3485,12 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
       <div className="col stack">
         {editMeal && (
           <MealEditor meal={editMeal} options={asOptions(nutri.meals[editMeal])}
-            todayIdx={dayIndex() % Math.max(1, asOptions(nutri.meals[editMeal]).length)}
+            defIdx={(nutri.mealDefaults && nutri.mealDefaults[editMeal]) || 0}
             onClose={() => setEditMeal(null)}
-            onSave={(opts) => {
-              setNutri({ ...nutri, meals: { ...nutri.meals, [editMeal]: opts } });
+            onSave={(opts, def) => {
+              setNutri({ ...nutri,
+                meals: { ...nutri.meals, [editMeal]: opts },
+                mealDefaults: { ...(nutri.mealDefaults || {}), [editMeal]: def } });
               setEditMeal(null);
               fireToast({ title: tr("◈ PASTO AGGIORNATO"), sub: editMeal });
             }} />
@@ -3399,7 +3499,8 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
         {orderedMealNames(nutri).map((meal) => {
           const raw = nutri.meals[meal];
           const opts = asOptions(raw);
-          const idx = dayIndex() % Math.max(1, opts.length);
+          /* opzione mostrata: la predefinita scelta dall'utente (non ruota più coi giorni) */
+          const idx = Math.min((nutri.mealDefaults && nutri.mealDefaults[meal]) || 0, Math.max(0, opts.length - 1));
           const foods = opts[idx] || [];
           return (
             <button key={meal} onClick={() => setEditMeal(meal)} className="tap" style={{ width: "100%", cursor: "pointer", textAlign: "left" }}>
@@ -3412,7 +3513,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
                     <div className="hud-label">▸ {meal}</div>
                   </div>
                   <span className="micro t-faint">
-                    {opts.length > 1 ? `${tr("OPZIONE")} ${idx + 1}/${opts.length} · ` : ""}{tr("MODIFICA")} ›
+                    {opts.length > 1 ? `${tr("OPZIONE")} ${idx + 1}/${opts.length} ★ · ` : ""}{tr("MODIFICA")} ›
                   </span>
                 </div>
                 {foods.map((f, i) => (
