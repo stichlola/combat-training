@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 
 /* ============================== STYLES ============================== */
 export const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Roboto:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap');
 
 :root{color-scheme:dark;
   --bg:#04090f; --panel:#081420; --panel2:#0a1a2a; --line:#1b3a52; --line2:#2f6786;
@@ -268,76 +268,88 @@ body.dragging *{cursor:grabbing!important}
    del colore d'accento, elevazioni al posto dei bordi, bottoni a pillola,
    card 16px, dialoghi 28px, tipografia Roboto. */
 /* ============================== FIT TRAINING (base) ==============================
-   Tema CHIARO moderno: neutri freddi slate + accento azzurro primario dell'app,
-   input bianchi con anello di focus, bottoni primari in gradiente azzurro,
-   card bianche con ombre morbide, tipografia Roboto. */
+   Tema CHIARO "Aurora": sfondo con alone di gradiente fissato al viewport
+   (indigo → ciano → violetto), vetro smerigliato su header e menu, card bianche
+   con ombre morbide bluastre e angoli generosi, accento primario indigo-violetto.
+   Tipografia: Sora per titoli ed etichette, Inter per testo e controlli. */
 .standard{color-scheme:light;
-  --bg:#f4f7fa;--panel:#ffffff;--panel2:#edf2f7;--line:#e2e9f0;--line2:#c3d0dd;
-  --cyan:#0284c7;--cyan-hi:#0369a1;--bright:#0f172a;--text:#3f4c5e;
-  --dim:#5b6b80;--faint:#8b98a9;--amber:#b45309;--green:#15803d;--red:#dc2626;
-  --card:#eef3f7;--card2:#e4ebf2;--active:#e0f1fc;--active2:#eef7fd;
-  --soft:#ebf1f6;--soft2:#dde6ee;--hairline:#ebf1f6;--input:#ffffff;
-  --modal:#f7fafc;--done:#dcf2e3;--warm-bg:#fdf2d9;--warm-line:#eab308;
+  --bg:#eef1f7;--panel:#ffffff;--panel2:#eef1f8;--line:#e4e9f3;--line2:#c9d2e4;
+  --cyan:#4f46e5;--cyan-hi:#4338ca;--bright:#0f1322;--text:#404a68;
+  --dim:#5b6580;--faint:#8d96b0;--amber:#b45309;--green:#15803d;--red:#dc2626;
+  --card:#eef1f8;--card2:#e5eaf4;--active:#e9ebfd;--active2:#f3f4fe;
+  --soft:#eceff7;--soft2:#dfe4f0;--hairline:#edf0f7;--input:#ffffff;
+  --modal:#f7f8fc;--done:#dcf2e3;--warm-bg:#fdf2d9;--warm-line:#eab308;
   --pt:#d97706;--pt-hi:#f59e0b;--pt-deep:#b45309;--pt-soft:#fef3c7;
-  font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
+/* alone "aurora" fissato dietro tutto il contenuto */
+.hud-root.standard{background:
+  radial-gradient(52vw 34vh at 88% -8%,rgba(124,58,237,.12),transparent 62%),
+  radial-gradient(48vw 38vh at -12% 4%,rgba(56,189,248,.16),transparent 60%),
+  radial-gradient(64vw 44vh at 50% 108%,rgba(79,70,229,.10),transparent 66%),
+  #eef1f7;background-attachment:fixed}
 .standard::before,.standard::after{display:none}
-.standard .f-hud,.standard .hud-label,.standard .hud-title,.standard .micro,.standard .btn,.standard .brand,
-.standard .bnav-btn,.standard .snav-btn,.standard .hud-input,.standard .chip{
-  font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.standard .btn,.standard .bnav-btn,.standard .snav-btn,.standard .hud-input,.standard .chip{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.standard .f-hud,.standard .hud-label,.standard .hud-title,.standard .brand,.standard .micro{
+  font-family:'Sora',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .standard .hud-label,.standard .hud-title,.standard .micro,.standard .btn,.standard .brand,
 .standard .bnav-btn,.standard .snav-btn{letter-spacing:.04em}
 .standard .hud-label,.standard .hud-title,.standard .btn,.standard .bnav-btn,.standard .snav-btn{text-transform:none}
 .standard .hud-label{font-weight:700}
-.standard .cham{clip-path:none;border-radius:16px}
-.standard .cham-s{clip-path:none;border-radius:12px}
-.standard .seg{clip-path:none;border-radius:4px}
-.standard .panel{background:#ffffff;border:1px solid #eef2f6;border-radius:16px;
-  box-shadow:0 1px 2px rgba(15,23,42,.06),0 4px 14px rgba(15,23,42,.06)}
-.standard .panel-accent{background:#f0f8fd;border-color:#d8ecfa}
+.standard .micro{letter-spacing:.14em}
+.standard .cham{clip-path:none;border-radius:20px}
+.standard .cham-s{clip-path:none;border-radius:14px}
+.standard .seg{clip-path:none;border-radius:999px}
+.standard .panel{background:#ffffff;border:1px solid #e8ecf5;border-radius:20px;
+  box-shadow:0 1px 2px rgba(35,43,90,.05),0 10px 28px rgba(35,43,90,.07)}
+.standard .panel-accent{background:linear-gradient(180deg,#f4f5fe,#eef0fd);border-color:#dee2fb}
 .standard .panel::before{display:none}
-/* bottoni: primario in gradiente azzurro, ghost in slate chiaro */
-.standard .btn{border-radius:999px;letter-spacing:.01em;font-weight:600;transition:all .15s ease}
-.standard .btn-primary{background:linear-gradient(135deg,#0ea5e9,#0284c7);border-color:transparent;color:#fff;
-  box-shadow:0 2px 6px rgba(2,132,199,.32),0 1px 2px rgba(2,132,199,.2)}
-.standard .btn-primary:hover{background:linear-gradient(135deg,#0284c7,#0369a1);
-  box-shadow:0 4px 12px rgba(2,132,199,.38),0 1px 3px rgba(2,132,199,.22)}
-.standard .btn-ghost{background:#e8eef4;color:#1d2935;border-color:transparent}
-.standard .btn-ghost:hover{background:#dbe6f0;color:#0369a1}
+/* bottoni: primario in gradiente aurora indigo→violetto, ghost in grigio freddo */
+.standard .btn{border-radius:14px;letter-spacing:.01em;font-weight:600;transition:all .15s ease}
+.standard .btn-primary{background:linear-gradient(135deg,#6366f1,#7c3aed);border-color:transparent;color:#fff;
+  box-shadow:0 2px 6px rgba(99,102,241,.35),0 1px 2px rgba(124,58,237,.25)}
+.standard .btn-primary:hover{background:linear-gradient(135deg,#4f46e5,#6d28d9);
+  box-shadow:0 5px 14px rgba(99,102,241,.42),0 2px 4px rgba(124,58,237,.25)}
+.standard .btn-ghost{background:#eceff7;color:#39415e;border-color:transparent}
+.standard .btn-ghost:hover{background:#e0e5f2;color:#4338ca}
 .standard .link-btn{color:var(--cyan)}
 .standard .link-btn:hover{color:var(--cyan-hi)}
-/* input moderni: bianchi, bordo sottile, anello azzurro al focus */
-.standard .hud-input{background:#ffffff;border:1px solid #d5dfe9;border-radius:12px;font-weight:500;color:#0f172a;
-  transition:border-color .15s ease,box-shadow .15s ease}
-.standard .hud-input::placeholder{color:#9aa7b8}
-.standard .hud-input:hover{border-color:#b7c8d8}
-.standard .hud-input:focus{border-color:#0284c7;box-shadow:0 0 0 3px rgba(2,132,199,.16);background:#ffffff;outline:none}
+/* input: superficie quasi bianca, anello indigo al focus */
+.standard .hud-input{background:#fbfcfe;border:1px solid #dde3ef;border-radius:14px;font-weight:500;color:#0f1322;
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}
+.standard .hud-input::placeholder{color:#98a1ba}
+.standard .hud-input:hover{border-color:#c3cde3}
+.standard .hud-input:focus{border-color:#4f46e5;box-shadow:0 0 0 4px rgba(99,102,241,.14);background:#ffffff;outline:none}
 .standard select.hud-input,.standard textarea.hud-input{appearance:auto}
-.standard .hud-header{background:rgba(255,255,255,.86);border-bottom-color:var(--line)}
-.standard .bottom-nav{background:rgba(255,255,255,.94);border-top:1px solid var(--line)}
-.standard .brand{letter-spacing:.06em;font-weight:700;color:#0369a1}
+/* header e menu: vetro smerigliato che lascia intravedere l'alone */
+.standard .hud-header{background:rgba(255,255,255,.72);backdrop-filter:blur(16px) saturate(1.5);
+  -webkit-backdrop-filter:blur(16px) saturate(1.5);border-bottom:1px solid rgba(226,232,244,.9)}
+.standard .bottom-nav{background:rgba(255,255,255,.78);backdrop-filter:blur(16px) saturate(1.5);
+  -webkit-backdrop-filter:blur(16px) saturate(1.5);border-top:1px solid rgba(226,232,244,.9)}
+.standard .brand{letter-spacing:.02em;font-weight:800;color:#4338ca}
 .standard .streak-pill{border-radius:999px}
-.standard .modal-box{border:none;border-radius:28px;background:#ffffff;box-shadow:0 8px 20px rgba(15,23,42,.14),0 2px 6px rgba(15,23,42,.1)}
-.standard .float-timer{border:none;border-radius:20px;background:#ffffff;box-shadow:0 6px 16px rgba(15,23,42,.12),0 1px 3px rgba(15,23,42,.1)}
-.standard .timer-pop{border:none;border-radius:20px;background:#ffffff;box-shadow:0 6px 16px rgba(15,23,42,.12),0 1px 3px rgba(15,23,42,.1)}
-.standard .setmenu{border:none;border-radius:16px;background:#ffffff;box-shadow:0 4px 12px rgba(15,23,42,.12),0 1px 2px rgba(15,23,42,.1)}
-.standard .float-cam-btn,.standard .float-timer-btn{border:1px solid #e2e9f0;border-radius:16px;background:#ffffff;
-  color:#1d2935;box-shadow:0 4px 10px rgba(15,23,42,.1),0 1px 3px rgba(15,23,42,.08)}
-.standard .set-chip{border:none;border-radius:8px}
-.standard .chip{border-radius:8px}
-/* selezioni tonali azzurre (chip attivi, voci scelte) */
-.standard .chip-on{background:#e0f1fc;color:#0369a1;border-color:transparent;font-weight:600}
-.standard .dash-btn{color:var(--cyan);border-color:rgba(2,132,199,.35);background:#f6fbfe}
-.standard .dash-btn:hover{color:var(--cyan-hi);border-color:rgba(2,132,199,.6);background:#eef7fd}
+.standard .modal-box{border:none;border-radius:24px;background:#ffffff;box-shadow:0 12px 32px rgba(35,43,90,.16),0 2px 8px rgba(35,43,90,.1)}
+.standard .float-timer{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(35,43,90,.14),0 1px 4px rgba(35,43,90,.1)}
+.standard .timer-pop{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(35,43,90,.14),0 1px 4px rgba(35,43,90,.1)}
+.standard .setmenu{border:none;border-radius:16px;background:#ffffff;box-shadow:0 6px 16px rgba(35,43,90,.14),0 1px 3px rgba(35,43,90,.1)}
+.standard .float-cam-btn,.standard .float-timer-btn{border:1px solid #e4e9f3;border-radius:16px;background:#ffffff;
+  color:#39415e;box-shadow:0 4px 12px rgba(35,43,90,.12),0 1px 3px rgba(35,43,90,.08)}
+.standard .set-chip{border:none;border-radius:10px}
+.standard .chip{border-radius:10px}
+/* selezioni tonali indigo (chip attivi, voci scelte) */
+.standard .chip-on{background:#e7e9fd;color:#4338ca;border-color:transparent;font-weight:600}
+.standard .dash-btn{color:#4f46e5;border-color:rgba(99,102,241,.35);background:#f7f8fe}
+.standard .dash-btn:hover{color:#4338ca;border-color:rgba(99,102,241,.6);background:#eff1fe}
 .standard .set-warmup{background:var(--warm-bg)}
-.standard .info-btn{background:#eef7fd;color:#0369a1;border-color:#cde7f7}
+.standard .info-btn{background:#eef0fe;color:#4338ca;border-color:#dbe0fb}
 .bnav-ico{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:28px;
   margin:-4px 0;border-radius:999px}
-/* voce attiva del menu: pill tonale azzurra col colore primario dell'app */
-.standard .bnav-btn.on .bnav-ico{background:#d9edfb;color:#0369a1}
-.standard .bnav-btn.on{color:#0369a1 !important}
+/* voce attiva del menu: pill tonale indigo */
+.standard .bnav-btn.on .bnav-ico{background:#e7e9fd;color:#4338ca}
+.standard .bnav-btn.on{color:#4338ca !important}
 .standard .bnav-btn div:last-child{display:none}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
-body.standard{background:#f4f7fa}
+body.standard{background:#eef1f7}
 
 `;
 
