@@ -518,6 +518,30 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const tRef = useRef(null);
 
+  /* Chrome/Android: niente barra di compilazione automatica (password, carte,
+     indirizzi) sopra la tastiera — autocomplete off su OGNI campo, compresi
+     quelli che nascono dopo (modali, portali), e ignora i password manager. */
+  useEffect(() => {
+    const fix = (el) => {
+      if (!el.matches || !el.matches("input, textarea, select")) return;
+      el.setAttribute("autocomplete", el.type === "password" ? "new-password" : "off");
+      el.setAttribute("data-1p-ignore", "true");  // 1Password
+      el.setAttribute("data-lpignore", "true");   // LastPass
+      el.setAttribute("data-bwignore", "true");   // Bitwarden
+    };
+    document.querySelectorAll("input, textarea, select").forEach(fix);
+    const mo = new MutationObserver((muts) => {
+      for (const m of muts)
+        m.addedNodes.forEach((n) => {
+          if (n.nodeType !== 1) return;
+          fix(n);
+          if (n.querySelectorAll) n.querySelectorAll("input, textarea, select").forEach(fix);
+        });
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
+
   /* --- auth & persistenza via Supabase --- */
   const [user, setUser] = useState(null);
   const [pendingPt, setPendingPt] = useState(null); // invito PT da confermare (id trainer)
