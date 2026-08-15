@@ -47,15 +47,16 @@ DATABASE ESERCIZI DELL'APP: ${ALL_EXERCISES.join(" | ")}
 REGOLA FONDAMENTALE: riconduci OGNI esercizio del documento al nome PIÙ VICINO nel database, e sposta in "note" tutti i dettagli in eccesso (angolo, presa, tempo, recupero, tecnica). Esempi: "Panca piana a 30 gradi presa larga" -> name "Panca Inclinata Bilanciere", note "30°, presa larga"; "Squat fermo 2 secondi in buca" -> name "Squat Bilanciere", note "fermo 2s in buca". Imposta "matched": true.
 SOLO se non esiste NESSUNA corrispondenza ragionevole nel database, mantieni il nome originale con "matched": false.
 Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra.
-Schema: {"name": string (nome scheda breve maiuscolo), "exercises": [{"name": string, "matched": boolean, "note": string (dettagli extra, "" se nessuno), "group": string (uno tra: ${GROUPS.join(", ")}, oppure "Altro"), "sets": [{"w": number (kg, 0 se corpo libero o non indicato), "r": number (ripetizioni, stima se è un range es. "8-10" -> 9)}]}]}
-Se un esercizio indica "3x10 60kg" genera 3 set identici. Se il documento contiene più giorni, unisci nel nome il giorno 1 e includi solo gli esercizi del giorno 1.
-PROGRESSIONE SETTIMANALE: se il documento è una tabella programmata per settimane (colonne o blocchi tipo "SETTIMANA 1/2/3", "Week 1-4", "Sett.1 ... Sett.2", con carichi o ripetizioni che cambiano), aggiungi a OGNI esercizio coinvolto la chiave "weeks": un array con UN oggetto per settimana, nell'ordine, formato {"sets": [{"w": number, "r": number}]} (stessa struttura di "sets"). La settimana 1 deve coincidere con "sets". Se non c'è nessuna progressione, ometti "weeks".`,
+Schema: {"routines": [{"name": string (nome breve maiuscolo), "exercises": [{"name": string, "matched": boolean, "note": string (dettagli extra, "" se nessuno), "group": string (uno tra: ${GROUPS.join(", ")}, oppure "Altro"), "sets": [{"w": number (kg, 0 se corpo libero o non indicato), "r": number (ripetizioni, stima se è un range es. "8-10" -> 9)}]}]}]}
+Se un esercizio indica "3x10 60kg" genera 3 set identici.
+PIÙ ALLENAMENTI E SETTIMANE: il documento spesso contiene diversi allenamenti (Giorno A/B/C, Push/Pull/Legs, Full body 1/2, Seduta 1/2/3...) e/o più settimane. Crea UNA routine in "routines" per OGNI allenamento/giorno trovato, con nomi chiari (es. "GIORNO A — PETTO E DORSI", "SETTIMANA 2 — GIORNO 1"). NON unire giorni diversi in una sola routine e NON scartare nessun giorno.
+PROGRESSIONE SETTIMANALE: se uno stesso allenamento è programmato su più settimane con gli STESSI esercizi ma carichi/ripetizioni che cambiano (tabelle tipo "SETTIMANA 1/2/3", "Week 1-4", "Sett.1 ... Sett.2"), NON duplicare la routine: aggiungi a OGNI esercizio coinvolto la chiave "weeks", un array con UN oggetto per settimana nell'ordine, formato {"sets": [{"w": number, "r": number}]} (stessa struttura di "sets"; la settimana 1 deve coincidere con "sets"). Se invece le settimane hanno esercizi DIVERSI, crea routine separate. Se non c'è nessuna progressione, ometti "weeks".`,
       });
 
       const response = await fetch("/api/ai", {
         method: "POST",
         headers: await featHeaders("import"),
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2500, messages: [{ role: "user", content }] }),
+        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 8000, messages: [{ role: "user", content }] }),
       });
       const _txt = await response.text();
       let data; try { data = JSON.parse(_txt); } catch { throw new Error(response.status === 413 ? tr("File troppo grande: usa una foto più piccola o incolla il testo.") : `Errore server (${response.status})`); }
@@ -63,10 +64,15 @@ PROGRESSIONE SETTIMANALE: se il documento è una tabella programmata per settima
       if (data.error) throw new Error(typeof data.error === "string" ? data.error : "Errore API");
       const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
       const parsed = parseLoose(text);
-      const routine = {
-        id: Date.now(),
-        name: (parsed.name || "SCHEDA PT").toUpperCase(),
-        exercises: (parsed.exercises || []).map((e) => {
+      /* nuovo formato: più schede in un colpo solo; compatibilità col vecchio {name, exercises} */
+      const rawList = Array.isArray(parsed.routines) && parsed.routines.length
+        ? parsed.routines
+        : [{ name: parsed.name, exercises: parsed.exercises }];
+      const routines = rawList.map((p, ri) => {
+        const routine = {
+          id: Date.now() + ri,
+          name: (p.name || `SCHEDA PT ${ri + 1}`).toUpperCase(),
+          exercises: (p.exercises || []).map((e) => {
           /* 1° livello: mapping fatto dall'AI col database; 2° livello: matcher testuale; altrimenti esercizio nuovo */
           let name = e.name, note = e.note || "";
           let matched = e.matched !== false && ALL_EXERCISES.includes(e.name);
@@ -96,13 +102,15 @@ PROGRESSIONE SETTIMANALE: se il documento è una tabella programmata per settima
             ...base,
             sets: (e.sets || []).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 10, done: false })),
           };
-        }).filter((e) => e.sets.length),
-      };
-      if (!routine.exercises.length) throw new Error("Nessun esercizio riconosciuto nel documento");
-      /* progressione precompilata dal documento: parte SPENTA, il PT l'attiva se vuole */
-      if (routine.exercises.some((e) => e.progression?.weeks?.length > 1))
-        routine.progression = { enabled: false, startDate: todayISO() };
-      setResult(routine);
+          }).filter((e) => e.sets.length),
+        };
+        /* progressione precompilata dal documento: parte SPENTA, si attiva a mano */
+        if (routine.exercises.some((e) => e.progression?.weeks?.length > 1))
+          routine.progression = { enabled: false, startDate: todayISO() };
+        return routine;
+      }).filter((r) => r.exercises.length);
+      if (!routines.length) throw new Error("Nessun esercizio riconosciuto nel documento");
+      setResult(routines);
     } catch (err) {
       if (err.message === "LIMIT") {
         setError("Limite settimanale di import raggiunto — acquista crediti o attendi lunedì.");
@@ -170,12 +178,26 @@ PROGRESSIONE SETTIMANALE: se il documento è una tabella programmata per settima
         </>
       ) : (
         <>
-          <Panel accent>
-            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", marginBottom: 12 }}>{result.name}</div>
-            {result.exercises.map((e, i) => {
-              const updEx = (field, val) => setResult((r) => ({
-                ...r, exercises: r.exercises.map((x, j) => j !== i ? x : { ...x, [field]: val }),
-              }));
+          {result.length > 1 && (
+            <div className="micro t-cyan" style={{ letterSpacing: ".12em" }}>
+              {tr("DOCUMENTO DIVISO IN")} {result.length} {tr("SCHEDE — CONTROLLALE PRIMA DI SALVARE")}
+            </div>
+          )}
+          {result.map((routine, ri) => (
+          <Panel accent key={ri}>
+            <div className="row between" style={{ marginBottom: 12 }}>
+              <div className="f-hud t-cyan grow" style={{ fontWeight: 700, letterSpacing: ".2em" }}>{routine.name}</div>
+              {result.length > 1 && (
+                <span onClick={() => setResult((rs) => rs.filter((_, j) => j !== ri))}
+                  className="tap t-faint" title={tr("Rimuovi")}
+                  style={{ cursor: "pointer", fontSize: 15, padding: "2px 8px" }}>✕</span>
+              )}
+            </div>
+            {routine.exercises.map((e, i) => {
+              const updEx = (field, val) => setResult((rs) =>
+                rs.map((r, j) => j !== ri ? r : {
+                  ...r, exercises: r.exercises.map((x, k) => k !== i ? x : { ...x, [field]: val }),
+                }));
               return (
                 <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid var(--hairline)" }}>
                   <div className="row between g8">
@@ -204,9 +226,12 @@ PROGRESSIONE SETTIMANALE: se il documento è una tabella programmata per settima
               );
             })}
           </Panel>
+          ))}
           <div className="row g8">
             <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Riprova")}</Btn>
-            <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>{tr("Salva scheda ✓")}</Btn>
+            <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>
+              {result.length > 1 ? `${tr("Salva")} ${result.length} ${tr("schede")} ✓` : tr("Salva scheda ✓")}
+            </Btn>
           </div>
         </>
       )}

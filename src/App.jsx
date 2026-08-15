@@ -1205,7 +1205,19 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
     onSave={(r) => saveRoutine({ ...r, id: routines.some((x) => x.id === r.id) ? Date.now() : r.id }, "◈ SCHEDA AI GENERATA")} />;
   /* nota: la conversione della scheda PT (import) resta gratuita per scelta */
   if (view === "import") return <DocImport premium={premium} onClose={() => setView("home")}
-    onSave={(r) => saveRoutine({ ...r, id: routines.some((x) => x.id === r.id) ? Date.now() : r.id }, "◈ DOCUMENTO INTERPRETATO")} />;
+    onSave={(list) => {
+      /* il documento può contenere più allenamenti/settimane: si salvano tutti */
+      const arr = Array.isArray(list) ? list : [list];
+      setRoutines((rs) => {
+        const out = [...rs];
+        arr.forEach((r, i) =>
+          out.push({ ...r, id: out.some((x) => x.id === r.id) ? Date.now() + i + 1 : r.id }));
+        return out;
+      });
+      setView("home"); setEditId(null);
+      fireToast({ title: tr("◈ DOCUMENTO INTERPRETATO"),
+        sub: arr.length > 1 ? `${arr.length} ${tr("schede aggiunte")}` : arr[0].name });
+    }} />;
 
   return (
     <div className="fade-in two-col">

@@ -182,9 +182,11 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
   if (importOpen) return (
     <DocImport premium={null}
       onClose={() => setImportOpen(false)}
-      onSave={(r) => {
+      onSave={(list) => {
         ptImportConsume(); setImportsLeft(ptImportsLeft());
-        setPending([...(routines || []), r]); setImportOpen(false);
+        /* import multiplo: tutte le schede trovate finiscono in bozza */
+        const arr = Array.isArray(list) ? list : [list];
+        setPending([...(routines || []), ...arr]); setImportOpen(false);
       }} />
   );
 

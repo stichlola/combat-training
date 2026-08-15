@@ -380,6 +380,9 @@ const EN_UI = {
   "Descrizione esecuzione (mostrata nel pop-up info)...": "How to perform (shown in the info popup)...",
   "URL immagine/GIF (opzionale)...": "Image/GIF URL (optional)...",
   "Salva scheda ✓": "Save routine ✓", "↻ Riprova": "↻ Retry",
+  "schede": "routines", "schede aggiunte": "routines added",
+  "DOCUMENTO DIVISO IN": "DOCUMENT SPLIT INTO",
+  "SCHEDE — CONTROLLALE PRIMA DI SALVARE": "ROUTINES — REVIEW THEM BEFORE SAVING",
   "LIMITE SETTIMANALE RAGGIUNTO": "WEEKLY LIMIT REACHED",
   "Crediti / Premium ›": "Credits / Premium ›",
 
