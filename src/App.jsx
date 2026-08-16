@@ -2838,15 +2838,14 @@ function NutriSubTabs({ value, onChange }) {
 /* ---------------- Opzioni pasto: scelta della predefinita + editor ---------------- */
 /* Struttura: meals["Pranzo"] = [ [cibo,...], [cibo,...] ]  (una lista per opzione).
    I piani vecchi con una sola lista piatta vengono normalizzati automaticamente.
-   nutri.mealDefaults["Pranzo"] = indice dell'opzione predefinita mostrata nel piano. */
+   nutri.mealDefaults["Pranzo"] = indice dell'opzione mostrata nel piano (salvata al tap). */
 const asOptions = (v) =>
   Array.isArray(v) && v.length && Array.isArray(v[0]) ? v : [Array.isArray(v) ? v : []];
 
-function MealEditor({ meal, options, defIdx = 0, onClose, onSave }) {
+function MealEditor({ meal, options, shownIdx = 0, onClose, onSave }) {
   const [opts, setOpts] = useState(() => JSON.parse(JSON.stringify(options)));
-  const [sel, setSel] = useState(Math.min(defIdx, Math.max(0, options.length - 1)));
-  /* opzione predefinita: è quella mostrata nella schermata del piano (★) */
-  const [def, setDef] = useState(Math.min(defIdx, Math.max(0, options.length - 1)));
+  /* si apre sull'opzione attualmente mostrata nel piano */
+  const [sel, setSel] = useState(Math.min(shownIdx, Math.max(0, options.length - 1)));
 
   const upd = (oi, fi, field, val) => setOpts((o) =>
     o.map((opt, i) => i !== oi ? opt : opt.map((f, j) => j !== fi ? f : { ...f, [field]: val })));
@@ -2856,7 +2855,6 @@ function MealEditor({ meal, options, defIdx = 0, onClose, onSave }) {
   const delOpt = (oi) => {
     if (opts.length <= 1) return;
     setOpts((o) => o.filter((_, i) => i !== oi));
-    setDef((d) => (oi === d ? 0 : oi < d ? d - 1 : d));
     setSel((s) => (s >= opts.length - 1 ? opts.length - 2 : s));
   };
 
@@ -2869,31 +2867,20 @@ function MealEditor({ meal, options, defIdx = 0, onClose, onSave }) {
           <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
         </div>
         <div className="tiny t-faint" style={{ marginBottom: 12 }}>
-          {opts.length} {tr("OPZIONI · ★ = PREDEFINITA")}
+          {opts.length} {tr("OPZIONI DISPONIBILI")}
         </div>
 
         {/* selettore opzioni */}
-        <div className="row wrap g6" style={{ marginBottom: 10 }}>
+        <div className="row wrap g6" style={{ marginBottom: 14 }}>
           {opts.map((_, i) => (
             <button key={i} onClick={() => setSel(i)}
               className={`tap cham-s chip ${sel === i ? "chip-on" : ""}`}
               style={{ cursor: "pointer", padding: "6px 12px", fontSize: 11 }}>
-              {tr("OPZIONE")} {i + 1}{i === def ? " ★" : ""}
+              {tr("OPZIONE")} {i + 1}
             </button>
           ))}
           <button onClick={addOpt} className="tap cham-s chip" style={{ cursor: "pointer", padding: "6px 12px", fontSize: 11 }}>＋</button>
         </div>
-
-        {/* scelta dell'opzione predefinita: è lei ad apparire nel piano */}
-        {opts.length > 1 && (sel !== def ? (
-          <button onClick={() => setDef(sel)} className="dash-btn cham-s tap" style={{ marginBottom: 12 }}>
-            ★ {tr("RENDI PREDEFINITA")}
-          </button>
-        ) : (
-          <div className="micro t-amber" style={{ marginBottom: 12, letterSpacing: ".08em" }}>
-            ★ {tr("OPZIONE PREDEFINITA — MOSTRATA NEL PIANO")}
-          </div>
-        ))}
 
         {/* alimenti dell'opzione selezionata */}
         {(opts[sel] || []).map((f, fi) => (
@@ -2913,7 +2900,7 @@ function MealEditor({ meal, options, defIdx = 0, onClose, onSave }) {
               {tr("Elimina opzione")}
             </Btn>
           )}
-          <Btn small primary onClick={() => onSave(opts.map((o) => o.filter((f) => f.nome.trim())), def)} style={{ flex: 2 }}>
+          <Btn small primary onClick={() => onSave(opts.map((o) => o.filter((f) => f.nome.trim())))} style={{ flex: 2 }}>
             {tr("Salva ✓")}
           </Btn>
         </div>
@@ -3521,12 +3508,12 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
       <div className="col stack">
         {editMeal && (
           <MealEditor meal={editMeal} options={asOptions(nutri.meals[editMeal])}
-            defIdx={(nutri.mealDefaults && nutri.mealDefaults[editMeal]) || 0}
+            shownIdx={(nutri.mealDefaults && nutri.mealDefaults[editMeal]) || 0}
             onClose={() => setEditMeal(null)}
-            onSave={(opts, def) => {
-              setNutri({ ...nutri,
-                meals: { ...nutri.meals, [editMeal]: opts },
-                mealDefaults: { ...(nutri.mealDefaults || {}), [editMeal]: def } });
+            onSave={(opts) => {
+              const md = { ...(nutri.mealDefaults || {}) };
+              md[editMeal] = Math.min(md[editMeal] || 0, Math.max(0, opts.length - 1));
+              setNutri({ ...nutri, meals: { ...nutri.meals, [editMeal]: opts }, mealDefaults: md });
               setEditMeal(null);
               fireToast({ title: tr("◈ PASTO AGGIORNATO"), sub: editMeal });
             }} />
@@ -3535,7 +3522,7 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
         {orderedMealNames(nutri).map((meal) => {
           const raw = nutri.meals[meal];
           const opts = asOptions(raw);
-          /* opzione mostrata: la predefinita scelta dall'utente (non ruota più coi giorni) */
+          /* opzione mostrata: l'ultima scelta toccando la card (salvata, non ruota coi giorni) */
           const idx = Math.min((nutri.mealDefaults && nutri.mealDefaults[meal]) || 0, Math.max(0, opts.length - 1));
           const foods = opts[idx] || [];
           return (
@@ -3555,7 +3542,7 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
                     <div className="hud-label">▸ {meal}</div>
                   </div>
                   <span className="row g6" style={{ alignItems: "center" }}>
-                    {opts.length > 1 && <span className="micro t-faint">{tr("OPZIONE")} {idx + 1}/{opts.length} ★</span>}
+                    {opts.length > 1 && <span className="micro t-faint">{tr("OPZIONE")} {idx + 1}/{opts.length}</span>}
                     <span onClick={(e) => { e.stopPropagation(); setEditMeal(meal); }}
                       className="micro tap" style={{ color: "var(--cyan)", cursor: "pointer", padding: "4px 2px 4px 8px", fontWeight: 700 }}>
                       {tr("MODIFICA")} ›
