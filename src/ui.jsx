@@ -268,25 +268,26 @@ body.dragging *{cursor:grabbing!important}
    del colore d'accento, elevazioni al posto dei bordi, bottoni a pillola,
    card 16px, dialoghi 28px, tipografia Roboto. */
 /* ============================== FIT TRAINING (base) ==============================
-   Tema CHIARO "Aurora": sfondo con alone di gradiente fissato al viewport
-   (indigo → ciano → violetto), vetro smerigliato su header e menu, card bianche
-   con ombre morbide bluastre e angoli generosi, accento primario indigo-violetto.
+   Tema CHIARO "Solare": base ARANCIONE calda su neutri color carta, alone di
+   gradiente pesca/ambrato fissato al viewport, vetro smerigliato su header e
+   menu, card bianche con ombre calde e angoli generosi.
    Tipografia: Sora per titoli ed etichette, Inter per testo e controlli. */
 .standard{color-scheme:light;
-  --bg:#eef1f7;--panel:#ffffff;--panel2:#eef1f8;--line:#e4e9f3;--line2:#c9d2e4;
-  --cyan:#4f46e5;--cyan-hi:#4338ca;--bright:#0f1322;--text:#404a68;
-  --dim:#5b6580;--faint:#8d96b0;--amber:#b45309;--green:#15803d;--red:#dc2626;
-  --card:#eef1f8;--card2:#e5eaf4;--active:#e9ebfd;--active2:#f3f4fe;
-  --soft:#eceff7;--soft2:#dfe4f0;--hairline:#edf0f7;--input:#ffffff;
-  --modal:#f7f8fc;--done:#dcf2e3;--warm-bg:#fdf2d9;--warm-line:#eab308;
-  --pt:#d97706;--pt-hi:#f59e0b;--pt-deep:#b45309;--pt-soft:#fef3c7;
+  --bg:#f7f4f0;--panel:#ffffff;--panel2:#f5f0ea;--line:#ece4da;--line2:#d9cdbd;
+  --cyan:#ea580c;--cyan-hi:#c2410c;--bright:#1f1913;--text:#4d443a;
+  --dim:#6b6156;--faint:#9a8d7e;--amber:#b45309;--green:#15803d;--red:#dc2626;
+  --card:#f5f0ea;--card2:#ede6dc;--active:#fdeede;--active2:#fdf5ec;
+  --soft:#f1ebe3;--soft2:#e8ddcd;--hairline:#f2ece4;--input:#ffffff;
+  --modal:#faf7f3;--done:#dcf2e3;--warm-bg:#fdf2d9;--warm-line:#eab308;
+  /* PT: ambra tendente al giallo, così resta distinto dall'arancione di base */
+  --pt:#ca8a04;--pt-hi:#eab308;--pt-deep:#a16207;--pt-soft:#fef9c3;
   font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
-/* alone "aurora" fissato dietro tutto il contenuto */
+/* alone "solare" fissato dietro tutto il contenuto */
 .hud-root.standard{background:
-  radial-gradient(52vw 34vh at 88% -8%,rgba(124,58,237,.12),transparent 62%),
-  radial-gradient(48vw 38vh at -12% 4%,rgba(56,189,248,.16),transparent 60%),
-  radial-gradient(64vw 44vh at 50% 108%,rgba(79,70,229,.10),transparent 66%),
-  #eef1f7;background-attachment:fixed}
+  radial-gradient(52vw 34vh at 88% -8%,rgba(249,115,22,.10),transparent 62%),
+  radial-gradient(48vw 38vh at -12% 4%,rgba(253,186,116,.18),transparent 60%),
+  radial-gradient(64vw 44vh at 50% 108%,rgba(251,146,60,.12),transparent 66%),
+  #f7f4f0;background-attachment:fixed}
 .standard::before,.standard::after{display:none}
 .standard .btn,.standard .bnav-btn,.standard .snav-btn,.standard .hud-input,.standard .chip{
   font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -300,62 +301,62 @@ body.dragging *{cursor:grabbing!important}
 .standard .cham{clip-path:none;border-radius:20px}
 .standard .cham-s{clip-path:none;border-radius:14px}
 .standard .seg{clip-path:none;border-radius:999px}
-.standard .panel{background:#ffffff;border:1px solid #e8ecf5;border-radius:20px;
-  box-shadow:0 1px 2px rgba(35,43,90,.05),0 10px 28px rgba(35,43,90,.07)}
-.standard .panel-accent{background:linear-gradient(180deg,#f4f5fe,#eef0fd);border-color:#dee2fb}
+.standard .panel{background:#ffffff;border:1px solid #efe7dd;border-radius:20px;
+  box-shadow:0 1px 2px rgba(70,45,20,.06),0 10px 28px rgba(70,45,20,.07)}
+.standard .panel-accent{background:linear-gradient(180deg,#fdf4ea,#fdeede);border-color:#f5e2cf}
 .standard .panel::before{display:none}
-/* bottoni: primario in gradiente aurora indigo→violetto, ghost in grigio freddo */
+/* bottoni: primario in gradiente arancio, ghost in neutro caldo */
 .standard .btn{border-radius:14px;letter-spacing:.01em;font-weight:600;transition:all .15s ease}
-.standard .btn-primary{background:linear-gradient(135deg,#6366f1,#7c3aed);border-color:transparent;color:#fff;
-  box-shadow:0 2px 6px rgba(99,102,241,.35),0 1px 2px rgba(124,58,237,.25)}
-.standard .btn-primary:hover{background:linear-gradient(135deg,#4f46e5,#6d28d9);
-  box-shadow:0 5px 14px rgba(99,102,241,.42),0 2px 4px rgba(124,58,237,.25)}
-.standard .btn-ghost{background:#eceff7;color:#39415e;border-color:transparent}
-.standard .btn-ghost:hover{background:#e0e5f2;color:#4338ca}
+.standard .btn-primary{background:linear-gradient(135deg,#fb923c,#ea580c);border-color:transparent;color:#fff;
+  box-shadow:0 2px 6px rgba(249,115,22,.35),0 1px 2px rgba(234,88,12,.25)}
+.standard .btn-primary:hover{background:linear-gradient(135deg,#f97316,#c2410c);
+  box-shadow:0 5px 14px rgba(249,115,22,.42),0 2px 4px rgba(234,88,12,.25)}
+.standard .btn-ghost{background:#f1eae2;color:#4d443a;border-color:transparent}
+.standard .btn-ghost:hover{background:#e7ddd1;color:#c2410c}
 .standard .link-btn{color:var(--cyan)}
 .standard .link-btn:hover{color:var(--cyan-hi)}
-/* input: superficie quasi bianca, anello indigo al focus */
-.standard .hud-input{background:#fbfcfe;border:1px solid #dde3ef;border-radius:14px;font-weight:500;color:#0f1322;
+/* input: superficie quasi bianca, anello arancio al focus */
+.standard .hud-input{background:#fbfcfe;border:1px solid #e6dccd;border-radius:14px;font-weight:500;color:#1f1913;
   transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}
-.standard .hud-input::placeholder{color:#98a1ba}
-.standard .hud-input:hover{border-color:#c3cde3}
-.standard .hud-input:focus{border-color:#4f46e5;box-shadow:0 0 0 4px rgba(99,102,241,.14);background:#ffffff;outline:none}
+.standard .hud-input::placeholder{color:#a89a89}
+.standard .hud-input:hover{border-color:#d3c2ac}
+.standard .hud-input:focus{border-color:#ea580c;box-shadow:0 0 0 4px rgba(234,88,12,.15);background:#ffffff;outline:none}
 .standard select.hud-input,.standard textarea.hud-input{appearance:auto}
 /* header e menu: vetro smerigliato che lascia intravedere l'alone */
 .standard .hud-header{background:rgba(255,255,255,.72);backdrop-filter:blur(16px) saturate(1.5);
-  -webkit-backdrop-filter:blur(16px) saturate(1.5);border-bottom:1px solid rgba(226,232,244,.9)}
+  -webkit-backdrop-filter:blur(16px) saturate(1.5);border-bottom:1px solid rgba(236,228,218,.9)}
 .standard .bottom-nav{background:rgba(255,255,255,.78);backdrop-filter:blur(16px) saturate(1.5);
-  -webkit-backdrop-filter:blur(16px) saturate(1.5);border-top:1px solid rgba(226,232,244,.9)}
-.standard .brand{letter-spacing:.02em;font-weight:800;color:#4338ca}
+  -webkit-backdrop-filter:blur(16px) saturate(1.5);border-top:1px solid rgba(236,228,218,.9)}
+.standard .brand{letter-spacing:.02em;font-weight:800;color:#c2410c}
 .standard .streak-pill{border-radius:999px}
-.standard .modal-box{border:none;border-radius:24px;background:#ffffff;box-shadow:0 12px 32px rgba(35,43,90,.16),0 2px 8px rgba(35,43,90,.1)}
-.standard .float-timer{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(35,43,90,.14),0 1px 4px rgba(35,43,90,.1)}
-.standard .timer-pop{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(35,43,90,.14),0 1px 4px rgba(35,43,90,.1)}
-.standard .setmenu{border:none;border-radius:16px;background:#ffffff;box-shadow:0 6px 16px rgba(35,43,90,.14),0 1px 3px rgba(35,43,90,.1)}
-.standard .float-cam-btn,.standard .float-timer-btn{border:1px solid #e4e9f3;border-radius:16px;background:#ffffff;
-  color:#39415e;box-shadow:0 4px 12px rgba(35,43,90,.12),0 1px 3px rgba(35,43,90,.08)}
+.standard .modal-box{border:none;border-radius:24px;background:#ffffff;box-shadow:0 12px 32px rgba(70,45,20,.16),0 2px 8px rgba(70,45,20,.1)}
+.standard .float-timer{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(70,45,20,.14),0 1px 4px rgba(70,45,20,.1)}
+.standard .timer-pop{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(70,45,20,.14),0 1px 4px rgba(70,45,20,.1)}
+.standard .setmenu{border:none;border-radius:16px;background:#ffffff;box-shadow:0 6px 16px rgba(70,45,20,.14),0 1px 3px rgba(70,45,20,.1)}
+.standard .float-cam-btn,.standard .float-timer-btn{border:1px solid #ece4da;border-radius:16px;background:#ffffff;
+  color:#4d443a;box-shadow:0 4px 12px rgba(70,45,20,.12),0 1px 3px rgba(70,45,20,.08)}
 .standard .set-chip{border:none;border-radius:10px}
 .standard .chip{border-radius:10px}
-/* selezioni tonali indigo (chip attivi, voci scelte) */
-.standard .chip-on{background:#e7e9fd;color:#4338ca;border-color:transparent;font-weight:600}
-.standard .dash-btn{color:#4f46e5;border-color:rgba(99,102,241,.35);background:#f7f8fe}
-.standard .dash-btn:hover{color:#4338ca;border-color:rgba(99,102,241,.6);background:#eff1fe}
+/* selezioni tonali arancio (chip attivi, voci scelte) */
+.standard .chip-on{background:#fdeadb;color:#c2410c;border-color:transparent;font-weight:600}
+.standard .dash-btn{color:#ea580c;border-color:rgba(234,88,12,.35);background:#fdf8f2}
+.standard .dash-btn:hover{color:#c2410c;border-color:rgba(234,88,12,.6);background:#fdf1e7}
 .standard .set-warmup{background:var(--warm-bg)}
-.standard .info-btn{background:#eef0fe;color:#4338ca;border-color:#dbe0fb}
+.standard .info-btn{background:#fdf1e7;color:#c2410c;border-color:#f4dfca}
 .bnav-ico{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:28px;
   margin:-4px 0;border-radius:999px}
-/* voce attiva del menu: pill tonale indigo */
-.standard .bnav-btn.on .bnav-ico{background:#e7e9fd;color:#4338ca}
-.standard .bnav-btn.on{color:#4338ca !important}
+/* voce attiva del menu: pill tonale arancio */
+.standard .bnav-btn.on .bnav-ico{background:#fdeadb;color:#c2410c}
+.standard .bnav-btn.on{color:#c2410c !important}
 .standard .bnav-btn div:last-child{display:none}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
-body.standard{background:#eef1f7}
+body.standard{background:#f7f4f0}
 
 `;
 
 /* ============================== PRIMITIVES ============================== */
-export const Panel = ({ children, accent, hover, className = "", style }) => (
-  <div className={`panel cham ${accent ? "panel-accent" : ""} ${hover ? "panel-hover" : ""} ${className}`} style={style}>
+export const Panel = ({ children, accent, hover, className = "", style, onClick }) => (
+  <div className={`panel cham ${accent ? "panel-accent" : ""} ${hover ? "panel-hover" : ""} ${className}`} style={style} onClick={onClick}>
     {children}
   </div>
 );

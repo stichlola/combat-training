@@ -25,7 +25,7 @@ import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
    default. Combat Training è la variante gamificata, invariata. */
 const UI_MODES = [
   { id: "standard", label: "Fit Training", flag: "◻", Icon: LayoutTemplate,
-    desc: "La versione base: interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material" },
+    desc: "La versione base: interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni caldi e solari" },
   { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
     desc: "La versione gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
 ];
@@ -3539,8 +3539,14 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
           const idx = Math.min((nutri.mealDefaults && nutri.mealDefaults[meal]) || 0, Math.max(0, opts.length - 1));
           const foods = opts[idx] || [];
           return (
-            <button key={meal} onClick={() => setEditMeal(meal)} className="tap" style={{ width: "100%", cursor: "pointer", textAlign: "left" }}>
-              <Panel hover>
+            <Panel key={meal} hover className="tap" style={{ cursor: "pointer", userSelect: "none" }}
+              /* tap sulla card: mostra l'opzione successiva (diventa quella visibile);
+                 la modifica resta sul link dedicato */
+              onClick={() => {
+                if (opts.length > 1)
+                  setNutri({ ...nutri, mealDefaults: { ...(nutri.mealDefaults || {}), [meal]: (idx + 1) % opts.length } });
+                else setEditMeal(meal);
+              }}>
                 <div className="row between" style={{ marginBottom: 6 }}>
                   <div className="row g8" style={{ alignItems: "center" }}>
                     <span className="drag-handle" title={tr("Trascina per riordinare")}
@@ -3548,8 +3554,12 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
                       onClick={(e) => e.stopPropagation()}><GripVertical size={14} /></span>
                     <div className="hud-label">▸ {meal}</div>
                   </div>
-                  <span className="micro t-faint">
-                    {opts.length > 1 ? `${tr("OPZIONE")} ${idx + 1}/${opts.length} ★ · ` : ""}{tr("MODIFICA")} ›
+                  <span className="row g6" style={{ alignItems: "center" }}>
+                    {opts.length > 1 && <span className="micro t-faint">{tr("OPZIONE")} {idx + 1}/{opts.length} ★</span>}
+                    <span onClick={(e) => { e.stopPropagation(); setEditMeal(meal); }}
+                      className="micro tap" style={{ color: "var(--cyan)", cursor: "pointer", padding: "4px 2px 4px 8px", fontWeight: 700 }}>
+                      {tr("MODIFICA")} ›
+                    </span>
                   </span>
                 </div>
                 {foods.map((f, i) => (
@@ -3559,8 +3569,7 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
                   </div>
                 ))}
                 {foods.length === 0 && <div className="tiny t-faint">{tr("Nessun alimento — tocca per aggiungerne")}</div>}
-              </Panel>
-            </button>
+            </Panel>
           );
         })}
         </div>

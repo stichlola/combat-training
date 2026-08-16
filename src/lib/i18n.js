@@ -207,7 +207,7 @@ const EN_UI = {
   "Apri fotocamera": "Open camera",
   "Potrai cambiarlo quando vuoi dal profilo": "You can change it anytime from your profile",
   "La versione gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco": "The gamified version: levels, XP, challenges and rewards — game HUD graphics",
-  "La versione base: interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni neutri stile Material": "The base version: clean, minimal interface, same structure without gamification — light graphics in neutral Material-style tones",
+  "La versione base: interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni caldi e solari": "The base version: clean, minimal interface, same structure without gamification — light graphics in warm, sunny tones",
   "Le modifiche salvate qui sovrascrivono le schede del cliente: lui le vedrà aggiornate al prossimo caricamento dell'app.": "Changes saved here overwrite the client's routines: they'll see them updated on the next app load.",
   "NESSUN CLIENTE COLLEGATO": "NO CLIENTS CONNECTED",
   "Condividi il tuo link invito o il QR code: il cliente si registra (o accede) e conferma il collegamento.": "Share your invite link or QR code: the client signs up (or logs in) and confirms the link.",
