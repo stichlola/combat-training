@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -2615,18 +2615,16 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
     const v = picks ? picks[c.name] : undefined;
     sel[c.name] = Array.isArray(v) ? v : (v == null ? [] : [v]);
   }
-  const single = (c) => /scegli\s*1/i.test(c.rule || "");
-
+  /* tutte le sezioni sono a scelta multipla: il tap aggiunge/toglie dalla selezione */
   const toggle = (c, idx) => {
     const cur = sel[c.name];
-    const next = single(c)
-      ? (cur.includes(idx) ? [] : [idx])
-      : (cur.includes(idx) ? cur.filter((x) => x !== idx) : [...cur, idx]);
+    const next = cur.includes(idx) ? cur.filter((x) => x !== idx) : [...cur, idx];
     setPicks({ ...picks, __custom: custom, [c.name]: next });
   };
   const addCustom = (catName) => {
     if (!nf.n.trim()) return;
-    const list = [...(custom[catName] || []), { q: nf.q.trim(), n: nf.n.trim() }];
+    /* l'alimento aggiunto a mano parte deselezionato: si attiva con un tap */
+    const list = [...(custom[catName] || []), { q: nf.q.trim(), n: nf.n.trim(), on: false }];
     setPicks({ ...picks, __custom: { ...custom, [catName]: list } });
     setNf({ q: "", n: "" }); setAddFor(null);
   };
@@ -2634,12 +2632,16 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
     const list = (custom[catName] || []).filter((_, j) => j !== i);
     setPicks({ ...picks, __custom: { ...custom, [catName]: list } });
   };
+  const toggleCustom = (catName, i) => {
+    const list = (custom[catName] || []).map((it, j) => (j === i ? { ...it, on: it.on === false } : it));
+    setPicks({ ...picks, __custom: { ...custom, [catName]: list } });
+  };
 
   /* voci scelte + totali stimati */
   const chosen = [];
   for (const c of cats) {
     for (const i of sel[c.name]) if (c.items && c.items[i]) chosen.push({ ...c.items[i], cat: c.name });
-    for (const it of (custom[c.name] || [])) chosen.push({ ...it, cat: c.name, custom: true });
+    for (const it of (custom[c.name] || [])) if (it.on !== false) chosen.push({ ...it, cat: c.name, custom: true });
   }
   const tot = sumEstimates(chosen);
   const liveNf = nf.n.trim() ? estimate(nf) : null;
@@ -2650,9 +2652,26 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
     return <span className={`micro ${dim ? "t-faint" : "t-cyan"}`}>{e.kcal} kcal</span>;
   };
 
+  /* riquadro opzione: neutro da spenta, accento di categoria + spunta da attiva */
+  const optBox = (on, color) => ({
+    width: "100%", textAlign: "left", cursor: "pointer", padding: "10px 12px", marginBottom: 6,
+    display: "flex", alignItems: "flex-start", gap: 10,
+    border: `1.5px solid ${on ? color : "var(--line)"}`,
+    background: on ? "var(--active)" : "var(--panel2)",
+    boxShadow: on ? `0 2px 10px ${color}26` : "none",
+    transition: "border-color .15s, background .15s, box-shadow .15s",
+  });
+  const checkDot = (on, color) => ({
+    width: 18, height: 18, borderRadius: 99, flexShrink: 0, marginTop: 1,
+    border: `2px solid ${on ? color : "var(--line2)"}`,
+    background: on ? color : "transparent",
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    transition: "all .15s",
+  });
+
   return (
     <div className="fade-in stack" style={{ maxWidth: 780 }}>
-      <Panel accent style={{ borderColor: "#ffd76a" }}>
+      <Panel accent>
         <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 15 }}>
           {tr("PIANO NUTRIZIONALE")}
         </div>
@@ -2671,7 +2690,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
           {plan.window.map((w, i) => (
             <div key={i} className="row g12" style={{ padding: "8px 0", borderBottom: "1px solid var(--hairline)", alignItems: "flex-start" }}>
               <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, width: 106, flexShrink: 0,
-                borderLeft: `2px solid ${w.fasting ? "var(--faint)" : "#ffd76a"}`, paddingLeft: 8 }}>{w.time}</div>
+                borderLeft: `2px solid ${w.fasting ? "var(--faint)" : "var(--cyan)"}`, paddingLeft: 8 }}>{w.time}</div>
               <div className="grow">
                 <div className={w.fasting ? "t-faint" : "t-bright"} style={{ fontSize: 14, fontWeight: 700 }}>{w.label}</div>
                 {w.note && <div className="tiny t-faint">{w.note}</div>}
@@ -2687,6 +2706,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
           const extra = GENERIC_EXTRA[c.name] || [];
           const base = c.items || [];
           const all = [...base, ...extra];
+          const nSel = sel[c.name].length + (custom[c.name] || []).filter((x) => x.on !== false).length;
           return (
             <Panel key={c.name} style={{ borderLeft: `3px solid ${color}` }}>
               <div className="row between" style={{ marginBottom: 8 }}>
@@ -2697,42 +2717,50 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
                     {c.name.toUpperCase()}
                   </span>
                 </span>
-                <span className="micro t-faint">{single(c) ? tr("(SCEGLI 1)") : tr("(SCELTA MULTIPLA)")}</span>
+                <span className="micro t-faint">{nSel > 0 ? `✓ ${nSel}` : tr("(SCELTA MULTIPLA)")}</span>
               </div>
 
               {all.map((it, i) => {
                 const on = sel[c.name].includes(i);
                 return (
-                  <button key={i} onClick={() => toggle(c, i)} className="tap cham-s"
-                    style={{ width: "100%", textAlign: "left", cursor: "pointer", padding: "9px 10px", marginBottom: 5,
-                      border: `1px solid ${on ? color : "var(--soft)"}`, background: on ? "#0c2233" : "var(--card2)" }}>
-                    <div className="row between g8">
-                      <div style={{ fontSize: 14, lineHeight: 1.4 }}>
-                        <span className="f-hud" style={{ color: on ? color : "#c9e8f7", fontWeight: 700 }}>{it.q}</span>
-                        <span className={on ? "t-bright" : "t-dim"}> {it.n}</span>
-                        {i >= base.length && <span className="micro t-faint"> · {tr("generico")}</span>}
+                  <button key={i} onClick={() => toggle(c, i)} className="tap cham-s" style={optBox(on, color)}>
+                    <span style={checkDot(on, color)}>{on && <Check size={11} color="#fff" strokeWidth={3.5} />}</span>
+                    <div className="grow">
+                      <div className="row between g8">
+                        <div style={{ fontSize: 14, lineHeight: 1.4 }}>
+                          <span className="f-hud" style={{ color, fontWeight: 700 }}>{it.q}</span>
+                          <span className={on ? "t-bright" : "t-dim"}> {it.n}</span>
+                          {i >= base.length && <span className="micro t-faint"> · {tr("generico")}</span>}
+                        </div>
+                        <Est item={it} dim={!on} />
                       </div>
-                      <Est item={it} dim={!on} />
+                      {it.alt && <div className="micro t-faint" style={{ marginTop: 2 }}>({it.alt})</div>}
                     </div>
-                    {it.alt && <div className="micro t-faint" style={{ marginTop: 2 }}>({it.alt})</div>}
                   </button>
                 );
               })}
 
-              {(custom[c.name] || []).map((it, i) => (
-                <div key={"c" + i} className="cham-s row between g8"
-                  style={{ padding: "9px 10px", marginBottom: 5, border: `1px solid ${color}`, background: "#0c2233" }}>
-                  <div style={{ fontSize: 14 }}>
-                    <span className="f-hud" style={{ color, fontWeight: 700 }}>{it.q}</span>
-                    <span className="t-bright"> {it.n}</span>
-                    <span className="micro t-faint"> · {tr("tuo")}</span>
+              {(custom[c.name] || []).map((it, i) => {
+                const on = it.on !== false;
+                return (
+                  <div key={"c" + i} onClick={() => toggleCustom(c.name, i)} className="tap cham-s" style={optBox(on, color)}>
+                    <span style={checkDot(on, color)}>{on && <Check size={11} color="#fff" strokeWidth={3.5} />}</span>
+                    <div className="grow">
+                      <div className="row between g8">
+                        <div style={{ fontSize: 14, lineHeight: 1.4 }}>
+                          <span className="f-hud" style={{ color, fontWeight: 700 }}>{it.q}</span>
+                          <span className={on ? "t-bright" : "t-dim"}> {it.n}</span>
+                          <span className="micro t-faint"> · {tr("tuo")}</span>
+                        </div>
+                        <div className="row g8" style={{ alignItems: "center" }}>
+                          <Est item={it} dim={!on} />
+                          <span onClick={(e) => { e.stopPropagation(); delCustom(c.name, i); }} className="tap icon-tap" style={{ color: "var(--faint)" }}><X size={13} /></span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="row g8" style={{ alignItems: "center" }}>
-                    <Est item={it} />
-                    <span onClick={() => delCustom(c.name, i)} className="tap icon-tap" style={{ color: "var(--faint)" }}><X size={13} /></span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {addFor === c.name ? (
                 <div className="cham-s stack-s" style={{ padding: 10, background: "var(--card)", border: "1px solid var(--soft2)" }}>
@@ -2773,7 +2801,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
         </div>
         {targets && chosen.length > 0 && (
           <div className="stack-s" style={{ marginBottom: 10 }}>
-            {[["Proteine", tot.p, targets.p, "var(--cyan)"], ["Carboidrati", tot.c, targets.c, "var(--cyan-hi)"], ["Grassi", tot.f, targets.f, "#ffd76a"]].map(([l, cur, goal, col]) => (
+            {[["Proteine", tot.p, targets.p, "var(--cyan)"], ["Carboidrati", tot.c, targets.c, "var(--cyan-hi)"], ["Grassi", tot.f, targets.f, "var(--amber)"]].map(([l, cur, goal, col]) => (
               <div key={l}>
                 <div className="row between tiny" style={{ marginBottom: 3 }}>
                   <span className="t-dim">{tr(l)}</span>
@@ -2781,7 +2809,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
                 </div>
                 <div className="cham-s" style={{ height: 6, background: "var(--soft)", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${Math.min(100, goal ? (cur / goal) * 100 : 0)}%`,
-                    background: cur > goal * 1.05 ? "#ffd76a" : col, transition: "width .3s" }} />
+                    background: cur > goal * 1.05 ? "var(--amber)" : col, transition: "width .3s" }} />
                 </div>
               </div>
             ))}
