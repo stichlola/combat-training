@@ -946,7 +946,7 @@ export default function App() {
       <HudToast toast={toast} />
 
       {isGuest && (
-        <div className="cham-s" style={{ margin: "0 14px 10px", padding: "8px 12px",
+        <div className="cham-s guest-banner" style={{ margin: "0 14px 10px", padding: "8px 12px",
           background: "#0c2233", border: "1px solid #2f6786" }}>
           <div className="row between g8" style={{ alignItems: "center" }}>
             <div className="grow">
@@ -2397,7 +2397,7 @@ function MacroBar({ label, grams, kcalPerG, totalKcal, color, pct: pctProp }) {
     <div>
       <div className="row between" style={{ marginBottom: 3 }}>
         <span className="hud-label" style={{ fontSize: 9 }}>{label}</span>
-        <span className="tiny"><span className="f-hud" style={{ color, fontWeight: 700 }}>{grams}g</span> <span className="t-faint">· {pct}%</span></span>
+        <span className="tiny"><span className="f-hud sp-accent" style={{ color, fontWeight: 700 }}>{grams}g</span> <span className="t-faint">· {pct}%</span></span>
       </div>
       <div className="cham-s" style={{ height: 6, background: "var(--soft)" }}>
         <div style={{ height: "100%", width: `${pct}%`, background: color, boxShadow: `0 0 6px ${color}`, transition: "width .5s ease" }} />
@@ -2713,7 +2713,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
                 <span className="row g8" style={{ alignItems: "center" }}>
                   <span className="drag-handle" title={tr("Trascina per riordinare")}
                     onPointerDown={(e) => dlStart(e, onReorder || (() => {}))}><GripVertical size={14} /></span>
-                  <span className="f-hud" style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
+                  <span className="f-hud sp-accent" style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
                     {c.name.toUpperCase()}
                   </span>
                 </span>
@@ -2728,7 +2728,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
                     <div className="grow">
                       <div className="row between g8">
                         <div style={{ fontSize: 14, lineHeight: 1.4 }}>
-                          <span className="f-hud" style={{ color, fontWeight: 700 }}>{it.q}</span>
+                          <span className="f-hud sp-accent" style={{ color, fontWeight: 700 }}>{it.q}</span>
                           <span className={on ? "t-bright" : "t-dim"}> {it.n}</span>
                           {i >= base.length && <span className="micro t-faint"> · {tr("generico")}</span>}
                         </div>
@@ -2748,7 +2748,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
                     <div className="grow">
                       <div className="row between g8">
                         <div style={{ fontSize: 14, lineHeight: 1.4 }}>
-                          <span className="f-hud" style={{ color, fontWeight: 700 }}>{it.q}</span>
+                          <span className="f-hud sp-accent" style={{ color, fontWeight: 700 }}>{it.q}</span>
                           <span className={on ? "t-bright" : "t-dim"}> {it.n}</span>
                           <span className="micro t-faint"> · {tr("tuo")}</span>
                         </div>
@@ -2863,7 +2863,7 @@ function NutriSubTabs({ value, onChange }) {
   );
 }
 
-/* ---------------- Opzioni pasto: scelta della predefinita + editor ---------------- */
+/* ---------------- Opzioni pasto: editor ---------------- */
 /* Struttura: meals["Pranzo"] = [ [cibo,...], [cibo,...] ]  (una lista per opzione).
    I piani vecchi con una sola lista piatta vengono normalizzati automaticamente.
    nutri.mealDefaults["Pranzo"] = indice dell'opzione mostrata nel piano (salvata al tap). */
@@ -3572,7 +3572,7 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
                   <span className="row g6" style={{ alignItems: "center" }}>
                     {opts.length > 1 && <span className="micro t-faint">{tr("OPZIONE")} {idx + 1}/{opts.length}</span>}
                     <span onClick={(e) => { e.stopPropagation(); setEditMeal(meal); }}
-                      className="micro tap" style={{ color: "var(--cyan)", cursor: "pointer", padding: "4px 2px 4px 8px", fontWeight: 700 }}>
+                      className="micro tap sp-accent" style={{ color: "var(--cyan)", cursor: "pointer", padding: "4px 2px 4px 8px", fontWeight: 700 }}>
                       {tr("MODIFICA")} ›
                     </span>
                   </span>

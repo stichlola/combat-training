@@ -327,7 +327,7 @@ body.dragging *{cursor:grabbing!important}
   -webkit-backdrop-filter:blur(16px) saturate(1.5);border-bottom:1px solid rgba(236,228,218,.9)}
 .standard .bottom-nav{background:rgba(255,255,255,.78);backdrop-filter:blur(16px) saturate(1.5);
   -webkit-backdrop-filter:blur(16px) saturate(1.5);border-top:1px solid rgba(236,228,218,.9)}
-.standard .brand{letter-spacing:.02em;font-weight:800;color:#c2410c}
+.standard .brand{letter-spacing:.02em;font-weight:800;color:#241b12}
 .standard .streak-pill{border-radius:999px}
 .standard .modal-box{border:none;border-radius:24px;background:#ffffff;box-shadow:0 12px 32px rgba(70,45,20,.16),0 2px 8px rgba(70,45,20,.1)}
 .standard .float-timer{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(70,45,20,.14),0 1px 4px rgba(70,45,20,.1)}
@@ -338,17 +338,23 @@ body.dragging *{cursor:grabbing!important}
 .standard .set-chip{border:none;border-radius:10px}
 .standard .chip{border-radius:10px}
 /* selezioni tonali arancio (chip attivi, voci scelte) */
-.standard .chip-on{background:#fdeadb;color:#c2410c;border-color:transparent;font-weight:600}
-.standard .dash-btn{color:#ea580c;border-color:rgba(234,88,12,.35);background:#fdf8f2}
-.standard .dash-btn:hover{color:#c2410c;border-color:rgba(234,88,12,.6);background:#fdf1e7}
+.standard .chip-on{background:#fdeadb;color:#241b12;border-color:transparent;font-weight:600}
+.standard .dash-btn{color:#241b12;border-color:rgba(234,88,12,.35);background:#fdf8f2}
+.standard .dash-btn:hover{color:#241b12;border-color:rgba(234,88,12,.6);background:#fdf1e7}
 .standard .set-warmup{background:var(--warm-bg)}
-.standard .info-btn{background:#fdf1e7;color:#c2410c;border-color:#f4dfca}
+.standard .info-btn{background:#fdf1e7;color:#241b12;border-color:#f4dfca}
 .bnav-ico{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:28px;
   margin:-4px 0;border-radius:999px}
 /* voce attiva del menu: pill tonale arancio */
-.standard .bnav-btn.on .bnav-ico{background:#fdeadb;color:#c2410c}
-.standard .bnav-btn.on{color:#c2410c !important}
+.standard .bnav-btn.on .bnav-ico{background:#fdeadb;color:#241b12}
+.standard .bnav-btn.on{color:#241b12 !important}
 .standard .bnav-btn div:last-child{display:none}
+/* testi accento in nero caldo: l'arancione resta su bottoni, bordi e spunte */
+.standard .t-cyan{color:#241b12}
+.standard .hud-title{color:#241b12}
+.standard .t-amber{color:#241b12}
+.standard .sp-accent{color:#241b12 !important}
+.standard .guest-banner .t-cyan{color:#fdba74}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
 body.standard{background:#f7f4f0}
 
