@@ -1276,12 +1276,13 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
           <Btn small onClick={() => setView("builder")}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
         </div>
 
+        {/* stessa grafica dei pulsanti nutrizione: AI a sinistra, import a destra (arancione) */}
         <div className="row g8">
-          <Btn small onClick={() => setView("import")} style={{ flex: 1, borderColor: "var(--pt)", color: "var(--pt)" }} title={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}>
-            <Upload size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("IMPORTA SCHEDA PT")}
-          </Btn>
           <Btn small onClick={() => setView("ai")} style={{ flex: 1, opacity: .85 }} title={tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")}>
-            <Bot size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("GENERA SCHEDA CON AI")}
+            <Bot size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Genera scheda con AI")}
+          </Btn>
+          <Btn small primary onClick={() => setView("import")} style={{ flex: 1 }} title={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}>
+            <Upload size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Importa scheda PT")}
           </Btn>
         </div>
 

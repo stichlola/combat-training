@@ -273,7 +273,7 @@ body.dragging *{cursor:grabbing!important}
    menu, card bianche con ombre calde e angoli generosi.
    Tipografia: Sora per titoli ed etichette, Inter per testo e controlli. */
 .standard{color-scheme:light;
-  --bg:#f7f4f0;--panel:#ffffff;--panel2:#f5f0ea;--line:#ece4da;--line2:#d9cdbd;
+  --bg:#f5f5f4;--panel:#ffffff;--panel2:#f5f0ea;--line:#ece4da;--line2:#d9cdbd;
   --cyan:#ea580c;--cyan-hi:#c2410c;--bright:#1f1913;--text:#4d443a;
   --dim:#6b6156;--faint:#9a8d7e;--amber:#b45309;--green:#15803d;--red:#dc2626;
   --card:#f5f0ea;--card2:#ede6dc;--active:#fdeede;--active2:#fdf5ec;
@@ -283,11 +283,7 @@ body.dragging *{cursor:grabbing!important}
   --pt:#ca8a04;--pt-hi:#eab308;--pt-deep:#a16207;--pt-soft:#fef9c3;
   font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400}
 /* alone "solare" fissato dietro tutto il contenuto */
-.hud-root.standard{background:
-  radial-gradient(52vw 34vh at 88% -8%,rgba(249,115,22,.10),transparent 62%),
-  radial-gradient(48vw 38vh at -12% 4%,rgba(253,186,116,.18),transparent 60%),
-  radial-gradient(64vw 44vh at 50% 108%,rgba(251,146,60,.12),transparent 66%),
-  #f7f4f0;background-attachment:fixed}
+.hud-root.standard{background:#f5f5f4}
 .standard::before,.standard::after{display:none}
 .standard .btn,.standard .bnav-btn,.standard .snav-btn,.standard .hud-input,.standard .chip{
   font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -356,7 +352,7 @@ body.dragging *{cursor:grabbing!important}
 .standard .sp-accent{color:#241b12 !important}
 .standard .guest-banner .t-cyan{color:#fdba74}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
-body.standard{background:#f7f4f0}
+body.standard{background:#f5f5f4}
 
 `;
 
