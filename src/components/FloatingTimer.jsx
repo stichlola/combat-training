@@ -46,22 +46,28 @@ export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) 
   }, [running, left]);
 
   const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  const bump = (d) => { const n = Math.max(15, dur + d); setDur(n); setLeft(n); setRunning(false); };
+  /* +/−15s: a timer in corso sposta il tempo rimanente SENZA fermarlo;
+     a timer fermo e pieno (mai partito o resettato) riconfigura la durata */
+  const bump = (d) => {
+    const nDur = Math.max(15, dur + d);
+    setDur(nDur);
+    setLeft((l) => (l === dur ? nDur : Math.max(0, Math.min(nDur, l + d))));
+  };
 
   const panel = open && (
     <div className={inline ? "timer-pop cham-s fade-in" : "float-timer cham-s fade-in"}>
-      <div className="row between" style={{ marginBottom: 8 }}>
+      <div className="row between" style={{ marginBottom: 2 }}>
         <span className="hud-label">{tr("RECUPERO")}</span>
         <span onClick={() => setOpen(false)} className="tap t-faint" style={{ cursor: "pointer", fontSize: 15, padding: 2 }}>✕</span>
       </div>
-      <div className="row g12" style={{ alignItems: "center" }}>
-        <span onClick={() => bump(-15)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>−15</span>
-        <span className={`f-hud ${left === 0 ? "t-amber" : "t-bright"}`} style={{ fontSize: 30, fontWeight: 700, minWidth: 88, textAlign: "center" }}>
+      <div className="row g8" style={{ alignItems: "center", justifyContent: "center" }}>
+        <span onClick={() => bump(-15)} className="tap tiny t-faint" style={{ cursor: "pointer", padding: "6px 8px" }}>−15</span>
+        <span className={`f-hud ${left === 0 ? "t-amber" : "t-bright"}`} style={{ fontSize: 24, fontWeight: 700, minWidth: 64, textAlign: "center" }}>
           {left === 0 ? "GO!" : fmt(left)}
         </span>
-        <span onClick={() => bump(30)} className="tap tiny t-faint" style={{ cursor: "pointer" }}>+30</span>
+        <span onClick={() => bump(15)} className="tap tiny t-faint" style={{ cursor: "pointer", padding: "6px 8px" }}>+15</span>
       </div>
-      <div className="cham-s" style={{ height: 5, background: "var(--soft)", margin: "8px 0" }}>
+      <div className="cham-s" style={{ height: 4, background: "var(--soft)", margin: "6px 0" }}>
         <div style={{ height: "100%", width: `${(left / dur) * 100}%`, background: left === 0 ? "#ffd76a" : "var(--cyan)", transition: "width 1s linear" }} />
       </div>
       <div className="row g8">

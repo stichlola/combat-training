@@ -91,12 +91,12 @@ button.btn{text-align:center}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
-.float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:var(--modal);border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;max-width:340px;box-sizing:border-box}
+.float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:var(--modal);border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:10px 14px;max-width:340px;box-sizing:border-box}
 /* timer in linea (sessione): bottone normale, pannello a comparsa sotto */
 .timer-inline{position:relative;display:inline-block}
 .timer-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:60;background:var(--modal);
-  border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:14px 16px;
-  min-width:290px;box-sizing:border-box}
+  border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:10px 14px;
+  min-width:260px;box-sizing:border-box}
 .set-grid-t{display:grid;grid-template-columns:18px 42px 1fr 64px 48px;gap:8px;align-items:center}
 .icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer;min-width:36px;min-height:36px}
 
