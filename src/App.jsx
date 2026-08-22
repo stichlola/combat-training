@@ -2688,35 +2688,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
 
   return (
     <div className="fade-in stack" style={{ maxWidth: 780 }}>
-      <Panel accent>
-        <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 15 }}>
-          {tr("PIANO NUTRIZIONALE")}
-        </div>
-        <div className="micro t-cyan" style={{ marginTop: 3 }}>{plan.protocol || ""}</div>
-        {targets && (
-          <div className="micro t-faint" style={{ marginTop: 6 }}>
-            TARGET {targets.kcal} KCAL · P{targets.p} C{targets.c} G{targets.f}
-            {body && body.peso ? ` · ${body.peso} KG` : ""}
-          </div>
-        )}
-      </Panel>
-
-      {(plan.window || []).length > 0 && (
-        <Panel>
-          <div className="hud-label" style={{ marginBottom: 10 }}>{tr("▸ Finestra alimentare & tempistiche")}</div>
-          {plan.window.map((w, i) => (
-            <div key={i} className="row g12" style={{ padding: "8px 0", borderBottom: "1px solid var(--hairline)", alignItems: "flex-start" }}>
-              <div className="f-hud t-cyan" style={{ fontSize: 12, fontWeight: 700, width: 106, flexShrink: 0,
-                borderLeft: `2px solid ${w.fasting ? "var(--faint)" : "var(--cyan)"}`, paddingLeft: 8 }}>{w.time}</div>
-              <div className="grow">
-                <div className={w.fasting ? "t-faint" : "t-bright"} style={{ fontSize: 14, fontWeight: 700 }}>{w.label}</div>
-                {w.note && <div className="tiny t-faint">{w.note}</div>}
-              </div>
-            </div>
-          ))}
-        </Panel>
-      )}
-
+      {/* niente pannelli di intestazione: la pagina parte dalle card delle fonti */}
       <div className="two-col" data-dl>
         {cats.map((c) => {
           const color = CAT_COLORS[c.name] || "var(--cyan)";
