@@ -2853,12 +2853,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
         </Panel>
       )}
 
-      <div className="row g8">
-        <Btn onClick={onImport} style={{ flex: 1 }}>{tr("⤓ Importa piano")}</Btn>
-        <Btn primary onClick={onRegen} disabled={loading} style={{ flex: 1 }}>
-          {loading ? tr("Generazione...") : tr("◈ Rigenera con AI")}
-        </Btn>
-      </div>
+      {/* niente pulsanti in fondo: import/rigenera stanno in cima alla pagina */}
       <div className="micro">{tr("Stime indicative: consulta un professionista per esigenze specifiche.")}</div>
     </div>
   );
