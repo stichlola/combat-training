@@ -2606,7 +2606,23 @@ const GENERIC_EXTRA = {
 };
 
 function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRegen, loading, onReorder }) {
-  const cats = plan.categories || [];
+  /* Le card sono SEMPRE le 4 canoniche (come le schede dei nutrizionisti), tutte
+     a scelta multipla: le categorie del piano importato vengono fuse per parola
+     chiave, quelle mancanti pescano dal piano base; categorie estranee restano in coda. */
+  const rawCats = plan.categories || [];
+  const CANON = [
+    ["Fonti proteiche", /prote/i],
+    ["Fonti carboidrati", /carboid/i],
+    ["Grassi e fibre", /grass|fibr|verdur/i],
+    ["Snack / Post-workout", /snack|post|spuntin|work/i],
+  ];
+  const cats = CANON.map(([name, rx]) => {
+    const found = rawCats.filter((c) => rx.test(c.name || ""));
+    const items = found.flatMap((c) => c.items || []);
+    const def = (DEFAULT_SOURCE_PLAN.categories || []).find((d) => d.name === name);
+    return { name, rule: "", items: items.length ? items : ((def && def.items) || []) };
+  });
+  for (const c of rawCats) if (!CANON.some(([, rx]) => rx.test(c.name || ""))) cats.push(c);
   const [addFor, setAddFor] = useState(null);        // categoria in cui si sta aggiungendo a mano
   const [nf, setNf] = useState({ q: "", n: "" });
 
@@ -2712,8 +2728,6 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
             <Panel key={c.name} style={{ borderLeft: `3px solid ${color}` }}>
               <div className="row between" style={{ marginBottom: 8 }}>
                 <span className="row g8" style={{ alignItems: "center" }}>
-                  <span className="drag-handle" title={tr("Trascina per riordinare")}
-                    onPointerDown={(e) => dlStart(e, onReorder || (() => {}))}><GripVertical size={14} /></span>
                   <span className="f-hud sp-accent" style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: ".15em" }}>
                     {c.name.toUpperCase()}
                   </span>
@@ -2960,8 +2974,8 @@ Schema: {"targets":{"kcal":number,"p":number,"c":number,"f":number},
  "meals":{"NomePasto":[[{"nome":string,"q":string}]]},
  "sourcePlan":{"protocol":string,"window":[{"time":string,"label":string,"note":string,"fasting":boolean}],
    "categories":[{"name":string,"rule":string,"items":[{"q":string,"n":string,"alt":string}]}],"directives":string}}
-IMPORTANTE: molte schede sono organizzate per FONTI INTERCAMBIABILI (es. "FONTI PROTEICHE — SCEGLI 1: 200g pollo / 220g pesce bianco / 160g tonno") con una finestra alimentare e gli orari dei pasti. In quel caso compila "sourcePlan" fedelmente: categorie con i loro nomi e regole ("SCEGLI 1", "A PASTO"), ogni opzione con quantità in "q" e alimento in "n", eventuali alternative fra parentesi in "alt", e la fascia di digiuno con "fasting":true.
-Compila "meals" con 3 OPZIONI di pasto già composte per ciascun pasto della finestra (3 combinazioni valide e diverse delle fonti, ognuna come array di alimenti: "NomePasto":[[{...}],[{...}],[{...}]]). Se il documento elenca solo pasti fissi, restituisci una sola opzione per pasto e lascia "sourcePlan" a null.
+IMPORTANTE — FONTI INTERCAMBIABILI: compila "sourcePlan" SEMPRE con ESATTAMENTE queste 4 categorie, con questi nomi esatti: "Fonti proteiche", "Fonti carboidrati", "Grassi e fibre", "Snack / Post-workout". Distribuisci OGNI alimento del documento nella categoria giusta (proteine: carne, pesce, uova, latticini proteici; carboidrati: pasta, riso, pane, polenta, patate; grassi e fibre: olio, olive, verdure; snack/post-workout: yogurt, whey, frutta, frutta secca). Se il documento organizza i pasti per opzioni o combinazioni (es. "130g pasta con 112g tonno e 1 uovo"), SMONTA le combinazioni e metti i singoli alimenti con le loro quantità nelle 4 categorie. Ogni voce: quantità in "q", alimento in "n", eventuali alternative fra parentesi in "alt". Le regole del documento ("SCEGLI 1", "A PASTO") vanno in "rule", ma in app la scelta è comunque multipla. La tabella degli orari/fasce dei pasti va in "window" (fascia di digiuno con "fasting":true).
+Compila "meals" con 3 OPZIONI di pasto già composte per ciascun pasto della finestra (3 combinazioni valide e diverse delle fonti, ognuna come array di alimenti: "NomePasto":[[{...}],[{...}],[{...}]]). Se il documento elenca solo pasti fissi, restituisci una sola opzione per pasto; compila comunque "sourcePlan" estraendo gli alimenti nelle 4 categorie (lascialo a null solo se non c'è alcun alimento elencato).
 REGOLE:
 - Usa ESATTAMENTE i pasti presenti nel documento, con i loro nomi (es. "Colazione", "Pranzo", "Spuntino", "Cena"). Se il piano prevede il digiuno intermittente e ha solo 2 pasti, restituisci solo quei 2.
 - Se i valori di kcal o macro non sono indicati, stimali dagli alimenti elencati.
