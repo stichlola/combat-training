@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     res.status(200).json({
       premium: prem,
       limits: prem ? WEEKLY_LIMITS.premium : WEEKLY_LIMITS.free,
-      used: { import: u.import_n || 0, nutrition: u.nutrition_n || 0, scan: u.scan_n || 0, workout: u.workout_n || 0 },
+      used: { import: u.import_n || 0, nutrition: u.nutrition_n || 0, scan: u.scan_n || 0, workout: u.workout_n || 0, suggest: u.suggest_n || 0 },
       credits: u.credits || 0,
     });
   } catch (e) {

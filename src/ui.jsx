@@ -52,6 +52,9 @@ export const CSS = `
 .btn-primary:hover{box-shadow:0 0 14px rgba(87,200,242,.45)}
 .btn-pt{background:linear-gradient(135deg,var(--pt-hi),var(--pt));color:#fff;border-color:transparent;box-shadow:0 2px 6px rgba(234,88,12,.35)}
 .btn-pt:hover{background:linear-gradient(135deg,var(--pt),var(--pt-deep))}
+/* funzioni AI = premium: viola in entrambi i temi, riconoscibile al volo */
+.btn-ai{background:linear-gradient(180deg,#8b5cf6,#6d28d9);color:#f5f3ff;border-color:#a78bfa}
+.btn-ai:hover{box-shadow:0 0 14px rgba(139,92,246,.5)}
 .btn-ghost{background:var(--active2);color:var(--cyan-hi)}
 .btn-ghost:hover{border-color:var(--cyan)}
 .btn:disabled{opacity:.3;cursor:default}
@@ -87,7 +90,7 @@ button.btn{text-align:center}
 /* --- modali e overlay --- */
 .modal-back{position:fixed;inset:0;background:rgba(2,6,10,.82);backdrop-filter:blur(3px);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-box{width:100%;max-width:430px;background:var(--modal);border:1px solid var(--cyan);box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto;color:var(--text)}
-.float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
+.float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:linear-gradient(180deg,#8b5cf6,#6d28d9);border:1px solid #a78bfa;cursor:pointer;box-shadow:0 0 14px rgba(139,92,246,.45)}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
@@ -239,6 +242,8 @@ body.dragging *{cursor:grabbing!important}
   display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:all .15s}
 .picker-check.on{background:var(--cyan);border-color:var(--cyan)}
 
+/* splash di avvio: su mobile tutto più compatto */
+@media(max-width:480px){.boot-box{zoom:.72}}
 .hide-sm{display:none}
 @media(min-width:480px){.hide-sm{display:inline}}
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:10}
@@ -308,6 +313,8 @@ body.dragging *{cursor:grabbing!important}
 .standard .btn-primary:hover{background:linear-gradient(135deg,#f97316,#c2410c);
   box-shadow:0 5px 14px rgba(249,115,22,.42),0 2px 4px rgba(234,88,12,.25)}
 .standard .btn-ghost{background:#f1eae2;color:#4d443a;border-color:transparent}
+.standard .btn-ai{background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-color:transparent;color:#fff}
+.standard .btn-ai:hover{background:linear-gradient(135deg,#7c3aed,#5b21b6)}
 .standard .btn-ghost:hover{background:#e7ddd1;color:#c2410c}
 .standard .link-btn{color:var(--cyan)}
 .standard .link-btn:hover{color:var(--cyan-hi)}
@@ -329,8 +336,10 @@ body.dragging *{cursor:grabbing!important}
 .standard .float-timer{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(70,45,20,.14),0 1px 4px rgba(70,45,20,.1)}
 .standard .timer-pop{border:none;border-radius:20px;background:#ffffff;box-shadow:0 8px 20px rgba(70,45,20,.14),0 1px 4px rgba(70,45,20,.1)}
 .standard .setmenu{border:none;border-radius:16px;background:#ffffff;box-shadow:0 6px 16px rgba(70,45,20,.14),0 1px 3px rgba(70,45,20,.1)}
-.standard .float-cam-btn,.standard .float-timer-btn{border:1px solid #ece4da;border-radius:16px;background:#ffffff;
+.standard .float-timer-btn{border:1px solid #ece4da;border-radius:16px;background:#ffffff;
   color:#4d443a;box-shadow:0 4px 12px rgba(70,45,20,.12),0 1px 3px rgba(70,45,20,.08)}
+.standard .float-cam-btn{border:1px solid transparent;border-radius:16px;color:#fff;
+  background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 4px 12px rgba(109,40,217,.35)}
 .standard .set-chip{border:none;border-radius:10px}
 .standard .chip{border-radius:10px}
 /* selezioni tonali arancio (chip attivi, voci scelte) */
@@ -363,9 +372,9 @@ export const Panel = ({ children, accent, hover, className = "", style, onClick 
   </div>
 );
 
-export const Btn = ({ children, onClick, primary, pt, small, full, disabled, style }) => (
+export const Btn = ({ children, onClick, primary, pt, ai, small, full, disabled, style }) => (
   <button onClick={onClick} disabled={disabled}
-    className={`btn cham-s tap ${pt ? "btn-pt" : primary ? "btn-primary" : "btn-ghost"} ${small ? "btn-sm" : ""} ${full ? "btn-full" : ""}`}
+    className={`btn cham-s tap ${pt ? "btn-pt" : ai ? "btn-ai" : primary ? "btn-primary" : "btn-ghost"} ${small ? "btn-sm" : ""} ${full ? "btn-full" : ""}`}
     style={style}>
     {children}
   </button>

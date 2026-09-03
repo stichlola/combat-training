@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote } from "lucide-react";
+import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { PtNoteModal } from "./PtNoteModal";
 import { ProgressionModal } from "./ProgressionModal";
@@ -8,9 +8,10 @@ import { MachineScan } from "./MachineScan";
 import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
 import { todayISO } from "../lib/progression";
-import { exMode, holdSets, isDumbbell, isHold } from "../lib/exercises";
+import { exMode, holdSets, isDumbbell, isHold, EXERCISE_DB, GROUPS, ALL_EXERCISES, findGroup, matchToDb } from "../lib/exercises";
+import { aiCall, parseLoose } from "../lib/ai";
 import { tr } from "../lib/i18n";
-import { Btn, Panel } from "../ui";
+import { Btn, Overlay, Panel } from "../ui";
 
 /* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ----------------
    ptMode: lo usa il personal trainer sulle schede del cliente — sblocca per ogni
@@ -26,6 +27,11 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi: si apre in popup
   const [progIdx, setProgIdx] = useState(null); // esercizio con modale progressione aperta
+  const [suggestOpen, setSuggestOpen] = useState(false); // popup suggerimenti AI
+  const [sugPrefs, setSugPrefs] = useState("");   // preferenze opzionali per l'AI
+  const [sugBusy, setSugBusy] = useState(false);
+  const [sugList, setSugList] = useState(null);   // [{ name, group, why, on }]
+  const [sugErr, setSugErr] = useState(null);
 
   const upd = (fn) => setDraft((d) => fn(d));
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
@@ -128,8 +134,109 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
     }),
   }));
 
+  /* Suggerimenti AI: propone esercizi del catalogo coerenti con la scheda
+     (funzione premium con quota settimanale "suggest" — 1 prova gratuita) */
+  const askSuggest = async () => {
+    if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
+    setSugBusy(true); setSugErr(null); setSugList(null);
+    try {
+      const catalog = GROUPS.map((g) => `${g}: ${EXERCISE_DB[g].join(" | ")}`).join("\n");
+      const present = draft.exercises.map((e) => e.name).join(", ") || "nessuno";
+      const data = await aiCall({
+        model: "claude-haiku-4-5-20251001", max_tokens: 1200,
+        messages: [{ role: "user", content: `Sei un personal trainer esperto. Sto componendo la scheda "${draft.name || "NUOVA SCHEDA"}".
+ESERCIZI GIÀ PRESENTI: ${present}
+${sugPrefs.trim() ? `PREFERENZE DELL'UTENTE (priorità massima): "${sugPrefs.trim()}"` : "NESSUNA PREFERENZA PARTICOLARE."}
+CATALOGO ESERCIZI DISPONIBILI (usa SOLO questi nomi, esattamente come scritti):
+${catalog}
+Suggerisci da 4 a 8 esercizi da AGGIUNGERE (mai quelli già presenti), coerenti fra loro e con lo scopo della scheda.
+Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra:
+{"suggest":[{"name":"nome esatto dal catalogo","why":"motivazione in max 60 caratteri"}]}` }],
+      }, "suggest");
+      if (data && data.error === "limit_reached") { if (premium) premium.open(); setSugErr(tr("Limite settimanale raggiunto")); setSugBusy(false); return; }
+      if (data && data.error) throw new Error("API");
+      const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
+      const p = parseLoose(text) || {};
+      const seen = new Set();
+      const list = (Array.isArray(p.suggest) ? p.suggest : [])
+        .map((x) => {
+          const m = matchToDb(String((x && x.name) || ""));
+          return { name: m.name, why: String((x && x.why) || "").slice(0, 80) };
+        })
+        .filter((x) => ALL_EXERCISES.includes(x.name) && !hasEx(x.name))
+        .filter((x) => !seen.has(x.name) && seen.add(x.name))
+        .map((x) => ({ ...x, group: findGroup(x.name) || "Altro", on: true }));
+      if (!list.length) setSugErr(tr("Nessun suggerimento valido: riprova"));
+      else setSugList(list);
+    } catch (e) {
+      setSugErr(tr("AI non disponibile: riprova tra poco"));
+    }
+    setSugBusy(false);
+  };
+
+  const applySuggest = () => {
+    const chosen = (sugList || []).filter((x) => x.on).map((x) => ({ name: x.name, group: x.group }));
+    if (chosen.length) addExercises(chosen);
+    setSuggestOpen(false); setSugList(null); setSugPrefs(""); setSugErr(null);
+  };
+
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
+      {suggestOpen && (
+        <Overlay>
+        <div className="modal-back" onClick={() => setSuggestOpen(false)}>
+          <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="f-hud" style={{ fontWeight: 700, letterSpacing: ".16em", fontSize: 14, marginBottom: 8, color: "#a78bfa" }}>
+              <Sparkles size={15} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />
+              {tr("SUGGERIMENTI AI")}
+            </div>
+            <div className="tiny t-dim" style={{ lineHeight: 1.65, marginBottom: 12 }}>
+              {tr("L'AI guarda la scheda che stai componendo e ti propone gli esercizi giusti da aggiungere.")}
+            </div>
+            <textarea className="hud-input cham-s" value={sugPrefs} onChange={(e) => setSugPrefs(e.target.value)} rows={2}
+              placeholder={tr("Preferenze (opzionale): es. enfasi sui dorsali, niente bilanciere, solo macchine...")}
+              style={{ resize: "none", fontSize: 13, marginBottom: 10 }} />
+            {sugErr && <div className="tiny t-red" style={{ marginBottom: 10 }}>⚠ {sugErr}</div>}
+            {sugList && (
+              <div className="stack-s" style={{ marginBottom: 12, maxHeight: 260, overflowY: "auto" }}>
+                {sugList.map((x, i) => (
+                  <button key={x.name} onClick={() => setSugList((l) => l.map((y, j) => j === i ? { ...y, on: !y.on } : y))}
+                    className="cham-s tap" style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", cursor: "pointer", textAlign: "left",
+                      background: "var(--card2)", border: `1px solid ${x.on ? "#a78bfa" : "var(--soft)"}`,
+                    }}>
+                    <span className="cham-s" style={{
+                      width: 18, height: 18, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: x.on ? "#7c3aed" : "transparent", border: `1.5px solid ${x.on ? "#a78bfa" : "var(--soft2)"}`,
+                    }}>
+                      {x.on && <Check size={11} color="#fff" strokeWidth={3.5} />}
+                    </span>
+                    <span className="grow" style={{ minWidth: 0 }}>
+                      <span className="t-bright" style={{ fontSize: 13, fontWeight: 700 }}>{tr(x.name)}</span>
+                      <span className="micro t-dim" style={{ display: "block" }}>{tr(x.group || "").toUpperCase()}{x.why ? ` · ${x.why}` : ""}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="row g8">
+              <Btn onClick={() => { setSuggestOpen(false); setSugList(null); setSugErr(null); }} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+              {sugList ? (
+                <Btn ai onClick={applySuggest} disabled={!sugList.some((x) => x.on)} style={{ flex: 1 }}>
+                  {tr("Aggiungi selezionati")} ✓
+                </Btn>
+              ) : (
+                <Btn ai onClick={askSuggest} disabled={sugBusy} style={{ flex: 1 }}>
+                  {sugBusy
+                    ? <span className="row center g8"><Loader2 size={13} className="spin" /> {tr("Analisi...")}</span>
+                    : tr("Suggerisci ✦")}
+                </Btn>
+              )}
+            </div>
+          </div>
+        </div>
+        </Overlay>
+      )}
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       {ptInfo && <PtNoteModal ex={ptInfo} onClose={() => setPtInfo(null)} />}
       {progIdx != null && draft.exercises[progIdx] && (
@@ -323,6 +430,11 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
         className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
         <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}
       </button>
+      <Btn ai full onClick={() => { setSuggestOpen(true); setSugList(null); setSugErr(null); }}
+        title={tr("L'AI propone esercizi da aggiungere in base alla scheda")}
+        style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
+        <Sparkles size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Suggerisci esercizi AI")}
+      </Btn>
       {showPicker && (
         <ExercisePickerModal
           activeNames={draft.exercises.map((e) => e.name)}
@@ -337,6 +449,13 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
           currentNames={draft.exercises.map((e) => e.name)}
           onAdd={(name, group) => pickEx(name, group)} />
       )}
+
+      {/* completa anche da fondo pagina: niente scroll fino in cima per salvare */}
+      <Btn primary full disabled={!draft.name || !draft.exercises.length}
+        onClick={() => onSave({ ...draft, name: draft.name.toUpperCase() })}
+        style={{ padding: 14, marginTop: 6 }}>
+        {tr("Completa e salva ✓")}
+      </Btn>
     </div>
   );
 }

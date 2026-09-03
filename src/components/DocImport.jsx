@@ -172,7 +172,7 @@ PROGRESSIONE SETTIMANALE: se uno stesso allenamento è programmato su più setti
             </Panel>
           )}
 
-          <Btn primary full disabled={loading || (!file && !pasted.trim())} onClick={interpret}>
+          <Btn ai full disabled={loading || (!file && !pasted.trim())} onClick={interpret}>
             {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Analisi in corso...")}</span> : "◈ Interpreta con AI"}
           </Btn>
         </>
@@ -228,7 +228,7 @@ PROGRESSIONE SETTIMANALE: se uno stesso allenamento è programmato su più setti
           </Panel>
           ))}
           <div className="row g8">
-            <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Riprova")}</Btn>
+            <Btn ai onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Riprova")}</Btn>
             <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>
               {result.length > 1 ? `${tr("Salva")} ${result.length} ${tr("schede")} ✓` : tr("Salva scheda ✓")}
             </Btn>

@@ -89,12 +89,12 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
       {busy
         ? <Loader2 size={18} color="#ffd76a" className="spin" />
         : <>
-            <Camera size={15} color="var(--cyan)" />
-            <span className="f-hud t-cyan" style={{ fontSize: 8, fontWeight: 700, letterSpacing: ".06em", lineHeight: 1 }}>AI</span>
+            <Camera size={15} color="#fff" />
+            <span className="f-hud" style={{ fontSize: 8, fontWeight: 700, letterSpacing: ".06em", lineHeight: 1, color: "#fff" }}>AI</span>
           </>}
     </button>
   ) : (
-    <Btn small onClick={() => setIntro(true)} style={{ flexShrink: 0 }}>
+    <Btn small ai onClick={() => setIntro(true)} style={{ flexShrink: 0 }}>
       {busy ? <Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2 }} /> : <Camera size={13} style={{ display: "inline", verticalAlign: -2 }} />} Scan macchinario
     </Btn>
   );
@@ -120,7 +120,7 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
             </div>
             <div className="row g8">
               <Btn onClick={() => setIntro(false)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
-              <Btn primary onClick={() => { setIntro(false); camRef.current && camRef.current.click(); }} style={{ flex: 1 }}>
+              <Btn ai onClick={() => { setIntro(false); camRef.current && camRef.current.click(); }} style={{ flex: 1 }}>
                 <Camera size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Apri fotocamera")}
               </Btn>
             </div>

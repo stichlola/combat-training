@@ -73,6 +73,7 @@ create policy "read own usage" on public.usage
 -- nessuna policy di scrittura per gli utenti: scrive solo il serverless.
 
 alter table public.usage add column if not exists workout_n integer default 0;
+alter table public.usage add column if not exists suggest_n integer default 0;
 
 -- ============ CODICI DI RISCATTO (acquisto senza account) ============
 create table if not exists public.redeem_codes (

@@ -63,7 +63,8 @@ export async function fetchMyTrainer(clientId) {
      il profilo del proprio PT" non è ancora stata applicata sul database) */
   let cached = null;
   try { cached = localStorage.getItem("gq_my_pt_name"); } catch {}
-  return { id: data.trainer_id, name: prof?.full_name || prof?.username || cached || null };
+  return { id: data.trainer_id, name: prof?.full_name || prof?.username || cached || null,
+    username: prof?.username || null, fullName: prof?.full_name || null, since: data.created_at || null };
 }
 
 /* L'utente si scollega dal proprio PT (stop o preparazione al cambio) */

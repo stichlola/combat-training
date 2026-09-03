@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Check, Play, Trash2, Trophy, Info, Pause, GripVertical, ArrowLeftRight, StickyNote } from "lucide-react";
+import { Plus, Check, Play, Trash2, Trophy, Info, Pause, GripVertical, ArrowLeftRight, StickyNote, Lock, LockOpen } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { PtNoteModal } from "./PtNoteModal";
 import { ExercisePickerModal } from "./ExercisePicker";
@@ -25,6 +25,8 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi (aggiungi/sostituisci)
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [confirmExDel, setConfirmExDel] = useState(null); // eliminazione esercizio in attesa di conferma
+  const [locked, setLocked] = useState(false); // blocco modifiche: solo spunta serie + timer
+  const toggleLock = () => { setLocked((l) => !l); setSetMenu(null); setConfirmExDel(null); setReplaceIdx(null); setShowPicker(false); };
   const timerRef = useRef(null); // ref per triggerare il timer di recupero programmaticamente
   const replaceRef = useRef(null); // card "SOSTITUZIONE ATTIVA": ci si scrolla appena si attiva
 
@@ -250,9 +252,11 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       )}
       {results && <ResultsScreen standard={standard} results={results} onClose={() => { setSession(null); exitToHome(); }} />}
       <FloatingTimer ref={timerRef} />
-      <MachineScan premium={premium} variant="float" fireToast={fireToast}
-        currentNames={session.exercises.map((e) => e.name)}
-        onAdd={(name, group) => upd((s) => ({ ...s, exercises: [...s.exercises, makeEx(name, group)] }))} />
+      {!locked && (
+        <MachineScan premium={premium} variant="float" fireToast={fireToast}
+          currentNames={session.exercises.map((e) => e.name)}
+          onAdd={(name, group) => upd((s) => ({ ...s, exercises: [...s.exercises, makeEx(name, group)] }))} />
+      )}
 
 
       {/* Conferma uscita: la sessione resta attiva */}
@@ -312,11 +316,21 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       <div className="sticky-hud stack">
       <div className="row between g8">
         <Btn small onClick={() => setConfirmExit(true)}>{tr("‹ Esci")}</Btn>
-        <input className="hud-input cham-s f-hud" value={session.name}
+        <input className="hud-input cham-s f-hud" value={session.name} readOnly={locked}
           onChange={(e) => upd((s) => ({ ...s, name: e.target.value.toUpperCase() }))}
-          style={{ textAlign: "center", fontWeight: 700, letterSpacing: ".12em", fontSize: 13, flex: 1 }} />
+          style={{ textAlign: "center", fontWeight: 700, letterSpacing: ".12em", fontSize: 13, flex: 1, opacity: locked ? .6 : 1 }} />
+        <button onClick={toggleLock} className="info-btn cham-s tap"
+          title={tr(locked ? "Sblocca modifiche" : "Blocca modifiche")}
+          style={{ padding: "7px 9px", ...(locked ? { color: "#ffd76a", borderColor: "#ffd76a" } : {}) }}>
+          {locked ? <Lock size={12} /> : <LockOpen size={12} />}
+        </button>
         <Btn small primary onClick={() => setFinishing(true)}>{tr("Termina ✓")}</Btn>
       </div>
+      {locked && (
+        <div className="micro" style={{ textAlign: "center", color: "#b8860b", letterSpacing: ".14em", marginTop: 6 }}>
+          🔒 {tr("MODIFICHE BLOCCATE")} — {tr("solo spunta serie e timer")}
+        </div>
+      )}
 
       <Panel style={{ padding: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", textAlign: "center" }}>
@@ -345,8 +359,10 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             {tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}
           </div>
           <div className="row between g8" style={{ marginBottom: 6, alignItems: "flex-start" }}>
-            <span className="drag-handle" title={tr("Trascina per riordinare")}
-              onPointerDown={(e) => dlStart(e, moveEx)} style={{ marginTop: 4, flexShrink: 0 }}><GripVertical size={15} /></span>
+            {!locked && (
+              <span className="drag-handle" title={tr("Trascina per riordinare")}
+                onPointerDown={(e) => dlStart(e, moveEx)} style={{ marginTop: 4, flexShrink: 0 }}><GripVertical size={15} /></span>
+            )}
             <div className="grow" style={{ marginRight: 14, minWidth: 0 }}>
               <span className="t-bright" style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>{tr(ex.name)}</span>
             </div>
@@ -356,12 +372,16 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                 {tr("Conferma eliminazione")}</button>
             ) : (
               <div className="row" style={{ gap: 14, flexShrink: 0, paddingTop: 4, marginLeft: "auto" }}>
-                <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }}
-                  className="tap icon-tap" title={tr("Sostituisci esercizio")}
-                  style={{ cursor: "pointer", color: "var(--dim)" }}>
-                  <ArrowLeftRight size={16} /></span>
-                <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
-                  style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={16} /></span>
+                {!locked && (
+                  <>
+                    <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }}
+                      className="tap icon-tap" title={tr("Sostituisci esercizio")}
+                      style={{ cursor: "pointer", color: "var(--dim)" }}>
+                      <ArrowLeftRight size={16} /></span>
+                    <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
+                      style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={16} /></span>
+                  </>
+                )}
                 {prs[ex.name] && !exMode(ex) && (
                   <span style={{ marginLeft: 4, paddingLeft: 12, borderLeft: "1px solid var(--soft2)", display: "inline-flex", alignItems: "center" }}>
                     <Trophy size={16} color="#ffd76a" />
@@ -388,7 +408,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             {/* recupero: sempre ancorato a destra nella riga */}
             <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
               <span className="t-faint">REC</span>
-              <input type="number" inputMode="numeric"
+              <input type="number" inputMode="numeric" readOnly={locked}
                 value={ex.rest ?? 90}
                 onChange={(e) => upd((s) => ({
                   ...s,
@@ -399,8 +419,8 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               <span className="t-faint">s</span>
             </span>
           </div>
-          <input className="hud-input cham-s" value={ex.note || ""} onChange={(e) => updateNote(ei, e.target.value)}
-            placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9" }} />
+          <input className="hud-input cham-s" value={ex.note || ""} readOnly={locked} onChange={(e) => updateNote(ei, e.target.value)}
+            placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9", opacity: locked ? .6 : 1 }} />
 
           {exMode(ex) === "time" || exMode(ex) === "hold" ? (
             <>
@@ -410,10 +430,12 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               <div data-dl>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid-t cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-                  <span className="drag-handle" title={tr("Trascina per riordinare")}
-                    onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
-                  <button className="set-chip cham-s" title={tr("Opzioni serie")}
-                    onClick={(e) => { e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
+                  {!locked && (
+                    <span className="drag-handle" title={tr("Trascina per riordinare")}
+                      onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
+                  )}
+                  <button className="set-chip cham-s" title={tr("Opzioni serie")} disabled={locked}
+                    onClick={(e) => { if (locked) return; e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
                     {si + 1}
                   </button>
                   <div className="row g8" style={{ alignItems: "center" }}>
@@ -427,11 +449,11 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                     </span>
                   </div>
                   {exMode(ex) === "time" ? (
-                    <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist}
+                    <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist} readOnly={locked}
                       placeholder="—" onChange={(e) => updateSet(ei, si, "dist", e.target.value)}
                       style={{ textAlign: "center", padding: "8px 4px" }} />
                   ) : (
-                    <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec || ""}
+                    <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec || ""} readOnly={locked}
                       placeholder="60" title={tr("Obiettivo secondi")}
                       onChange={(e) => updateSet(ei, si, "sec", e.target.value)}
                       style={{ textAlign: "center", padding: "8px 4px" }} />
@@ -454,16 +476,18 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               <div data-dl>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""} ${s.warmup ? "set-warmup" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-                  <span className="drag-handle" title={tr("Trascina per riordinare")}
-                    onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
-                  <button className={`set-chip cham-s ${s.warmup ? "warmup" : ""}`} title={tr("Opzioni serie")}
-                    onClick={(e) => { e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
+                  {!locked && (
+                    <span className="drag-handle" title={tr("Trascina per riordinare")}
+                      onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
+                  )}
+                  <button className={`set-chip cham-s ${s.warmup ? "warmup" : ""}`} title={tr("Opzioni serie")} disabled={locked}
+                    onClick={(e) => { if (locked) return; e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
                     {s.warmup ? "W" : ex.sets.slice(0, si + 1).filter((x) => !x.warmup).length}
                   </button>
-                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
-                    onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
-                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r}
-                    onChange={(e) => updateSet(ei, si, "r", e.target.value)} style={{ textAlign: "center", padding: "8px 4px" }} />
+                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w} readOnly={locked}
+                    onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px", opacity: locked ? .6 : 1 }} />
+                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r} readOnly={locked}
+                    onChange={(e) => updateSet(ei, si, "r", e.target.value)} style={{ textAlign: "center", padding: "8px 4px", opacity: locked ? .6 : 1 }} />
                   <button onClick={() => toggleSet(ei, si)} className={`check-btn cham-s tap ${s.done ? "check-on" : ""}`}>
                     <Check size={15} strokeWidth={3} />
                   </button>
@@ -472,16 +496,18 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               </div>
             </>
           )}
-          <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>{tr("+ SERIE")}</button>
+          {!locked && <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>{tr("+ SERIE")}</button>}
         </Panel>
       ))}
       </div>
 
       {/* Gestione esercizi in sessione: l'elenco si apre in un popup (anche per la sostituzione) */}
-      <button onClick={() => { setReplaceIdx(null); setShowPicker(true); }}
-        className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
-        <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}
-      </button>
+      {!locked && (
+        <button onClick={() => { setReplaceIdx(null); setShowPicker(true); }}
+          className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
+          <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}
+        </button>
+      )}
       {showPicker && (
         <ExercisePickerModal
           activeNames={session.exercises.map((e) => e.name)}

@@ -17,6 +17,12 @@ export async function getUserFromToken(token) {
 }
 
 export async function isPremium(userId) {
+  /* i personal trainer hanno sempre le funzioni premium sbloccate */
+  const pr = await fetch(`${SB_URL}/rest/v1/profiles?id=eq.${userId}&select=role`, { headers: H() });
+  if (pr.ok) {
+    const prows = await pr.json();
+    if (prows && prows[0] && prows[0].role === "pt") return true;
+  }
   const r = await fetch(
     `${SB_URL}/rest/v1/premium?user_id=eq.${userId}&select=premium_until`,
     { headers: H() }
@@ -45,8 +51,8 @@ export async function grantPremium(userId, orderId) {
 /* Free: una sola prova a settimana per funzione (assaggio che porta all'abbonamento).
    Premium: limiti ampi. Oltre il limite si usano i crediti extra acquistabili. */
 export const WEEKLY_LIMITS = {
-  free:    { import: 1,  nutrition: 1,  scan: 1,  workout: 1 },
-  premium: { import: 20, nutrition: 25, scan: 40, workout: 25 },
+  free:    { import: 1,  nutrition: 1,  scan: 1,  workout: 1, suggest: 1 },
+  premium: { import: 20, nutrition: 25, scan: 40, workout: 25, suggest: 30 },
 };
 const wk = () => {
   const d = new Date(), j = new Date(d.getFullYear(), 0, 1);
@@ -58,17 +64,29 @@ export async function getUsage(userId) {
   if (!r.ok) throw new Error(`Lettura usage fallita (${r.status}) — la tabella "usage" esiste su Supabase?`);
   const rows = await r.json();
   let u = rows && rows[0];
-  if (!u) u = { user_id: userId, week: wk(), import_n: 0, nutrition_n: 0, scan_n: 0, workout_n: 0, credits: 0 };
+  if (!u) u = { user_id: userId, week: wk(), import_n: 0, nutrition_n: 0, scan_n: 0, workout_n: 0, suggest_n: 0, credits: 0 };
   if (u.week !== wk()) { u.week = wk(); u.import_n = 0; u.nutrition_n = 0; u.scan_n = 0; u.workout_n = 0; }
   return u;
 }
 
 async function saveUsage(u) {
-  const r = await fetch(`${SB_URL}/rest/v1/usage`, {
+  const now = new Date().toISOString();
+  let r = await fetch(`${SB_URL}/rest/v1/usage`, {
     method: "POST",
     headers: { ...H(), Prefer: "resolution=merge-duplicates" },
-    body: JSON.stringify({ ...u, updated_at: new Date().toISOString() }),
+    body: JSON.stringify({ ...u, updated_at: now }),
   });
+  if (!r.ok && r.status === 400) {
+    /* colonna nuova (es. suggest_n) non ancora creata su Supabase:
+       salva solo i campi base così le altre quote restano tracciate */
+    const base = { user_id: u.user_id, week: u.week, import_n: u.import_n || 0, nutrition_n: u.nutrition_n || 0,
+      scan_n: u.scan_n || 0, workout_n: u.workout_n || 0, credits: u.credits || 0, updated_at: now };
+    r = await fetch(`${SB_URL}/rest/v1/usage`, {
+      method: "POST",
+      headers: { ...H(), Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify(base),
+    });
+  }
   if (!r.ok) throw new Error("Scrittura usage fallita");
 }
 
@@ -104,8 +122,9 @@ export async function addCredits(userId, n, orderId) {
 /* Catalogo prodotti condiviso (PayPal + Stripe): il prezzo è deciso QUI, mai dal client. */
 export const PRODUCTS = {
   premium: { amount: "20.00", desc: "Combat Training Premium — 12 mesi" },
-  pack30:  { amount: "3.00",  desc: "Combat Training — 30 crediti extra", credits: 30 },
-  pack100: { amount: "8.00",  desc: "Combat Training — 100 crediti extra", credits: 100 },
+  pack30:  { amount: "3.00",  desc: "Fit Training — 30 crediti extra", credits: 30 },
+  pack100: { amount: "8.00",  desc: "Fit Training — 100 crediti extra (−20% a credito)", credits: 100 },
+  pack300: { amount: "18.00", desc: "Fit Training — 300 crediti extra (−40% a credito)", credits: 300 },
 };
 
 /* ---------------- Acquisto senza account: codice di riscatto ---------------- */
@@ -141,7 +160,7 @@ export async function redeemCode(userId, rawCode) {
   const out = {};
   if (row.product === "premium") out.premium_until = await grantPremium(userId, row.order_id);
   else {
-    const n = row.product === "pack100" ? 100 : 30;
+    const n = (PRODUCTS[row.product] && PRODUCTS[row.product].credits) || 30;
     out.credits = await addCredits(userId, n, row.order_id);
   }
   await fetch(`${SB_URL}/rest/v1/redeem_codes?code=eq.${encodeURIComponent(code)}`, {

@@ -34,10 +34,47 @@ const Trophy3D = React.lazy(() => import("./Trophy3D"));   // three.js caricato 
 
 /* ================================== APP ================================== */
 
+/* Scheda del proprio personal trainer: si apre dal chip PT nella barra in alto */
+function PtInfoModal({ trainer, onClose, onGoProfile }) {
+  const since = trainer.since
+    ? new Date(trainer.since).toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" })
+    : null;
+  return (
+    <Overlay>
+    <div className="modal-back" onClick={onClose}>
+      <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="row between" style={{ marginBottom: 12 }}>
+          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 13 }}>{tr("IL TUO PERSONAL TRAINER")}</div>
+          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "4px 8px", margin: "-4px -6px 0 0" }}>✕</span>
+        </div>
+        <div className="row g12" style={{ alignItems: "center", marginBottom: 14 }}>
+          <span className="cham-s" style={{ width: 52, height: 52, display: "flex", alignItems: "center", justifyContent: "center",
+            background: "var(--active)", border: "1px solid var(--cyan)", flexShrink: 0 }}>
+            <Users size={24} color="var(--cyan)" />
+          </span>
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div className="t-bright" style={{ fontSize: 17, fontWeight: 700 }}>{trainer.fullName || trainer.name || tr("Personal trainer")}</div>
+            {trainer.username && <div className="tiny t-dim">@{trainer.username}</div>}
+            {since && <div className="micro t-faint" style={{ marginTop: 3 }}>{tr("Ti segue dal")} {since}</div>}
+          </div>
+        </div>
+        <div className="tiny t-dim" style={{ lineHeight: 1.65, marginBottom: 14 }}>
+          {tr("Può vedere le tue schede, seguire i tuoi allenamenti e lasciarti note mirate con video sugli esercizi: le trovi sul pulsante arancione INFO PT.")}
+        </div>
+        <div className="row g8">
+          <Btn onClick={onClose} style={{ flex: 1 }}>{tr("Chiudi")}</Btn>
+          {onGoProfile && <Btn primary onClick={() => { onClose(); onGoProfile(); }} style={{ flex: 1 }}>{tr("Vai al profilo ›")}</Btn>}
+        </div>
+      </div>
+    </div>
+    </Overlay>
+  );
+}
+
 function BootScreen({ progress, fact, combat }) {
   return (
     <div className="hud-root" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-      <div className="fade-in" style={{ width: "min(420px, 86vw)", textAlign: "center" }}>
+      <div className="fade-in boot-box" style={{ width: "min(420px, 86vw)", textAlign: "center" }}>
         <Dumbbell size={34} color="var(--cyan)" style={{ margin: "0 auto 10px", filter: "drop-shadow(0 0 8px rgba(87,200,242,.6))" }} />
         <div className="f-hud t-cyan" style={{ fontSize: 24, fontWeight: 700, letterSpacing: ".35em" }}>{combat ? "COMBAT TRAINING" : "FIT TRAINING"}</div>
         <div className="micro" style={{ marginTop: 4, marginBottom: 26 }}>{tr("INIZIALIZZAZIONE SISTEMA")}</div>
@@ -433,10 +470,19 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
 
         {usage && (
           <div className="cham-s micro" style={{ margin: "12px 0", padding: "8px 10px", background: "var(--card)", border: "1px solid var(--soft)", lineHeight: 1.8 }}>
-            {tr("QUESTA SETTIMANA")} — {tr("SCHEDA AI")}: {usage.used.workout}/{usage.limits.workout}
-            {" · "}{tr("IMPORT PT")}: {usage.used.import}/{usage.limits.import}
-            {" · "}{tr("NUTRIZIONE")}: {usage.used.nutrition}/{usage.limits.nutrition}
-            {" · "}{tr("SCAN")}: {usage.used.scan}/{usage.limits.scan}
+            {premium.is ? (
+              <>
+                <span className="t-amber" style={{ fontWeight: 700 }}>{tr("PREMIUM ATTIVO — GENERAZIONI AI SBLOCCATE")} ∞</span>
+                <br /><span className="t-faint">({tr("soft cap anti-abuso gestito automaticamente dietro le quinte")})</span>
+              </>
+            ) : (
+              <>
+                {tr("QUESTA SETTIMANA")} — {tr("SCHEDA AI")}: {usage.used.workout}/{usage.limits.workout}
+                {" · "}{tr("IMPORT PT")}: {usage.used.import}/{usage.limits.import}
+                {" · "}{tr("NUTRIZIONE")}: {usage.used.nutrition}/{usage.limits.nutrition}
+                {" · "}{tr("SCAN")}: {usage.used.scan}/{usage.limits.scan}
+              </>
+            )}
             <br />{tr("CREDITI EXTRA:")} <span className="t-amber">{usage.credits}</span>
             <span className="t-faint"> ({tr("1 credito = 1 generazione")})</span>
           </div>
@@ -448,9 +494,11 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
               lines="Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi" />
           )}
           <Card id="pack30" title={tr("Pacchetto 30 crediti")} price="3€"
-            lines="Una tantum · generazioni extra oltre il limite settimanale" />
+            lines="Una tantum · 0,10€ a credito · generazioni extra oltre il limite settimanale" />
           <Card id="pack100" title={tr("Pacchetto 100 crediti")} price="8€"
-            lines="Una tantum · il più conveniente per chi genera tanto" />
+            lines="Una tantum · 0,08€ a credito — risparmi il 20%" />
+          <Card id="pack300" gold title={tr("Pacchetto 300 crediti")} price="18€"
+            lines="Una tantum · 0,06€ a credito — risparmi il 40% · IL PIÙ CONVENIENTE" />
         </div>
 
         {clientId ? (
@@ -545,7 +593,8 @@ export default function App() {
   /* --- auth & persistenza via Supabase --- */
   const [user, setUser] = useState(null);
   const [pendingPt, setPendingPt] = useState(null); // invito PT da confermare (id trainer)
-  const [myTrainer, setMyTrainer] = useState(null); // PT attuale dell'utente: { id, name } | null (max uno)
+  const [myTrainer, setMyTrainer] = useState(null); // PT attuale dell'utente: { id, name, username, fullName, since } | null (max uno)
+  const [ptInfoOpen, setPtInfoOpen] = useState(false); // scheda info del PT (si apre dal chip nella barra in alto)
   const GUEST_KEY = "gq_guest_v1";
   const isGuest = !!(user && user.guest);
   const isPT = !!(user && user.role === "pt");
@@ -568,7 +617,7 @@ export default function App() {
   const [premiumUntil, setPremiumUntil] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
   const [stripeCode, setStripeCode] = useState(null); // codice di riscatto emesso al rientro da Stripe (ospite)
-  const isPremium = !!premiumUntil && new Date(premiumUntil) > new Date();
+  const isPremium = isPT || (!!premiumUntil && new Date(premiumUntil) > new Date()); // il PT ha sempre premium
   const premium = { is: isPremium, until: premiumUntil, guest: isGuest,
     open: () => setGateOpen(true),
     needAccount: () => { setGateOpen(true); } };
@@ -963,6 +1012,9 @@ export default function App() {
 
       {/* CAMBIO PT: l'unico caso in cui serve conferma — il collegamento
           normale da link invito è automatico dopo login/registrazione */}
+      {ptInfoOpen && myTrainer && !isPT && (
+        <PtInfoModal trainer={myTrainer} onClose={() => setPtInfoOpen(false)} onGoProfile={() => setTab("profile")} />
+      )}
       {pendingPt && !isPT && (
         <Overlay>
         <div className="modal-back">
@@ -1005,8 +1057,8 @@ export default function App() {
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <div className="brand">{standard ? "FIT" : "COMBAT"}<span className="t-faint">//</span>TRAINING</div>
             {myTrainer && !isPT && (
-              <button onClick={() => setTab("profile")} className="tap row g6"
-                title={tr("Il tuo personal trainer")}
+              <button onClick={() => setPtInfoOpen(true)} className="tap row g6"
+                title={tr("Il tuo personal trainer — tocca per le info")}
                 style={{ cursor: "pointer", alignItems: "center", padding: 0, background: "none", border: "none" }}>
                 <Users size={10} color="var(--cyan)" />
                 <span className="f-hud t-cyan" style={{ fontSize: 9, letterSpacing: ".18em", fontWeight: 700 }}>
@@ -1025,7 +1077,7 @@ export default function App() {
                 position: "absolute", top: -6, right: -7, fontSize: 8, fontWeight: 700,
                 color: "#ffd76a", textShadow: "0 0 6px rgba(255,215,106,.8)" }}>P</span>}
             </span>
-            <span className="f-hud hide-sm" style={{ fontSize: 11, letterSpacing: ".1em" }}>{user.username}</span>
+            <span className="f-hud" style={{ fontSize: 11, letterSpacing: ".1em" }}>{user.username}</span>
           </button>
           {isPT ? (
             <div className="xp-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1278,10 +1330,10 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
 
         {/* stessa grafica dei pulsanti nutrizione: AI a sinistra, import a destra (arancione) */}
         <div className="row g8">
-          <Btn small onClick={() => setView("ai")} style={{ flex: 1, opacity: .85 }} title={tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")}>
+          <Btn small ai onClick={() => setView("ai")} style={{ flex: 1 }} title={tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")}>
             <Bot size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Genera scheda con AI")}
           </Btn>
-          <Btn small primary onClick={() => setView("import")} style={{ flex: 1 }} title={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}>
+          <Btn small ai onClick={() => setView("import")} style={{ flex: 1 }} title={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}>
             <Upload size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Importa scheda PT")}
           </Btn>
         </div>
@@ -1711,7 +1763,7 @@ Schema: {"exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sop
             <div className="micro t-faint" style={{ marginTop: 6 }}>{tr("SE COMPILATE, LA SCHEDA VIENE COMPOSTA DALL'AI SEGUENDO LE TUE RICHIESTE")}</div>
           </div>
           {error && <div className="tiny t-red">⚠ {error}</div>}
-          <Btn primary full disabled={loading} onClick={generate}>
+          <Btn ai full disabled={loading} onClick={generate}>
             {loading ? "Generazione..." : "Genera scheda"}
           </Btn>
         </Panel>
@@ -1731,7 +1783,7 @@ Schema: {"exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sop
             </div>
           </Panel>
           <div className="row g8">
-            <Btn onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Rigenera")}</Btn>
+            <Btn ai onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Rigenera")}</Btn>
             <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>{tr("Salva ✓")}</Btn>
           </div>
         </>
@@ -2072,25 +2124,30 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             [tr("Import scheda PT"), "import"],
             [tr("Piano nutrizionale"), "nutrition"],
             [tr("Scan macchinari"), "scan"],
+            [tr("Suggerimenti esercizi"), "suggest"],
           ].map(([label, k]) => {
-            const lim = usage.limits[k], used = usage.used[k];
+            const lim = usage.limits[k] || 0, used = usage.used[k] || 0;
+            const unlocked = premium && premium.is; // premium: limite "sbloccato" a vista, soft cap dietro le quinte
             return (
               <div key={k} style={{ marginBottom: 10 }}>
                 <div className="row between tiny" style={{ marginBottom: 4 }}>
                   <span className="t-dim">{label}</span>
-                  <span className={lim === 0 ? "t-faint" : used >= lim ? "t-amber" : "t-bright"}>
-                    {lim === 0 ? "PREMIUM" : `${used} / ${lim}`}
+                  <span className={unlocked ? "t-amber" : used >= lim && lim > 0 ? "t-amber" : "t-bright"}>
+                    {unlocked ? tr("∞ SBLOCCATO") : `${used} / ${lim}`}
                   </span>
                 </div>
                 <div className="cham-s" style={{ height: 6, background: "var(--soft)", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${lim ? Math.min(100, (used / lim) * 100) : 0}%`,
-                    background: used >= lim && lim > 0 ? "linear-gradient(90deg,#ffd76a,#ffb84d)" : "linear-gradient(90deg,var(--cyan),var(--cyan-hi))" }} />
+                  <div style={{ height: "100%", width: unlocked ? "100%" : `${lim ? Math.min(100, (used / lim) * 100) : 0}%`,
+                    background: unlocked ? "linear-gradient(90deg,#8b5cf6,#a78bfa)"
+                      : used >= lim && lim > 0 ? "linear-gradient(90deg,#ffd76a,#ffb84d)" : "linear-gradient(90deg,var(--cyan),var(--cyan-hi))" }} />
                 </div>
               </div>
             );
           })}
           <div className="micro t-faint" style={{ margin: "2px 0 10px" }}>
-            {tr("I LIMITI SI AZZERANO OGNI SETTIMANA · OLTRE IL LIMITE SI USANO I CREDITI EXTRA")}
+            {premium && premium.is
+              ? tr("CON PREMIUM I LIMITI SONO SBLOCCATI · UN SOFT CAP ANTI-ABUSO LI GESTISCE DIETRO LE QUINTE")
+              : tr("I LIMITI SI AZZERANO OGNI SETTIMANA · OLTRE IL LIMITE SI USANO I CREDITI EXTRA")}
           </div>
           <Btn primary full onClick={() => premium && premium.open()}>
             ◈ Negozio — crediti{premium && !premium.is ? " e Premium" : ""} ›
@@ -3040,7 +3097,7 @@ REGOLE:
             </Panel>
           )}
 
-          <Btn primary full disabled={loading || (!file && !pasted.trim())} onClick={interpret}>
+          <Btn ai full disabled={loading || (!file && !pasted.trim())} onClick={interpret}>
             {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Analisi in corso...")}</span> : tr("◈ Interpreta con AI")}
           </Btn>
         </>
@@ -3320,7 +3377,7 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
             placeholder={tr("Es. vegetariano, niente lattosio, digiuno intermittente 16:8 con 2 pasti, allergia alle noci...")}
             style={{ resize: "none", fontSize: 13 }} />
         </div>
-        <Btn primary full disabled={loading}
+        <Btn ai full disabled={loading}
           onClick={async () => { await generate(false); setRegenOpen(false); }}>
           {loading
             ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Generazione...")}</span>
@@ -3352,10 +3409,10 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
         </div>
       )}
       <div className="row g8">
-        <Btn small onClick={() => (nutri ? setRegenOpen(true) : generate(false))} disabled={loading} style={{ flex: 1, opacity: .85 }}>
+        <Btn small ai onClick={() => (nutri ? setRegenOpen(true) : generate(false))} disabled={loading} style={{ flex: 1 }}>
           {loading ? tr("Rigenerazione...") : tr("◈ Rigenera con AI")}
         </Btn>
-        <Btn small onClick={() => setImporting(true)} style={{ flex: 1, opacity: .85 }}>{tr("⤓ Importa piano")}</Btn>
+        <Btn small ai onClick={() => setImporting(true)} style={{ flex: 1 }}>{tr("⤓ Importa piano")}</Btn>
       </div>
       <NutriSubTabs value={subTab} onChange={setSubTab} />
       <SourcePlanView
@@ -3430,7 +3487,7 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
             placeholder={tr("Es. vegetariano, niente lattosio, digiuno intermittente 16:8 con 2 pasti, allergia alle noci...")}
             style={{ resize: "none", fontSize: 13 }} />
         </div>
-        <Btn primary full disabled={loading} onClick={() => generate(false)}>
+        <Btn ai full disabled={loading} onClick={() => generate(false)}>
           {loading ? <span className="row center g8"><Loader2 size={14} className="spin" /> {tr("Generazione...")}</span> : tr("◈ Genera piano AI")}
         </Btn>
       </Panel>
@@ -3460,10 +3517,10 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
         </div>
 
         <div className="row g8">
-          <Btn small onClick={() => setRegenOpen(true)} disabled={loading} style={{ flex: 1, opacity: .85 }}>
+          <Btn small ai onClick={() => setRegenOpen(true)} disabled={loading} style={{ flex: 1 }}>
             {loading ? tr("Rigenerazione...") : tr("◈ Rigenera con AI")}
           </Btn>
-          <Btn small onClick={() => setImporting(true)} style={{ flex: 1, opacity: .85 }}>{tr("⤓ Importa piano")}</Btn>
+          <Btn small ai onClick={() => setImporting(true)} style={{ flex: 1 }}>{tr("⤓ Importa piano")}</Btn>
         </div>
 
         <NutriSubTabs value={subTab} onChange={setSubTab} />
