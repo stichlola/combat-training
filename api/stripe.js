@@ -84,7 +84,7 @@ export default async function handler(req, res) {
         const credits = await addCredits(user.id, prod.credits, s.id);
         return res.status(200).json({ credits });
       }
-      const until = await grantPremium(user.id, s.id); // idempotente di natura
+      const until = await grantPremium(user.id, s.id, prod.days || 365); // idempotente di natura
       return res.status(200).json({ premium_until: until });
     }
 

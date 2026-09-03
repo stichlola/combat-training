@@ -75,6 +75,28 @@ create policy "read own usage" on public.usage
 alter table public.usage add column if not exists workout_n integer default 0;
 alter table public.usage add column if not exists suggest_n integer default 0;
 
+-- ============ SHOP A CREDITI (temi extra, piani prefatti) ============
+create table if not exists public.unlocks (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  item text not null,
+  created_at timestamptz default now(),
+  primary key (user_id, item)
+);
+alter table public.unlocks enable row level security;
+drop policy if exists "read own unlocks" on public.unlocks;
+create policy "read own unlocks" on public.unlocks
+  for select using (auth.uid() = user_id);
+-- scrive solo il serverless dopo aver scalato i crediti.
+
+-- ============ REFERRAL (chi invita + chi si iscrive ricevono crediti) ============
+create table if not exists public.referrals (
+  referee_id uuid primary key references auth.users(id) on delete cascade,
+  referrer_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz default now()
+);
+alter table public.referrals enable row level security;
+-- nessuna policy utente: legge/scrive solo il serverless (conta e idempotenza).
+
 -- ============ CODICI DI RISCATTO (acquisto senza account) ============
 create table if not exists public.redeem_codes (
   code text primary key,

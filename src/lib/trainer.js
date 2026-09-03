@@ -204,3 +204,12 @@ export function ptImportConsume() {
     localStorage.setItem(PT_IMPORT_KEY, JSON.stringify({ week: ptWeekKey(), count: count + 1 }));
   } catch { /* ignore */ }
 }
+
+/* Link referral (#ref=<uuid>): parcheggiato prima del login e riscattato
+   dopo da App.jsx chiamando /api/referral — bonus crediti a entrambi. */
+export function captureRefHash() {
+  const m = /#ref=([0-9a-f-]{36})/i.exec(window.location.hash || "");
+  if (m) { try { localStorage.setItem("gq_pending_ref", m[1]); } catch { /* ignore */ } }
+}
+export const pendingRef = () => { try { return localStorage.getItem("gq_pending_ref"); } catch { return null; } };
+export const clearRef = () => { try { localStorage.removeItem("gq_pending_ref"); } catch { /* ignore */ } };

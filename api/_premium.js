@@ -33,8 +33,8 @@ export async function isPremium(userId) {
   return !!until && new Date(until) > new Date();
 }
 
-export async function grantPremium(userId, orderId) {
-  const until = new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString();
+export async function grantPremium(userId, orderId, days = 365) {
+  const until = new Date(Date.now() + days * 24 * 3600 * 1000).toISOString();
   const r = await fetch(`${SB_URL}/rest/v1/premium`, {
     method: "POST",
     headers: { ...H(), Prefer: "resolution=merge-duplicates,return=representation" },
@@ -121,7 +121,8 @@ export async function addCredits(userId, n, orderId) {
 
 /* Catalogo prodotti condiviso (PayPal + Stripe): il prezzo è deciso QUI, mai dal client. */
 export const PRODUCTS = {
-  premium: { amount: "20.00", desc: "Combat Training Premium — 12 mesi" },
+  premium:   { amount: "20.00", desc: "Fit Training Premium — 12 mesi", days: 365 },
+  premium_m: { amount: "2.00",  desc: "Fit Training Premium — 1 mese",  days: 30 },
   pack30:  { amount: "3.00",  desc: "Fit Training — 30 crediti extra", credits: 30 },
   pack100: { amount: "8.00",  desc: "Fit Training — 100 crediti extra (−20% a credito)", credits: 100 },
   pack300: { amount: "18.00", desc: "Fit Training — 300 crediti extra (−40% a credito)", credits: 300 },
@@ -158,7 +159,8 @@ export async function redeemCode(userId, rawCode) {
   if (!row) return { ok: false, error: "code_not_found" };
   if (row.used_by) return { ok: false, error: "code_already_used" };
   const out = {};
-  if (row.product === "premium") out.premium_until = await grantPremium(userId, row.order_id);
+  if (row.product === "premium" || row.product === "premium_m")
+    out.premium_until = await grantPremium(userId, row.order_id, (PRODUCTS[row.product] || {}).days || 365);
   else {
     const n = (PRODUCTS[row.product] && PRODUCTS[row.product].credits) || 30;
     out.credits = await addCredits(userId, n, row.order_id);
@@ -169,3 +171,39 @@ export async function redeemCode(userId, rawCode) {
   });
   return { ok: true, ...out };
 }
+
+
+/* ---------------- Shop a crediti (temi extra, piani prefatti, ...) ---------------- */
+/* Il costo è deciso QUI; il contenuto sbloccato è applicato dal client. */
+export const SHOP_ITEMS = {
+  "theme-emerald": { credits: 40 },  // tema grafico Smeraldo
+  "pack-strength": { credits: 50 },  // schede pronte: Forza 5x5 A/B
+  "pack-core":     { credits: 40 },  // scheda pronta: 30 giorni Core & Addome
+};
+
+export async function listUnlocks(userId) {
+  const r = await fetch(`${SB_URL}/rest/v1/unlocks?user_id=eq.${userId}&select=item`, { headers: H() });
+  if (!r.ok) throw new Error(`Lettura unlocks fallita (${r.status}) — la tabella "unlocks" esiste su Supabase?`);
+  const rows = await r.json();
+  return (rows || []).map((x) => x.item);
+}
+
+export async function addUnlock(userId, item) {
+  await fetch(`${SB_URL}/rest/v1/unlocks`, {
+    method: "POST", headers: { ...H(), Prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify({ user_id: userId, item, created_at: new Date().toISOString() }),
+  });
+}
+
+/* Scala crediti per un acquisto shop: ritorna { ok, credits } */
+export async function spendCredits(userId, n) {
+  const u = await getUsage(userId);
+  if ((u.credits || 0) < n) return { ok: false, credits: u.credits || 0 };
+  u.credits -= n;
+  await saveUsage(u);
+  return { ok: true, credits: u.credits };
+}
+
+/* ---------------- Referral: chi invita e chi si iscrive ricevono crediti ---------------- */
+export const REF_BONUS_NEW = 10;      // crediti al nuovo iscritto
+export const REF_BONUS_REFERRER = 30; // crediti a chi ha invitato

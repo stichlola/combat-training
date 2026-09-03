@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, Gift
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -13,7 +13,8 @@ import { RoutineEditor } from "./components/RoutineEditor";
 import { SessionView } from "./components/SessionView";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
-import { captureInviteHash, clearInvite, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, pendingInviteName, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
+import { captureInviteHash, captureRefHash, clearInvite, clearRef, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, pendingInviteName, pendingRef, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
+import { SHOP_META, EMERALD_MODE, buildPackRoutines } from "./lib/shopContent";
 import { dlStart } from "./lib/dnd";
 import { applyProgression, todayISO } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb } from "./lib/exercises";
@@ -324,7 +325,7 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
   );
 }
 
-function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast, initialCode, onCreateAccount }) {
+function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast, initialCode, onCreateAccount, unlocks = [], onBuyShop }) {
   const [code, setCode] = useState(initialCode || null); // codice emesso per acquisto senza account
   const [redeem, setRedeem] = useState("");
   const [redeemMsg, setRedeemMsg] = useState(null);
@@ -350,6 +351,14 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
   const ppRef = useRef(null);
   const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
   const [stripeLoading, setStripeLoading] = useState(false);
+  const [shopBusy, setShopBusy] = useState(null);
+  const buyShopLocal = async (it) => {
+    if (!onBuyShop) return;
+    setShopBusy(it.id);
+    const res = await onBuyShop(it);
+    setShopBusy(null);
+    if (res && res.credits != null) setUsage((u) => (u ? { ...u, credits: res.credits } : u));
+  };
 
   /* Stripe Checkout: crea la sessione lato server e reindirizza alla pagina Stripe;
      al rientro (?stripe_session=...) la verifica/avvenuto accredito è gestito a livello App */
@@ -491,7 +500,11 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
         <div className="stack-s" style={{ margin: "12px 0 16px" }}>
           {!premium.is && (
             <Card id="premium" gold title={tr("◆ Premium — 12 mesi")} price="20€"
-              lines="Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi" />
+              lines="Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi · 2 mesi risparmiati rispetto al mensile" />
+          )}
+          {!premium.is && (
+            <Card id="premium_m" title={tr("◆ Premium — 1 mese")} price="2€"
+              lines="Tutte le funzioni AI sbloccate per 30 giorni · ideale per provare · rinnovo manuale" />
           )}
           <Card id="pack30" title={tr("Pacchetto 30 crediti")} price="3€"
             lines="Una tantum · 0,10€ a credito · generazioni extra oltre il limite settimanale" />
@@ -499,6 +512,30 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
             lines="Una tantum · 0,08€ a credito — risparmi il 20%" />
           <Card id="pack300" gold title={tr("Pacchetto 300 crediti")} price="18€"
             lines="Una tantum · 0,06€ a credito — risparmi il 40% · IL PIÙ CONVENIENTE" />
+        </div>
+
+        {/* Extra sbloccabili con i crediti: temi e piani prefatti */}
+        <div className="hud-label" style={{ margin: "14px 0 8px" }}>{tr("SBLOCCA CON I CREDITI")}</div>
+        <div className="stack-s" style={{ marginBottom: 14 }}>
+          {SHOP_META.map((it) => {
+            const owned = unlocks.includes(it.id);
+            return (
+              <div key={it.id} className="cham-s row between g8" style={{ padding: "10px 12px", background: "var(--card2)", border: "1px solid var(--soft)", alignItems: "center" }}>
+                <div className="row g8" style={{ alignItems: "center", minWidth: 0, flex: 1 }}>
+                  <it.Icon size={16} color="var(--cyan)" style={{ flexShrink: 0 }} />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="t-bright" style={{ fontSize: 13, fontWeight: 700 }}>{tr(it.title)}</div>
+                    <div className="tiny t-faint" style={{ lineHeight: 1.45 }}>{tr(it.desc)}</div>
+                  </div>
+                </div>
+                {owned
+                  ? <span className="micro t-cyan" style={{ fontWeight: 700, flexShrink: 0 }}>{tr("ATTIVO ◈")}</span>
+                  : <Btn small onClick={() => buyShopLocal(it)} disabled={shopBusy === it.id} style={{ flexShrink: 0 }}>
+                      {shopBusy === it.id ? <Loader2 size={12} className="spin" /> : `⬡ ${it.credits}`}
+                    </Btn>}
+              </div>
+            );
+          })}
         </div>
 
         {clientId ? (
@@ -595,6 +632,9 @@ export default function App() {
   const [pendingPt, setPendingPt] = useState(null); // invito PT da confermare (id trainer)
   const [myTrainer, setMyTrainer] = useState(null); // PT attuale dell'utente: { id, name, username, fullName, since } | null (max uno)
   const [ptInfoOpen, setPtInfoOpen] = useState(false); // scheda info del PT (si apre dal chip nella barra in alto)
+  const [unlocks, setUnlocks] = useState([]);      // extra sbloccati con i crediti (temi, piani prefatti)
+  const [refCount, setRefCount] = useState(0);     // amici iscritti col proprio link referral
+  const [softGate, setSoftGate] = useState(false); // paywall soft post-allenamento (max 1 volta/giorno)
   const GUEST_KEY = "gq_guest_v1";
   const isGuest = !!(user && user.guest);
   const isPT = !!(user && user.role === "pt");
@@ -621,6 +661,42 @@ export default function App() {
   const premium = { is: isPremium, until: premiumUntil, guest: isGuest,
     open: () => setGateOpen(true),
     needAccount: () => { setGateOpen(true); } };
+
+  /* Acquisto extra con i crediti (temi, piani prefatti) via /api/shop */
+  const buyShop = async (item) => {
+    if (isGuest) { fireToast({ title: tr("Serve un account"), sub: tr("Crea un account gratuito per usare i crediti") }); return { ok: false }; }
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const r = await fetch("/api/shop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${s?.access_token || ""}` },
+        body: JSON.stringify({ item: item.id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 402) { fireToast({ title: tr("Crediti insufficienti"), sub: tr("Prendi un pacchetto crediti qui sopra") }); return { ok: false, credits: d.credits }; }
+      if (!r.ok) { fireToast({ title: tr("Acquisto non riuscito"), sub: d.error || "" }); return { ok: false }; }
+      setUnlocks(d.unlocks || []);
+      if (item.id.startsWith("pack-") && !d.already) {
+        const add = buildPackRoutines(item.id);
+        if (add.length) setRoutines((rs) => [...rs, ...add]);
+      }
+      if (item.id === "theme-emerald") setBody((b) => ({ ...b, uiMode: "emerald" }));
+      fireToast({ title: d.already ? tr("Già sbloccato") : tr("◈ SBLOCCATO"), sub: tr(item.title) });
+      return { ok: true, credits: d.credits };
+    } catch { fireToast({ title: tr("Errore di rete, riprova") }); return { ok: false }; }
+  };
+
+  /* Paywall soft: dopo un allenamento completato si propone Premium (o
+     l'account agli ospiti) al massimo una volta al giorno, mai bloccante */
+  const maybeSoftGate = () => {
+    if (isPremium) return;
+    try {
+      const key = "gq_softgate_" + new Date().toISOString().slice(0, 10);
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+    } catch { /* ignore */ }
+    setSoftGate(true);
+  };
   /* esce dalla modalità ospite e torna alla schermata di accesso/registrazione */
   const exitGuest = () => { window.__gqKeepGuest = false; setUser(null); setHydrated(false); };
   const [session, setSession] = useState(null);   // sessione attiva: persiste su Supabase, si riprende al rientro
@@ -726,6 +802,35 @@ export default function App() {
       const { data: prem } = await supabase.from("premium")
         .select("premium_until").eq("user_id", authUser.id).maybeSingle();
       if (prem) setPremiumUntil(prem.premium_until);
+      /* referral: il link #ref=... si riscatta una sola volta dopo il login —
+         bonus crediti al nuovo iscritto e a chi lo ha invitato */
+      const refCode = pendingRef();
+      if (refCode) {
+        clearRef();
+        if (refCode !== authUser.id) {
+          try {
+            const { data: { session: rs } } = await supabase.auth.getSession();
+            const rr = await fetch("/api/referral", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${rs?.access_token || ""}` },
+              body: JSON.stringify({ ref: refCode }),
+            });
+            const rd = await rr.json().catch(() => ({}));
+            if (rd.ok && !rd.already) fireToast({ title: tr("◈ BONUS REFERRAL"), sub: `+${rd.bonus || 10} ${tr("crediti di benvenuto")}` });
+          } catch { /* ignore */ }
+        }
+      }
+      /* extra sbloccati con i crediti (temi, piani) + amici invitati */
+      try {
+        const { data: { session: ss } } = await supabase.auth.getSession();
+        const ah = { Authorization: `Bearer ${ss?.access_token || ""}` };
+        const [shopRes, refRes] = await Promise.all([
+          fetch("/api/shop", { headers: ah }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+          fetch("/api/referral", { headers: ah }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+        ]);
+        if (Array.isArray(shopRes.unlocks)) setUnlocks(shopRes.unlocks);
+        if (typeof refRes.count === "number") setRefCount(refRes.count);
+      } catch { /* ignore */ }
       const role = await fetchMyRole(authUser); // "user" | "pt"
       const uname = (authUser.user_metadata && authUser.user_metadata.username) || authUser.email.split("@")[0];
       syncMyUsername(authUser.id, uname); // il PT vede lo username dei clienti
@@ -791,6 +896,7 @@ export default function App() {
     window.__gqHydrateGuest = hydrateGuest;
 
     captureInviteHash(); // link invito PT (#pt=...): parcheggia l'id per dopo il login
+    captureRefHash();    // link referral (#ref=...): bonus crediti riscattato dopo il login
 
     (async () => {
       supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -935,8 +1041,9 @@ export default function App() {
   /* i portali (Overlay → document.body) ereditano il tema: la classe standard va anche su <body> */
   useEffect(() => {
     document.body.classList.toggle("standard", standard);
-    return () => document.body.classList.remove("standard");
-  }, [standard]);
+    document.body.classList.toggle("emerald", body.uiMode === "emerald");
+    return () => { document.body.classList.remove("standard"); document.body.classList.remove("emerald"); };
+  }, [standard, body.uiMode]);
   /* PT e admin vedono entrambe le facce dell'app: l'ultimo pulsante del menu
      (sempre in fondo) commuta tra area PT (clienti) e area utente normale */
   const canPt = isPT || isAdminUser(user);
@@ -1049,7 +1156,32 @@ export default function App() {
       )}
       {questsOpen && <QuestModal quests={quests} stats={stats} prs={prs} level={level} streak={streak} onClose={() => setQuestsOpen(false)} />}
       {gateOpen && <StoreModal premium={premium} isGuest={isGuest} fireToast={fireToast} onClose={() => setGateOpen(false)}
-        onUnlocked={(until) => setPremiumUntil(until)} initialCode={stripeCode} onCreateAccount={exitGuest} />}
+        onUnlocked={(until) => setPremiumUntil(until)} initialCode={stripeCode} onCreateAccount={exitGuest}
+        unlocks={unlocks} onBuyShop={buyShop} />}
+      {/* Paywall soft: proposta non bloccante dopo l'allenamento (max 1/giorno) */}
+      {softGate && (
+        <Overlay>
+        <div className="modal-back" onClick={() => setSoftGate(false)}>
+          <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
+            <div className="cham-s" style={{ width: 52, height: 52, margin: "2px auto 10px", background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Sparkles size={24} color="#fff" />
+            </div>
+            <div className="f-hud t-bright" style={{ fontWeight: 700, fontSize: 15, letterSpacing: ".12em" }}>{tr("ALLENAMENTO COMPLETATO!")} 💪</div>
+            <div className="tiny t-dim" style={{ margin: "8px 0 14px", lineHeight: 1.7 }}>
+              {isGuest
+                ? tr("Con un account gratuito salvi i progressi su tutti i dispositivi e provi le funzioni AI: scheda su misura, piano nutrizionale e scan macchinari.")
+                : tr("La prossima scheda potrebbe generarla l'AI su misura per te: con Premium sblocchi tutte le funzioni AI, da 2€ al mese.")}
+            </div>
+            {isGuest ? (
+              <Btn primary full onClick={() => { setSoftGate(false); exitGuest(); }}>{tr("Crea account — è gratis")}</Btn>
+            ) : (
+              <Btn ai full onClick={() => { setSoftGate(false); setGateOpen(true); }}>{tr("SCOPRI PREMIUM — DA 2€/MESE")}</Btn>
+            )}
+            <Btn full style={{ marginTop: 8 }} onClick={() => setSoftGate(false)}>{tr("Più tardi")}</Btn>
+          </div>
+        </div>
+        </Overlay>
+      )}
 
       {/* TOP HUD BAR */}
       <header className="hud-header">
@@ -1138,7 +1270,7 @@ export default function App() {
 
         <main className="main-area">
           {tab === "clients" && canPt && ptMode && <TrainerView user={user} fireToast={fireToast} />}
-          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
+          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} onSessionClosed={maybeSoftGate} premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
@@ -1156,6 +1288,7 @@ export default function App() {
               <ProfileTab user={user} body={body} setBody={setBody}
                 fireToast={fireToast} onLogout={async () => { await supabase.auth.signOut(); setTab("training"); }}
                 onUserUpdate={setUser} level={level} rank={rank} streak={streak} premium={premium}
+                unlocks={unlocks} refCount={refCount}
                 onRedoSetup={() => setBody((b) => ({ ...b, onboarded: false }))}
                 trainer={myTrainer}
                 onUnlinkTrainer={async () => {
@@ -1207,7 +1340,7 @@ export default function App() {
 }
 
 /* ================================ TRAINING ================================ */
-function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
+function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
   const [view, setView] = useState("home");
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
@@ -1267,7 +1400,8 @@ function Training({ standard, onWorkoutDone, premium, addXp, fireToast, routines
     return <SessionView standard={standard} onWorkoutDone={onWorkoutDone} premium={premium} session={session} setSession={setSession} prs={prs} setPrs={setPrs}
       addXp={addXp} fireToast={fireToast}
       routines={routines} setRoutines={setRoutines} setHistory={setHistory}
-      exitToHome={() => setView("home")} />;
+      exitToHome={() => setView("home")}
+      onResultsClose={() => { setSession(null); setView("home"); onSessionClosed && onSessionClosed(); }} />;
   }
   if (view === "builder") {
     const initial = editId != null ? routines.find((r) => r.id === editId) : null;
@@ -1982,7 +2116,7 @@ const BodyField = ({ draft, setD, label, k, unit, step }) => (
 );
 
 /* ================================ PROFILE ================================ */
-function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup, ptCard, trainer, onUnlinkTrainer }) {
+function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, level, rank, streak, premium, onRedoSetup, ptCard, trainer, onUnlinkTrainer, unlocks = [], refCount = 0 }) {
   const [ptUnlink, setPtUnlink] = useState(false); // conferma in due passi dello scollegamento dal PT
   const [usage, setUsage] = useState(null);
   const [usageErr, setUsageErr] = useState(null);
@@ -2171,8 +2305,9 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             {tr("L'app ha due versioni: puoi cambiare quando vuoi, i tuoi dati e i tuoi allenamenti restano sempre gli stessi.")}
           </div>
           <div className="stack g10">
-            {UI_MODES.map((o) => {
-              const active = (body.uiMode === "combat" ? "combat" : "standard") === o.id;
+            {[...UI_MODES, ...(unlocks.includes("theme-emerald") ? [EMERALD_MODE] : [])].map((o) => {
+              const curMode = body.uiMode === "combat" ? "combat" : (body.uiMode === "emerald" && unlocks.includes("theme-emerald") ? "emerald" : "standard");
+              const active = curMode === o.id;
               return (
                 <button key={o.id} onClick={() => setBody((b) => ({ ...b, uiMode: o.id }))}
                   className="tap cham-s"
@@ -2194,6 +2329,27 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             })}
           </div>
         </Panel>
+
+        {/* Referral: invita amici, entrambi ricevono crediti */}
+        {!user?.guest && user?.id && (
+          <Panel>
+            <div className="hud-label" style={{ marginBottom: 8 }}>
+              <Gift size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("INVITA AMICI, GUADAGNA CREDITI")}
+            </div>
+            <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 10 }}>
+              {tr("Per ogni amico che si registra dal tuo link:")} <span className="t-amber" style={{ fontWeight: 700 }}>{tr("+30 crediti a te, +10 a lui")}</span>.
+            </div>
+            <div className="row g8">
+              <input className="hud-input cham-s" readOnly value={`${location.origin}${location.pathname}#ref=${user.id}`}
+                onFocus={(e) => e.target.select()} style={{ flex: 1, fontSize: 11, minWidth: 0 }} />
+              <Btn small primary onClick={() => {
+                const link = `${location.origin}${location.pathname}#ref=${user.id}`;
+                try { navigator.clipboard.writeText(link); fireToast({ title: tr("◈ LINK COPIATO") }); } catch { fireToast({ title: link }); }
+              }}>{tr("Copia")}</Btn>
+            </div>
+            <div className="micro t-faint" style={{ marginTop: 8 }}>{tr("Amici iscritti col tuo link")}: <span className="t-cyan" style={{ fontWeight: 700 }}>{refCount}</span></div>
+          </Panel>
+        )}
 
         {/* Il personal trainer che segue l'utente (max uno) */}
         {trainer && (

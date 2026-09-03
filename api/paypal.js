@@ -80,7 +80,7 @@ export default async function handler(req, res) {
         const credits = await addCredits(user.id, prod.credits, orderID);
         return res.status(200).json({ credits });
       }
-      const until = await grantPremium(user.id, orderID);
+      const until = await grantPremium(user.id, orderID, prod.days || 365);
       return res.status(200).json({ premium_until: until });
     }
 

@@ -363,6 +363,22 @@ body.dragging *{cursor:grabbing!important}
 /* portali (Overlay → document.body): il tema chiaro arriva anche agli overlay */
 body.standard{background:#f5f5f4}
 
+/* TEMA SMERALDO: variante verde del tema standard (sbloccabile con i crediti).
+   Si applica insieme alla classe .standard: qui cambiano solo gli accenti. */
+.emerald{--cyan:#059669;--cyan-hi:#047857;--amber:#065f46;--green:#047857;
+  --active:#d1fae5;--active2:#ecfdf5}
+.emerald .btn-primary{background:linear-gradient(135deg,#34d399,#059669)}
+.emerald .btn-primary:hover{background:linear-gradient(135deg,#10b981,#047857)}
+.emerald .chip-on{background:#d1fae5}
+.emerald .dash-btn{border-color:rgba(5,150,105,.35);background:#f2fbf6}
+.emerald .dash-btn:hover{border-color:rgba(5,150,105,.6);background:#e6f9ef}
+.emerald .info-btn{background:#e6f9ef;border-color:#c3ecd7}
+.emerald .bnav-btn.on .bnav-ico{background:#d1fae5}
+.emerald .hud-input:focus{border-color:#059669;box-shadow:0 0 0 4px rgba(5,150,105,.15)}
+.emerald .panel-accent{background:linear-gradient(180deg,#ecfdf5,#e2f8ee);border-color:#c3ecd7}
+.emerald .guest-banner .t-cyan{color:#6ee7b7}
+.emerald .float-cam-btn{box-shadow:0 4px 12px rgba(5,150,105,.35)}
+
 `;
 
 /* ============================== PRIMITIVES ============================== */

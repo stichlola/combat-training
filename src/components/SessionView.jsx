@@ -13,7 +13,7 @@ import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
 
 /* ---------------- Sessione di allenamento attiva ---------------- */
-export function SessionView({ standard, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome }) {
+export function SessionView({ standard, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome, onResultsClose }) {
   const [info, setInfo] = useState(null);
   const [ptInfo, setPtInfo] = useState(null); // esercizio con popup note PT aperto
   const [confirmExit, setConfirmExit] = useState(false);
@@ -250,7 +250,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
           onDelete={() => removeSet(setMenu.ei, setMenu.si)}
           onClose={() => setSetMenu(null)} />
       )}
-      {results && <ResultsScreen standard={standard} results={results} onClose={() => { setSession(null); exitToHome(); }} />}
+      {results && <ResultsScreen standard={standard} results={results} onClose={() => { if (onResultsClose) onResultsClose(); else { setSession(null); exitToHome(); } }} />}
       <FloatingTimer ref={timerRef} />
       {!locked && (
         <MachineScan premium={premium} variant="float" fireToast={fireToast}
