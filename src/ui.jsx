@@ -100,7 +100,7 @@ button.btn{text-align:center}
 .timer-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:60;background:var(--modal);
   border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:10px 14px;
   min-width:260px;box-sizing:border-box}
-.set-grid-t{display:grid;grid-template-columns:18px 42px 1fr 64px 48px;gap:8px;align-items:center}
+.set-grid-t{display:grid;grid-template-columns:auto 42px 1fr 64px 46px;gap:8px;align-items:center}
 .icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer;min-width:36px;min-height:36px}
 
 /* --- info esercizio: pulsante ben visibile --- */
@@ -210,14 +210,15 @@ body.dragging *{cursor:grabbing!important}
 .grow{flex:1;min-width:0}
 .wrap{flex-wrap:wrap}
 
-.set-grid{display:grid;grid-template-columns:18px 42px 1fr 1fr 48px;gap:8px;align-items:center}
+.set-grid{display:grid;grid-template-columns:auto 42px 1fr 1fr 46px;gap:8px;align-items:center}
 .divider-row{display:flex;justify-content:space-between;align-items:center;
   padding:7px 0;border-bottom:1px solid var(--hairline)}
 .divider-row:last-child{border-bottom:none}
 .chip{font-family:'Chakra Petch',sans-serif;font-size:9px;letter-spacing:.15em;
   padding:3px 8px;border:1px solid var(--line);color:var(--dim);text-transform:uppercase}
 .chip-on{background:var(--cyan);color:#04121d;border-color:var(--cyan-hi);font-weight:600}
-.check-btn{height:36px;display:flex;align-items:center;justify-content:center;
+.check-btn{width:40px;height:40px;padding:0;flex-shrink:0;justify-self:end;
+  display:flex;align-items:center;justify-content:center;
   border:1px solid var(--line);color:var(--faint);cursor:pointer}
 .check-btn:hover{border-color:var(--cyan)}
 .check-on{background:var(--green);border-color:#7cffb5;color:#04121d;

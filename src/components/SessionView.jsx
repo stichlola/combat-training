@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Check, Play, Trash2, Trophy, Info, Pause, GripVertical, ArrowLeftRight, StickyNote, Lock, LockOpen } from "lucide-react";
+import { Plus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, StickyNote, Lock, LockOpen } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { PtNoteModal } from "./PtNoteModal";
 import { ExercisePickerModal } from "./ExercisePicker";
@@ -382,11 +382,6 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                       style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={16} /></span>
                   </>
                 )}
-                {prs[ex.name] && !exMode(ex) && (
-                  <span style={{ marginLeft: 4, paddingLeft: 12, borderLeft: "1px solid var(--soft2)", display: "inline-flex", alignItems: "center" }}>
-                    <Trophy size={16} color="#ffd76a" />
-                  </span>
-                )}
               </div>
             )}
           </div>
@@ -430,10 +425,10 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               <div data-dl>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid-t cham-s ${s.done ? "set-done" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-                  {!locked && (
+                  {!locked ? (
                     <span className="drag-handle" title={tr("Trascina per riordinare")}
                       onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
-                  )}
+                  ) : <span />}
                   <button className="set-chip cham-s" title={tr("Opzioni serie")} disabled={locked}
                     onClick={(e) => { if (locked) return; e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
                     {si + 1}
@@ -476,10 +471,10 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               <div data-dl>
               {ex.sets.map((s, si) => (
                 <div key={si} className={`set-grid cham-s ${s.done ? "set-done" : ""} ${s.warmup ? "set-warmup" : ""}`} style={{ marginBottom: 6, padding: 4 }}>
-                  {!locked && (
+                  {!locked ? (
                     <span className="drag-handle" title={tr("Trascina per riordinare")}
                       onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={12} /></span>
-                  )}
+                  ) : <span />}
                   <button className={`set-chip cham-s ${s.warmup ? "warmup" : ""}`} title={tr("Opzioni serie")} disabled={locked}
                     onClick={(e) => { if (locked) return; e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
                     {s.warmup ? "W" : ex.sets.slice(0, si + 1).filter((x) => !x.warmup).length}
