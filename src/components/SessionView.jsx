@@ -355,7 +355,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       {session.exercises.map((ex, ei) => (
         <Panel key={ei}>
           {/* riga 0: gruppo · PR (sopra il nome) · riga 1: nome + azioni · riga 2: INFO · settimana · recupero */}
-          <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 29 }}>
+          <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: locked ? 0 : 29 }}>
             {tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}
           </div>
           <div className="row between g8" style={{ marginBottom: 6, alignItems: "flex-start" }}>
@@ -387,7 +387,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
           </div>
           {/* seconda riga a tutta larghezza: non viene più schiacciata dalle icone azione;
               se proprio non ci sta scorre in orizzontale invece di tagliarsi */}
-          <div className="micro ex-meta" style={{ marginBottom: 10, marginLeft: 29 }}>
+          <div className="micro ex-meta" style={{ marginBottom: 10, marginLeft: locked ? 0 : 29 }}>
             <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
             {(ex.ptNote || ex.ptVideo) && (
               <button onClick={() => setPtInfo(ex)} className="pt-btn tap" title={tr("Note e video del tuo PT")}>
