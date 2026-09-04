@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
-import { PtNoteModal } from "./PtNoteModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
 import { MachineScan } from "./MachineScan";
@@ -21,7 +20,6 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
     ? JSON.parse(JSON.stringify(initial))
     : { id: Date.now(), name: "", exercises: [] });
   const [info, setInfo] = useState(null);
-  const [ptInfo, setPtInfo] = useState(null); // esercizio con popup note PT aperto (lettura)
   const [ptEditIdx, setPtEditIdx] = useState(null); // esercizio con sezione note PT espansa
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
@@ -238,7 +236,6 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         </Overlay>
       )}
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
-      {ptInfo && <PtNoteModal ex={ptInfo} onClose={() => setPtInfo(null)} />}
       {progIdx != null && draft.exercises[progIdx] && (
         <ProgressionModal ex={draft.exercises[progIdx]}
           onSave={(p) => { upd((d) => ({ ...d, exercises: d.exercises.map((e, i) => i !== progIdx ? e : { ...e, progression: p }) })); setProgIdx(null); }}
@@ -306,12 +303,12 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
               <span className="drag-handle" title={tr("Trascina per riordinare")}
                 onPointerDown={(e) => dlStart(e, moveEx)} style={{ flexShrink: 0 }}><GripVertical size={15} /></span>
               <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
-              <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
-              {!ptMode && (ex.ptNote || ex.ptVideo) && (
-                <button onClick={() => setPtInfo(ex)} className="pt-btn tap" title={tr("Note e video del tuo PT")}>
-                  <StickyNote size={11} /> INFO PT
-                </button>
-              )}
+              {/* un solo pulsante INFO: ambra quando il PT ha aggiunto note/video */}
+              <button onClick={() => setInfo(ex)}
+                className={!ptMode && (ex.ptNote || ex.ptVideo) ? "pt-btn tap" : "info-btn cham-s tap"}
+                title={!ptMode && (ex.ptNote || ex.ptVideo) ? tr("Note e video del tuo PT") : undefined}>
+                <Info size={11} /> INFO
+              </button>
               {ex.progression?.enabled && (
                 <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", alignSelf: "center" }}>PROG ×{ex.progression.weeks?.length || 1}</span>
               )}

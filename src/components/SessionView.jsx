@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, StickyNote, Lock, LockOpen } from "lucide-react";
+import { Plus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
-import { PtNoteModal } from "./PtNoteModal";
 import { ExercisePickerModal } from "./ExercisePicker";
 import { FloatingTimer } from "./FloatingTimer";
 import { MachineScan } from "./MachineScan";
@@ -15,7 +14,6 @@ import { Btn, Overlay, Panel } from "../ui";
 /* ---------------- Sessione di allenamento attiva ---------------- */
 export function SessionView({ standard, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome, onResultsClose }) {
   const [info, setInfo] = useState(null);
-  const [ptInfo, setPtInfo] = useState(null); // esercizio con popup note PT aperto
   const [confirmExit, setConfirmExit] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [sessionPrCount, setSessionPrCount] = useState(0);
@@ -252,7 +250,6 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
-      {ptInfo && <PtNoteModal ex={ptInfo} onClose={() => setPtInfo(null)} />}
       {setMenu && (
         <SetMenu isTime={["time", "hold"].includes(exMode(session.exercises[setMenu.ei]))}
           warmup={!!session.exercises[setMenu.ei].sets[setMenu.si].warmup}
@@ -398,12 +395,13 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
           {/* seconda riga a tutta larghezza: non viene più schiacciata dalle icone azione;
               se proprio non ci sta scorre in orizzontale invece di tagliarsi */}
           <div className="micro ex-meta" style={{ marginBottom: 10, marginLeft: locked ? 0 : 29 }}>
-            <button onClick={() => setInfo(ex)} className="info-btn cham-s tap"><Info size={11} /> INFO</button>
-            {(ex.ptNote || ex.ptVideo) && (
-              <button onClick={() => setPtInfo(ex)} className="pt-btn tap" title={tr("Note e video del tuo PT")}>
-                <StickyNote size={11} /> INFO PT
-              </button>
-            )}
+            {/* un solo pulsante INFO: diventa ambra quando il PT ha aggiunto note/video
+                e il popup incorpora esecuzione + note personalizzate */}
+            <button onClick={() => setInfo(ex)}
+              className={(ex.ptNote || ex.ptVideo) ? "pt-btn tap" : "info-btn cham-s tap"}
+              title={(ex.ptNote || ex.ptVideo) ? tr("Note e video del tuo PT") : undefined}>
+              <Info size={11} /> INFO
+            </button>
             {ex.progWeek && (
               <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a" }}
                 title={`${tr("SETTIMANA")} ${ex.progWeek}${ex.progTotal ? `/${ex.progTotal}` : ""} — ${tr("Progressione settimanale attiva")}`}>
