@@ -609,10 +609,11 @@ export default function App() {
   useEffect(() => {
     const fix = (el) => {
       if (!el.matches || !el.matches("input, textarea, select")) return;
-      el.setAttribute("autocomplete", el.type === "password" ? "new-password" : "off");
-      el.setAttribute("data-1p-ignore", "true");  // 1Password
-      el.setAttribute("data-lpignore", "true");   // LastPass
-      el.setAttribute("data-bwignore", "true");   // Bitwarden
+      el.setAttribute("autocomplete", "off");
+      el.setAttribute("data-1p-ignore", "true");   // 1Password
+      el.setAttribute("data-lpignore", "true");    // LastPass
+      el.setAttribute("data-bwignore", "true");    // Bitwarden
+      el.setAttribute("data-form-type", "other");  // Dashlane
     };
     document.querySelectorAll("input, textarea, select").forEach(fix);
     const mo = new MutationObserver((muts) => {
@@ -1930,7 +1931,7 @@ Schema: {"exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sop
 const AuthField = ({ icon: Icon, ...props }) => (
   <div style={{ position: "relative" }}>
     <Icon size={15} color="var(--faint)" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }} />
-    <input {...props} className="hud-input cham-s" style={{ paddingLeft: 34, ...(props.style || {}) }} />
+    <input {...props} className={"hud-input cham-s" + (props.className ? " " + props.className : "")} style={{ paddingLeft: 34, ...(props.style || {}) }} />
   </div>
 );
 
@@ -2020,8 +2021,8 @@ function AuthScreen({ fireToast, onGuest, combat }) {
             </>
           ) : (
             <>
-              <AuthField icon={Mail} type="email" placeholder={tr("Email")} value={email}
-                onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+              <AuthField icon={Mail} type="text" inputMode="email" placeholder={tr("Email")} value={email}
+                onChange={(e) => setEmail(e.target.value)} />
 
               {mode === "register" && (
                 <AuthField icon={User} type="text" placeholder={tr("Username")} value={username}
@@ -2031,10 +2032,9 @@ function AuthScreen({ fireToast, onGuest, combat }) {
               {mode !== "forgot" && (
                 <div style={{ position: "relative" }}>
                   <Lock size={15} color="var(--faint)" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }} />
-                  <input type={showPw ? "text" : "password"} placeholder={tr("Password")} value={pw}
-                    onChange={(e) => setPw(e.target.value)} className="hud-input cham-s"
-                    style={{ paddingLeft: 34, paddingRight: 40 }}
-                    autoComplete={mode === "login" ? "current-password" : "new-password"} />
+                  <input type="text" placeholder={tr("Password")} value={pw}
+                    onChange={(e) => setPw(e.target.value)} className={"hud-input cham-s" + (showPw ? "" : " masked")}
+                    style={{ paddingLeft: 34, paddingRight: 40 }} />
                   <button onClick={() => setShowPw(!showPw)} className="tap"
                     style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "var(--faint)" }}>
                     {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -2043,8 +2043,8 @@ function AuthScreen({ fireToast, onGuest, combat }) {
               )}
 
               {mode === "register" && (
-                <AuthField icon={Lock} type={showPw ? "text" : "password"} placeholder={tr("Conferma password")}
-                  value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" />
+                <AuthField icon={Lock} type="text" className={showPw ? "" : "masked"} placeholder={tr("Conferma password")}
+                  value={pw2} onChange={(e) => setPw2(e.target.value)} />
               )}
 
               {error && <div className="tiny t-red">⚠ {error}</div>}
@@ -2398,8 +2398,8 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             </div>
             <div>
               <div className="hud-label" style={{ marginBottom: 4, fontSize: 9 }}>{tr("Nuova password")}</div>
-              <input className="hud-input cham-s" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)}
-                placeholder={tr("Minimo 6 caratteri")} autoComplete="new-password" />
+              <input className="hud-input cham-s masked" type="text" value={newPw} onChange={(e) => setNewPw(e.target.value)}
+                placeholder={tr("Minimo 6 caratteri")} />
             </div>
             {pwError && <div className="tiny t-red">⚠ {pwError}</div>}
             <Btn primary full onClick={saveAccount}>{tr("Salva account")}</Btn>

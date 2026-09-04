@@ -224,6 +224,9 @@ body.dragging *{cursor:grabbing!important}
 .check-on{background:var(--green);border-color:#7cffb5;color:#04121d;
   box-shadow:0 0 10px rgba(47,191,113,.4)}
 .set-done{background:var(--done)}
+/* password mascherate SENZA type=password: Chrome/gestori password non
+   riconoscono il campo e non aprono la barra autofill con la chiave */
+.masked{-webkit-text-security:disc !important}
 .dash-btn{width:100%;padding:7px;border:1px dashed var(--line);color:var(--faint);
   font-family:'Chakra Petch',sans-serif;font-size:10px;letter-spacing:.2em;cursor:pointer;text-align:center}
 .dash-btn:hover{border-color:var(--cyan);color:var(--cyan-hi)}
