@@ -25,8 +25,18 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi (aggiungi/sostituisci)
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [confirmExDel, setConfirmExDel] = useState(null); // eliminazione esercizio in attesa di conferma
-  const [locked, setLocked] = useState(false); // blocco modifiche: solo spunta serie + timer
-  const toggleLock = () => { setLocked((l) => !l); setSetMenu(null); setConfirmExDel(null); setReplaceIdx(null); setShowPicker(false); };
+  /* Blocco modifiche: solo spunta serie + timer. Parte ATTIVO di default e
+     ricorda l'ultima scelta (globale, vale per ogni allenamento in corso). */
+  const [locked, setLocked] = useState(() => {
+    try { return localStorage.getItem("gq_session_lock") !== "0"; } catch { return true; }
+  });
+  const toggleLock = () => {
+    setLocked((l) => {
+      try { localStorage.setItem("gq_session_lock", l ? "0" : "1"); } catch { /* ignore */ }
+      return !l;
+    });
+    setSetMenu(null); setConfirmExDel(null); setReplaceIdx(null); setShowPicker(false);
+  };
   const timerRef = useRef(null); // ref per triggerare il timer di recupero programmaticamente
   const replaceRef = useRef(null); // card "SOSTITUZIONE ATTIVA": ci si scrolla appena si attiva
 
