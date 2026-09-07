@@ -15,13 +15,14 @@ export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) 
   const [running, setRunning] = useState(false);
   const [autoOn, setAutoOn] = useState(true); // timer automatico attivo di default
   const autoRef = useRef(true);               // mirror leggibile dalla ref imperativa
+  const endAtRef = useRef(null);            // timestamp di fine: il countdown NON dipende dai tick del browser
 
   const toggleAuto = () => {
     const n = !autoOn;
     setAutoOn(n);
     autoRef.current = n;
     setOpen(n);            // feedback immediato: attivando si vede il pannello, disattivando sparisce
-    if (!n) setRunning(false);
+    if (!n) { setRunning(false); endAtRef.current = null; }
   };
 
   useImperativeHandle(ref, () => ({
@@ -29,21 +30,34 @@ export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) 
       if (!autoRef.current) return; // timer disattivato dal pulsante: niente popup
       setDur(seconds);
       setLeft(seconds);
+      endAtRef.current = Date.now() + seconds * 1000;
       setRunning(true);
       setOpen(true);
     },
     reset: () => {
-      setLeft(dur);
       setRunning(false);
+      endAtRef.current = null;
+      setLeft(dur);
     },
   }));
 
+  /* Countdown ancorato al timestamp reale: se la scheda va in background
+     (Chrome sospende i timer), il tempo continua comunque a scendere e il
+     display si riallinea al ritorno (visibilitychange / focus). */
   useEffect(() => {
     if (!running) return;
-    if (left <= 0) { setRunning(false); return; }
-    const t = setTimeout(() => setLeft((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [running, left]);
+    const tick = () => {
+      const l = Math.max(0, Math.ceil(((endAtRef.current || Date.now()) - Date.now()) / 1000));
+      setLeft(l);
+      if (l <= 0) { setRunning(false); endAtRef.current = null; }
+    };
+    tick();
+    const iv = setInterval(tick, 250);
+    const onVis = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("focus", onVis); };
+  }, [running]);
 
   const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   /* +/−15s: a timer in corso sposta il tempo rimanente SENZA fermarlo;
@@ -51,7 +65,9 @@ export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) 
   const bump = (d) => {
     const nDur = Math.max(15, dur + d);
     setDur(nDur);
-    setLeft((l) => (l === dur ? nDur : Math.max(0, Math.min(nDur, l + d))));
+    const nl = left === dur ? nDur : Math.max(0, Math.min(nDur, left + d));
+    setLeft(nl);
+    if (running) endAtRef.current = Date.now() + nl * 1000;
   };
 
   const panel = open && (
@@ -72,9 +88,9 @@ export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) 
       </div>
       <div className="row g8">
         {running
-          ? <Btn small onClick={() => setRunning(false)} style={{ flex: 1 }}><Pause size={11} style={{ display: "inline", verticalAlign: -1 }} />{tr("Pausa")}</Btn>
-          : <Btn small primary onClick={() => { if (left === 0) setLeft(dur); setRunning(true); }} style={{ flex: 1 }}><Play size={11} style={{ display: "inline", verticalAlign: -1 }} />{tr("Avvia")}</Btn>}
-        <Btn small onClick={() => { setLeft(dur); setRunning(false); }} style={{ flex: 1 }}>{tr("↻ Reset")}</Btn>
+          ? <Btn small onClick={() => { const l = Math.max(0, Math.ceil(((endAtRef.current || Date.now()) - Date.now()) / 1000)); setLeft(l); setRunning(false); endAtRef.current = null; }} style={{ flex: 1 }}><Pause size={11} style={{ display: "inline", verticalAlign: -1 }} />{tr("Pausa")}</Btn>
+          : <Btn small primary onClick={() => { const secs = left === 0 ? dur : left; if (left === 0) setLeft(dur); endAtRef.current = Date.now() + secs * 1000; setRunning(true); }} style={{ flex: 1 }}><Play size={11} style={{ display: "inline", verticalAlign: -1 }} />{tr("Avvia")}</Btn>}
+        <Btn small onClick={() => { setRunning(false); endAtRef.current = null; setLeft(dur); }} style={{ flex: 1 }}>{tr("↻ Reset")}</Btn>
       </div>
     </div>
   );

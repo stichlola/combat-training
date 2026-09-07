@@ -101,19 +101,30 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   /* Scelta dal popup in modalità sostituzione */
   const pickReplace = (name, group) => { if (replaceIdx != null) replaceExercise(replaceIdx, name, group); };
 
-  /* Cronometro cardio: incrementa elapsed della riga attiva */
+  /* Cronometro cardio/tenute: incrementa elapsed della riga attiva.
+     Basato su timestamp con catch-up: in background i tick vengono sospesi,
+     ma alla riattivazione vengono recuperati tutti i secondi realmente trascorsi. */
   useEffect(() => {
     if (!runKey) return;
-    const t = setInterval(() => {
+    let last = Date.now();
+    const step = () => {
+      const now = Date.now();
+      const delta = Math.floor((now - last) / 1000);
+      if (delta <= 0) return;
+      last += delta * 1000;
       const [ei, si] = runKey.split("-").map(Number);
       setSession((s) => ({
         ...s,
         exercises: s.exercises.map((e, i) => i !== ei ? e : {
-          ...e, sets: e.sets.map((st, j) => j !== si ? st : { ...st, elapsed: (st.elapsed || 0) + 1 }),
+          ...e, sets: e.sets.map((st, j) => j !== si ? st : { ...st, elapsed: (st.elapsed || 0) + delta }),
         }),
       }));
-    }, 1000);
-    return () => clearInterval(t);
+    };
+    const t = setInterval(step, 1000);
+    const onVis = () => { if (document.visibilityState === "visible") step(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("focus", onVis); };
   }, [runKey]);
 
   const upd = (fn) => setSession((s) => fn(s));
