@@ -17,7 +17,7 @@ import { captureInviteHash, captureRefHash, clearInvite, clearRef, fetchMyRole, 
 import { SHOP_META, EMERALD_MODE, buildPackRoutines } from "./lib/shopContent";
 import { dlStart } from "./lib/dnd";
 import { applyProgression, todayISO } from "./lib/progression";
-import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb } from "./lib/exercises";
+import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb, exMode } from "./lib/exercises";
 import { ACHIEVEMENTS, BASE_FACTS, DEFAULT_PRS, DEFAULT_ROUTINES, EMPTY_STATS, LEVEL_TITLES, QUEST_METRICS, QUEST_POOL_DAILY, QUEST_POOL_WEEKLY, dayKey, freshQuests, weekKey, xpForLevel } from "./lib/game";
 import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
 
@@ -1341,12 +1341,53 @@ export default function App() {
 }
 
 /* ================================ TRAINING ================================ */
+/* ─── RIEPILOGO SCHEDA (modale veloce) ─── */
+function RoutineSummaryModal({ routine, onClose }) {
+  const fmtSets = (ex) => {
+    const mode = exMode(ex);
+    const parts = ex.sets.map((st) => {
+      if (mode === "hold") return `${st.r} s`;
+      if (mode === "time") return `${st.r}'`;
+      return `${st.r}${st.w !== undefined && st.w !== "" && st.w !== null ? ` · ${st.w} kg` : ""}`;
+    });
+    const counts = {};
+    parts.forEach((x) => { counts[x] = (counts[x] || 0) + 1; });
+    return Object.entries(counts).map(([lbl, n]) => (n > 1 ? `${n}×${lbl}` : lbl)).join("  +  ");
+  };
+  return (
+    <Overlay onClose={onClose}>
+      <div className="modal-back">
+        <div className="modal-box cham glow">
+          <div className="modal-bar">
+            <span className="f-hud t-bright" style={{ fontSize: 17, letterSpacing: 2 }}>{routine.name.toUpperCase()}</span>
+            <button className="modal-x" onClick={onClose}><X size={15} /></button>
+          </div>
+          <div className="micro" style={{ marginBottom: 12 }}>{routine.exercises.length} {tr("ESERCIZI")} · {routine.exercises.reduce((a, e) => a + e.sets.length, 0)} {tr("SERIE")}</div>
+          <div className="col" style={{ gap: 8, maxHeight: "62vh", overflowY: "auto" }}>
+            {routine.exercises.map((ex, i) => (
+              <div key={i} className="soft-box cham-s" style={{ padding: "9px 12px" }}>
+                <div className="row" style={{ justifyContent: "space-between", gap: 8 }}>
+                  <span className="t-bright" style={{ fontWeight: 700, fontSize: 13 }}>{i + 1}. {ex.name}</span>
+                  <span className="chip">{ex.group}</span>
+                </div>
+                <div className="micro" style={{ marginTop: 5, color: "var(--cyan)", letterSpacing: 1 }}>{fmtSets(ex)}{ex.rest ? `  ·  REC ${ex.rest}s` : ""}</div>
+                {ex.note ? <div className="micro" style={{ marginTop: 4, fontStyle: "italic" }}>“{ex.note}”</div> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+
 function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
   const [view, setView] = useState("home");
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [report, setReport] = useState(null);
+  const [summaryId, setSummaryId] = useState(null);
 
   const deleteRoutine = (id) => {
     setRoutines((rs) => rs.filter((r) => r.id !== id));
@@ -1433,6 +1474,7 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
   return (
     <div className="fade-in two-col">
       {report && <WorkoutReport rec={report} onClose={() => setReport(null)} />}
+      {summaryId && (() => { const r = routines.find((x) => x.id === summaryId); return r ? <RoutineSummaryModal routine={r} onClose={() => setSummaryId(null)} /> : null; })()}
       {/* LEFT: routines */}
       <div className="col stack">
 
@@ -1507,6 +1549,8 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
               ) : (
                 <>
                   <div className="row" style={{ gap: 18 }}>
+                    <span onClick={() => setSummaryId(r.id)} className="tap icon-tap" title={tr("Riepilogo scheda")}
+                      style={{ color: "#5d87a3" }}><Info size={17} /></span>
                     <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title={tr("Modifica modello")}
                       style={{ color: "#5d87a3" }}><Pencil size={17} /></span>
                     <span onClick={() => setConfirmDel(r.id)} className="tap icon-tap" title={tr("Elimina")}
