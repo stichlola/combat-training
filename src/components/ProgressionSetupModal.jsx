@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { Minus, Plus, TrendingUp } from "lucide-react";
+import { Loader2, Minus, Plus, Sparkles, TrendingUp } from "lucide-react";
 import { tr } from "../lib/i18n";
 import { currentWeek, progTotal } from "../lib/progression";
 import { Btn, Overlay } from "../ui";
 
-/* ---------------- Modale progressione settimanale (semplificato) ----------------
-   Un'unica impostazione: il NUMERO DI SETTIMANE. Le settimane partono tutte con
-   gli stessi valori della scheda (settimana 1 = carichi attuali); poi l'utente
-   o il PT sistema i carichi esercizio per esercizio dalla modifica scheda (📈).
+/* ---------------- Modale progressione settimanale ----------------
+   Manuale: un'unica impostazione, il NUMERO DI SETTIMANE — le settimane partono
+   tutte con gli stessi valori della scheda e poi l'utente (o il PT) sistema i
+   carichi esercizio per esercizio dalla modifica scheda (📈).
+   AI: nessuna opzione — un pulsante solo, l'AI decide settimane e carichi da
+   sola in base alla scheda e ai dati della persona (Premium o 1 credito).
    Se la progressione è già attiva, lo stesso modale permette di disattivarla. */
-export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onClose }) {
+export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onAI, onClose }) {
   const enabled = !!routine.progression?.enabled;
   const total = progTotal(routine);
   const curWeek = enabled ? currentWeek(routine.progression, total) : null;
@@ -55,6 +57,20 @@ export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onC
               )}
               <Btn primary onClick={onClose} style={{ flex: 2 }}>{tr("Chiudi")}</Btn>
             </div>
+        {/* AI: fa tutto lei, nessuna opzione */}
+        <div className="row" style={{ alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
+          <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+          <span className="micro t-faint">{tr("OPPURE")}</span>
+          <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+        </div>
+        <Btn ai full onClick={onAI} disabled={busy}>
+          {busy
+            ? <><Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Generazione...")}</>
+            : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Ricalcola con l'AI")}</>}
+        </Btn>
+        <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.5, textAlign: "center" }}>
+          {tr("L'AI decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
+        </div>
             {confirmOff && (
               <div className="tiny t-faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
                 {tr("Disattivando, la scheda torna ai carichi base e il conteggio delle settimane si ferma.")}
@@ -85,6 +101,20 @@ export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onC
                 {tr("Attiva progressione")}
               </Btn>
             </div>
+        {/* AI: fa tutto lei, nessuna opzione */}
+        <div className="row" style={{ alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
+          <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+          <span className="micro t-faint">{tr("OPPURE")}</span>
+          <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+        </div>
+        <Btn ai full onClick={onAI} disabled={busy}>
+          {busy
+            ? <><Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Generazione...")}</>
+            : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Calcola tutto con l'AI")}</>}
+        </Btn>
+        <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.5, textAlign: "center" }}>
+          {tr("L'AI decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
+        </div>
           </>
         )}
       </div>

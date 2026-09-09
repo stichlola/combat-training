@@ -1559,7 +1559,10 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
     }));
   };
   const genAIProgression = async (r) => {
-    if (premium && premium.guest) return premium.needAccount ? premium.needAccount() : premium.open();
+    if (premium && premium.guest) {
+      setProgSetupId(null);
+      return premium.needAccount ? premium.needAccount() : premium.open();
+    }
     const finish = (exWeeks, aiDone) => {
       const total = exWeeks[0]?.length || 4;
       setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
@@ -1567,7 +1570,7 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
         progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
         exercises: x.exercises.map((e, i) => ({ ...e, progression: { weeks: exWeeks[i] } })),
       }));
-      setProgBusy(null);
+      setProgBusy(null); setProgSetupId(null);
       fireToast({
         title: aiDone ? tr("◈ PROGRESSIONE AI GENERATA") : tr("◈ PROGRESSIONE ATTIVA"),
         sub: `${tr("SETTIMANA")} 1/${total}`,
@@ -1595,7 +1598,7 @@ Rispondi SOLO con JSON valido, senza markdown né backtick:
 Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}.` }],
       }, "progression");
       if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
-        setProgBusy(null);
+        setProgBusy(null); setProgSetupId(null);
         if (premium) premium.open();
         return fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento AI") });
       }
@@ -1677,6 +1680,7 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
           <ProgressionSetupModal routine={r} premium={premium} busy={progBusy === r.id}
             onClose={() => setProgSetupId(null)}
             onConfirm={(opts) => genProgression(r, opts)}
+            onAI={() => genAIProgression(r)}
             onDisable={() => {
               setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : { ...x, progression: { ...x.progression, enabled: false } }));
               setProgSetupId(null);
@@ -1808,11 +1812,6 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
                         : tr("Progressione manuale: scegli il numero di settimane")}
                       style={{ color: r.progression?.enabled ? "#ffd76a" : "#5d87a3" }}>
                       <TrendingUp size={17} />
-                    </span>
-                    <span onClick={() => genAIProgression(r)}
-                      className="tap icon-tap" title={tr("Progressione AI: calcola tutto lei in base alla scheda e ai tuoi dati")}
-                      style={{ color: "#ffd76a" }}>
-                      {progBusy === r.id ? <Loader2 size={17} className="spin" /> : <Sparkles size={17} />}
                     </span>
                     <span onClick={() => setSummaryId(r.id)} className="tap icon-tap" title={tr("Riepilogo scheda")}
                       style={{ color: "#5d87a3" }}><Info size={17} /></span>
