@@ -419,6 +419,13 @@ const EN_UI = {
   "RECUPERO": "REST", "Avvia": "Start", "Pausa": "Pause", "↻ Reset": "↻ Reset",
   "Timer di recupero": "Rest timer",
   "Riepilogo scheda": "Routine summary", "tenute": "holds", "Fatta questa settimana": "Done this week",
+  "Progressione AI: calcola le settimane in base ai tuoi dati": "AI progression: computes the weeks from your data",
+  "◈ PROGRESSIONE AI GENERATA": "◈ AI PROGRESSION GENERATED",
+  "AI non disponibile: progressione lineare applicata": "AI unavailable: linear progression applied",
+  "La settimana avanza quando completi la scheda e cambia la settimana": "The week advances once you complete the routine and the week changes",
+  "Rigenera AI": "Regenerate AI", "Disattiva": "Disable",
+  "◈ PROGRESSIONE DISATTIVATA": "◈ PROGRESSION DISABLED",
+  "Passa a Premium o usa i crediti": "Go Premium or use credits",
   "▸ Esecuzione": "▸ How to perform",
   "ANTEPRIMA NON DISPONIBILE": "PREVIEW NOT AVAILABLE",
 

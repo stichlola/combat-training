@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Plus, Trash2, TrendingUp } from "lucide-react";
 import { exMode } from "../lib/exercises";
 import { tr } from "../lib/i18n";
-import { weekIndex } from "../lib/progression";
+import { currentWeek } from "../lib/progression";
 import { Btn, Overlay } from "../ui";
 
 /* ---------------- Modale settimane di un esercizio (solo editor scheda) ----------------
@@ -17,7 +17,7 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
     return w && w.length ? JSON.parse(JSON.stringify(w)) : [{ sets: baseSets() }];
   });
 
-  const curWeek = routineProg?.enabled ? weekIndex(routineProg.startDate, weeks.length) + 1 : null;
+  const curWeek = routineProg?.enabled ? Math.min(routineProg.week || 1, weeks.length) : null;
 
   const updateSet = (wi, si, field, val) => setWeeks((ws) =>
     ws.map((w, i) => i !== wi ? w : { sets: w.sets.map((s, j) => j !== si ? s : { ...s, [field]: val === "" ? "" : Number(val) }) }));

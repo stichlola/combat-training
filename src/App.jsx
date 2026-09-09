@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, CheckCircle2, Gift
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, CheckCircle2, Gift, TrendingUp
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -16,7 +16,7 @@ import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
 import { captureInviteHash, captureRefHash, clearInvite, clearRef, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, pendingInviteName, pendingRef, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
 import { SHOP_META, EMERALD_MODE, buildPackRoutines } from "./lib/shopContent";
 import { dlStart } from "./lib/dnd";
-import { applyProgression, todayISO } from "./lib/progression";
+import { applyProgression, todayISO, currentWeek, progTotal, syncProgression } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb, exMode } from "./lib/exercises";
 import { ACHIEVEMENTS, BASE_FACTS, DEFAULT_PRS, DEFAULT_ROUTINES, EMPTY_STATS, LEVEL_TITLES, QUEST_METRICS, QUEST_POOL_DAILY, QUEST_POOL_WEEKLY, dayKey, freshQuests, weekKey, xpForLevel } from "./lib/game";
 import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
@@ -1271,7 +1271,7 @@ export default function App() {
 
         <main className="main-area">
           {tab === "clients" && canPt && ptMode && <TrainerView user={user} fireToast={fireToast} />}
-          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} onSessionClosed={maybeSoftGate} premium={premium} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
+          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} onSessionClosed={maybeSoftGate} premium={premium} body={body} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
@@ -1406,13 +1406,25 @@ function RoutineSummaryModal({ routine, onClose }) {
   );
 }
 
-function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
+function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
   const [view, setView] = useState("home");
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [report, setReport] = useState(null);
   const [summaryId, setSummaryId] = useState(null);
+  const [progBusy, setProgBusy] = useState(null);    // id scheda in generazione AI
+  const [confirmProg, setConfirmProg] = useState(null); // id scheda con riga rigenera/disattiva
+
+  /* Avanzamento settimane: la settimana sale solo se la scheda è stata
+     completata E la settimana di calendario è cambiata */
+  useEffect(() => {
+    setRoutines((rs) => {
+      let changed = false;
+      const out = rs.map((r) => { const u = syncProgression(r); if (u) changed = true; return u || r; });
+      return changed ? out : rs;
+    });
+  }, [history]);
 
   const deleteRoutine = (id) => {
     setRoutines((rs) => rs.filter((r) => r.id !== id));
@@ -1456,6 +1468,83 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
       }),
     });
     setView("session");
+  };
+
+  /* ─── Progressione AI: N settimane di sovraccarico progressivo calcolate
+         sulla scheda e sui dati dell'utente; fallback lineare se l'AI non risponde ─── */
+  const PROG_WEEKS = 4;
+  const localProgWeeks = (ex) => {
+    const mode = exMode(ex);
+    return Array.from({ length: PROG_WEEKS }, (_, i) => ({
+      sets: ex.sets.map((st) => {
+        if (mode === "hold") return { sec: (Number(st.sec) || 60) + 5 * i, elapsed: 0, done: false };
+        if (mode === "time") return { sec: (Number(st.sec) || 600) + 60 * i, dist: st.dist || "", elapsed: 0, done: false };
+        const w = Number(st.w) || 0;
+        const r0 = Number(st.r) || 8;
+        return w > 0 ? { w: w + 2.5 * i, r: r0, done: false } : { w: 0, r: r0 + i, done: false };
+      }),
+    }));
+  };
+  const genProgression = async (r) => {
+    if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
+    setProgBusy(r.id);
+    const exLine = (e) => {
+      const mode = exMode(e);
+      const pr = prs[e.name] ? ` (PR attuale: ${prs[e.name]} kg)` : "";
+      const sets = e.sets.map((st) => mode === "hold" ? `${st.sec}s` : mode === "time" ? `${Math.round((st.sec || 0) / 60)}min` : `${st.w}kg×${st.r}`).join(", ");
+      return `- ${e.name} [${e.group}${mode === "hold" ? ", tenuta" : mode === "time" ? ", cardio a tempo" : ""}]: ${e.sets.length} serie: ${sets}${pr}`;
+    };
+    let exWeeks = null;
+    try {
+      const data = await aiCall({
+        model: "claude-haiku-4-5-20251001", max_tokens: 4000,
+        messages: [{ role: "user", content: `Sei un personal trainer esperto in sovraccarico progressivo. Genera una progressione di ${PROG_WEEKS} settimane per questa scheda di allenamento.
+UTENTE: ${body?.sesso === "M" ? "uomo" : "donna"}, ${body?.eta || 30} anni, ${body?.peso || 75} kg, ${body?.altezza || 175} cm, obiettivo "${body?.obiettivo || "Massa"}", si allena ${body?.giorniAllenamento || 3} volte a settimana.
+SCHEDA "${r.name}" (${r.exercises.length} esercizi):
+${r.exercises.map(exLine).join("\n")}
+REGOLE: settimana 1 = carichi attuali; incrementi realistici e sicuri (+2,5-5% carico OPPURE +1-2 ripetizioni a settimana per la forza; +5-10s per le tenute; +1-2 min per il cardio); numero di serie invariato; ultima settimana la più impegnativa ma sostenibile; per esercizi a corpo libero (0kg) aumenta le ripetizioni.
+Rispondi SOLO con JSON valido, senza markdown né backtick:
+{"weeks":[{"week":1,"exercises":[{"name":"NOME ESATTO come sopra","sets":[{"w":number,"r":number}]}]}]}
+Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}.` }],
+      }, "progression");
+      if (data && data.error === "limit_reached") {
+        setProgBusy(null);
+        if (premium) premium.open();
+        return fireToast({ title: tr("Limite settimanale raggiunto"), sub: tr("Passa a Premium o usa i crediti") });
+      }
+      if (data && data.error) throw new Error("API");
+      const raw = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+      const parsed = parseLoose(raw);
+      const weeksArr = (parsed.weeks || []).slice(0, 8);
+      if (weeksArr.length < 2) throw new Error("bad");
+      /* validazione: per ogni esercizio si prendono le settimane AI (match per
+         nome, altrimenti per posizione) con valori clampati a range sensati */
+      exWeeks = r.exercises.map((ex, ei) => {
+        const mode = exMode(ex);
+        return weeksArr.map((wk) => {
+          const found = (wk.exercises || []).find((x) => x.name === ex.name) || (wk.exercises || [])[ei] || {};
+          const src = Array.isArray(found.sets) && found.sets.length ? found.sets : ex.sets;
+          const sets = ex.sets.map((base, si) => {
+            const st = src[Math.min(si, src.length - 1)] || {};
+            if (mode === "hold") return { sec: Math.max(5, Math.min(600, Number(st.sec ?? base.sec) || 60)), elapsed: 0, done: false };
+            if (mode === "time") return { sec: Math.max(60, Number(st.sec ?? base.sec) || 600), dist: String(st.dist ?? base.dist ?? ""), elapsed: 0, done: false };
+            return { w: Math.max(0, Number(st.w ?? base.w) || 0), r: Math.max(1, Math.min(50, Number(st.r ?? base.r) || 8)), done: false };
+          });
+          return { sets };
+        });
+      });
+    } catch (e) {
+      exWeeks = r.exercises.map(localProgWeeks); // fallback lineare +2,5kg/+1rep/+5s
+      fireToast({ title: tr("AI non disponibile: progressione lineare applicata") });
+    }
+    const total = exWeeks[0]?.length || PROG_WEEKS;
+    setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
+      ...x,
+      progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
+      exercises: x.exercises.map((e, i) => ({ ...e, progression: { weeks: exWeeks[i] } })),
+    }));
+    setProgBusy(null); setConfirmProg(null);
+    fireToast({ title: tr("◈ PROGRESSIONE AI GENERATA"), sub: `${tr("SETTIMANA")} 1/${total}` });
   };
 
   const abandonSession = () => {
@@ -1525,6 +1614,33 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
           </Panel>
         )}
 
+        {/* Banner progressioni: a che settimana è arrivata ogni scheda */}
+        {routines.some((r) => r.progression?.enabled) && (
+          <Panel style={{ borderColor: "#ffd76a", background: "rgba(255,215,106,.05)" }}>
+            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 12 }}>
+              <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("PROGRESSIONE SETTIMANALE")}
+            </div>
+            <div className="tiny t-faint" style={{ marginTop: 2 }}>{tr("La settimana avanza quando completi la scheda e cambia la settimana")}</div>
+            {routines.filter((r) => r.progression?.enabled).map((r) => {
+              const total = progTotal(r);
+              const wk = currentWeek(r.progression, total);
+              return (
+                <div key={r.id} style={{ marginTop: 10 }}>
+                  <div className="row between" style={{ alignItems: "baseline" }}>
+                    <span className="t-bright" style={{ fontWeight: 700, fontSize: 13 }}>{r.name}</span>
+                    <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", fontWeight: 700 }}>
+                      {tr("SETTIMANA")} {wk}/{total}
+                    </span>
+                  </div>
+                  <div className="cham-s" style={{ height: 4, background: "var(--soft)", marginTop: 6 }}>
+                    <div style={{ height: "100%", width: `${(wk / total) * 100}%`, background: "#ffd76a", transition: "width .4s" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </Panel>
+        )}
+
         <div className="row between">
           <h2 className="hud-title">{tr("▸ Schede attive")}</h2>
           <Btn small onClick={() => setView("builder")}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
@@ -1558,6 +1674,13 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
                 <div className="tiny t-dim" style={{ marginTop: 2 }}>
                   {r.exercises.length} ESERCIZI · {r.exercises.reduce((a, e) => a + e.sets.length, 0)} SERIE
                 </div>
+                {r.progression?.enabled && (
+                  <div className="row g6" style={{ marginTop: 6 }}>
+                    <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", fontWeight: 700 }}>
+                      <TrendingUp size={11} style={{ display: "inline", verticalAlign: -1, marginRight: 4 }} />{tr("SETTIMANA")} {currentWeek(r.progression, progTotal(r))}/{progTotal(r)}
+                    </span>
+                  </div>
+                )}
                 {routineDoneThisWeek(r, history) && (
                   <div className="row g6" style={{ marginTop: 6 }}>
                     <span className="chip cham-s" style={{ background: "rgba(16,185,129,.14)", color: "#10b981", borderColor: "rgba(16,185,129,.45)", fontWeight: 700 }}>
@@ -1573,7 +1696,15 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
               </div>
             </div>
             <div className="row between" style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--soft)" }}>
-              {confirmDel === r.id ? (
+              {confirmProg === r.id ? (
+                <div className="row g8" style={{ width: "100%" }}>
+                  <Btn small ai onClick={() => genProgression(r)} disabled={progBusy === r.id} style={{ flex: 1.4 }}>
+                    {progBusy === r.id ? tr("Rigenerazione...") : tr("Rigenera AI")}
+                  </Btn>
+                  <Btn small onClick={() => { setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : { ...x, progression: { ...x.progression, enabled: false } })); setConfirmProg(null); fireToast({ title: tr("◈ PROGRESSIONE DISATTIVATA"), sub: r.name }); }} style={{ flex: 1 }}>{tr("Disattiva")}</Btn>
+                  <Btn small onClick={() => setConfirmProg(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+                </div>
+              ) : confirmDel === r.id ? (
                 <div className="row g8" style={{ width: "100%" }}>
                   <Btn small onClick={() => deleteRoutine(r.id)} style={{ flex: 1, borderColor: "var(--line2)", color: "var(--dim)" }}>{tr("Elimina scheda")}</Btn>
                   <Btn small onClick={() => setConfirmDel(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
@@ -1581,6 +1712,11 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
               ) : (
                 <>
                   <div className="row" style={{ gap: 18 }}>
+                    <span onClick={() => (r.progression?.enabled ? setConfirmProg(r.id) : genProgression(r))}
+                      className="tap icon-tap" title={tr("Progressione AI: calcola le settimane in base ai tuoi dati")}
+                      style={{ color: r.progression?.enabled ? "#ffd76a" : "#5d87a3" }}>
+                      {progBusy === r.id ? <Loader2 size={17} className="spin" /> : <TrendingUp size={17} />}
+                    </span>
                     <span onClick={() => setSummaryId(r.id)} className="tap icon-tap" title={tr("Riepilogo scheda")}
                       style={{ color: "#5d87a3" }}><Info size={17} /></span>
                     <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title={tr("Modifica modello")}
