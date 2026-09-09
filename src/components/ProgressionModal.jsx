@@ -33,14 +33,14 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
 
   /* Incremento lineare automatico: prende la settimana 1 e genera le successive
      con +kg o +reps/+sec a ogni settimana (stile schede PT) */
-  const [inc, setInc] = useState(mode === undefined ? 2.5 : 5);
+  const [inc, setInc] = useState(""); // nessun default: lo decide l'utente
   const autoField = mode === undefined ? "w" : "sec"; // forza→kg, hold/time→sec (reps via pulsante dedicato)
   const autoFill = (field) => setWeeks((ws) => {
     const first = ws[0].sets;
     /* ogni settimana mantiene il proprio numero di serie: come base si usa la
        stessa serie della settimana 1 quando esiste, altrimenti il valore proprio */
     return ws.map((w, i) => ({
-      sets: w.sets.map((s, j) => ({ ...s, [field]: (Number((first[j] || s)[field]) || 0) + inc * i })),
+      sets: w.sets.map((s, j) => ({ ...s, [field]: (Number((first[j] || s)[field]) || 0) + (Number(inc) || 0) * i })),
     }));
   });
 
@@ -134,15 +134,15 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
           <div className="row g8" style={{ marginTop: 8, alignItems: "center" }}>
             <span className="micro t-faint" style={{ flexShrink: 0 }}>{tr("AUTO +")}</span>
             <input className="hud-input cham-s" type="number" inputMode="decimal" value={inc}
-              onChange={(e) => setInc(e.target.value === "" ? 0 : Number(e.target.value))}
+              onChange={(e) => setInc(e.target.value)}
               style={{ textAlign: "center", padding: "6px 4px", width: 64 }} />
             {mode === undefined ? (
               <>
-                <Btn small onClick={() => autoFill("w")} style={{ flex: 1 }}>{tr("KG/SETT")}</Btn>
-                <Btn small onClick={() => autoFill("r")} style={{ flex: 1 }}>{tr("REPS/SETT")}</Btn>
+                <Btn small onClick={() => autoFill("w")} disabled={!Number(inc)} style={{ flex: 1 }}>{tr("KG/SETT")}</Btn>
+                <Btn small onClick={() => autoFill("r")} disabled={!Number(inc)} style={{ flex: 1 }}>{tr("REPS/SETT")}</Btn>
               </>
             ) : (
-              <Btn small onClick={() => autoFill(autoField)} style={{ flex: 1 }}>{mode === "hold" ? tr("SEC/SETT") : tr("MIN/SETT")}</Btn>
+              <Btn small onClick={() => autoFill(autoField)} disabled={!Number(inc)} style={{ flex: 1 }}>{mode === "hold" ? tr("SEC/SETT") : tr("MIN/SETT")}</Btn>
             )}
           </div>
         )}

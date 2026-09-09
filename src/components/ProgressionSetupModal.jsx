@@ -1,53 +1,21 @@
-import React, { useEffect, useState } from "react";
-import { Bot, Lock, Minus, Plus, TrendingUp } from "lucide-react";
+import React, { useState } from "react";
+import { Minus, Plus, TrendingUp } from "lucide-react";
 import { tr } from "../lib/i18n";
 import { currentWeek, progTotal } from "../lib/progression";
-import { supabase } from "../lib/supabase";
 import { Btn, Overlay } from "../ui";
 
-/* ---------------- Modale impostazioni progressione settimanale ----------------
-   Si apre dal pulsante ↗ sulla scheda, sia per attivare sia per modificare.
-   Base (gratis): numero di settimane → riempimento lineare automatico.
-   Completamento AI: solo con Premium o crediti (1 credito oltre il limite
-   settimanale); la strategia segue i metodi più usati in palestra:
-   - doppia progressione: prima salgono le reps, poi il carico (la più comune)
-   - solo carico:         +kg a parità di ripetizioni (stile schede forza 5×5)
-   - solo ripetizioni:    +reps a parità di carico (tipica del corpo libero)
-   Se la progressione è già attiva, lo stesso modale permette anche di disattivarla. */
-export const PROG_STRATEGIES = [
-  { id: "double", label: "Doppia progressione", desc: "Prima aumentano le ripetizioni, poi il carico — il metodo più usato" },
-  { id: "weight", label: "Solo carico", desc: "Ogni settimana salgono i kg, le ripetizioni restano uguali" },
-  { id: "reps",   label: "Solo ripetizioni", desc: "Ogni settimana salgono le reps, il carico resta uguale" },
-];
-
-export function ProgressionSetupModal({ routine, premium, busy, onConfirm, onDisable, onClose }) {
+/* ---------------- Modale progressione settimanale (semplificato) ----------------
+   Un'unica impostazione: il NUMERO DI SETTIMANE. Le settimane partono tutte con
+   gli stessi valori della scheda (settimana 1 = carichi attuali); poi l'utente
+   o il PT sistema i carichi esercizio per esercizio dalla modifica scheda (📈).
+   Se la progressione è già attiva, lo stesso modale permette di disattivarla. */
+export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onClose }) {
   const enabled = !!routine.progression?.enabled;
   const total = progTotal(routine);
   const curWeek = enabled ? currentWeek(routine.progression, total) : null;
 
   const [weeks, setWeeks] = useState(() => Math.max(2, Math.min(8, enabled ? total : 4)));
-  const [useAI, setUseAI] = useState(false);
-  const [aiMode, setAiMode] = useState("double");
-  const [usage, setUsage] = useState(null);
   const [confirmOff, setConfirmOff] = useState(false);
-
-  const isGuest = !!(premium && premium.guest);
-
-  /* saldo crediti: il completamento AI si propone solo a chi può pagarlo
-     (Premium → generazioni incluse; altrimenti 1 credito a generazione) */
-  useEffect(() => {
-    if (isGuest) return;
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const r = await fetch("/api/usage", { headers: { Authorization: `Bearer ${session?.access_token || ""}` } });
-        if (r.ok) setUsage(await r.json());
-      } catch {}
-    })();
-  }, []);
-
-  const credits = usage?.credits ?? 0;
-  const aiOk = !!premium?.is || credits > 0;
   const clamp = (n) => Math.max(2, Math.min(8, n));
 
   return (
@@ -72,133 +40,52 @@ export function ProgressionSetupModal({ routine, premium, busy, onConfirm, onDis
           {tr("La scheda passa da sola alla settimana successiva quando la completi e cambia la settimana di calendario.")}
         </div>
 
-        {/* ① Base: numero di settimane (gratis, riempimento lineare) */}
-        <div className="hud-label" style={{ marginBottom: 8 }}>{tr("① NUMERO DI SETTIMANE")}</div>
-        <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
-          <Btn small onClick={() => setWeeks((w) => clamp(w - 1))} disabled={weeks <= 2} style={{ padding: "8px 12px" }}>
-            <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
-          </Btn>
-          <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
-            {weeks}
-          </div>
-          <Btn small onClick={() => setWeeks((w) => clamp(w + 1))} disabled={weeks >= 8} style={{ padding: "8px 12px" }}>
-            <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
-          </Btn>
-        </div>
-        <div className="tiny t-faint" style={{ marginBottom: 16, lineHeight: 1.5 }}>
-          {tr("Di base le settimane sono riempite con un aumento lineare automatico (carichi, reps o secondi in salita).")}
-        </div>
-
-        {/* ② Completamento AI: solo Premium o crediti */}
-        <div className="hud-label row g6" style={{ marginBottom: 8 }}>
-          <Bot size={13} style={{ verticalAlign: -2 }} /> {tr("② COMPLETAMENTO AI")}
-          {!premium?.is && <span className="chip cham-s" style={{ fontSize: 9 }}>⬡ 1 {tr("CREDITO")}</span>}
-        </div>
-        {isGuest ? (
-          <div className="cham-s" style={{ padding: "10px 12px", background: "var(--card)", border: "1px solid var(--soft)", marginBottom: 16 }}>
-            <div className="tiny t-dim row g6" style={{ lineHeight: 1.5 }}>
-              <Lock size={12} style={{ flexShrink: 0, verticalAlign: -1 }} /> {tr("Le funzioni AI richiedono un account gratuito.")}
+        {enabled ? (
+          <>
+            <div className="tiny t-faint" style={{ marginBottom: 14, lineHeight: 1.5 }}>
+              {tr("I carichi delle settimane si modificano dalla scheda (matita → 📈 su ogni esercizio).")}
             </div>
-            <Btn small style={{ marginTop: 8 }} onClick={() => { onClose(); premium.needAccount ? premium.needAccount() : premium.open(); }}>
-              {tr("Crea account — è gratis")}
-            </Btn>
-          </div>
-        ) : !aiOk ? (
-          <div className="cham-s" style={{ padding: "10px 12px", background: "var(--card)", border: "1px solid var(--soft)", marginBottom: 16 }}>
-            <div className="tiny t-dim row g6" style={{ lineHeight: 1.5 }}>
-              <Lock size={12} style={{ flexShrink: 0, verticalAlign: -1 }} />
-              {usage ? tr("Nessun credito disponibile: il completamento AI costa 1 credito.") : tr("Verifica crediti in corso...")}
+            <div className="row g8" style={{ marginTop: 4 }}>
+              {confirmOff ? (
+                <Btn small onClick={onDisable} style={{ flex: 1.2, borderColor: "var(--line2)", color: "var(--dim)" }}>
+                  {tr("Conferma: disattiva")}
+                </Btn>
+              ) : (
+                <Btn small onClick={() => setConfirmOff(true)} style={{ flex: 1.2 }}>{tr("Disattiva")}</Btn>
+              )}
+              <Btn primary onClick={onClose} style={{ flex: 2 }}>{tr("Chiudi")}</Btn>
             </div>
-            {usage && (
-              <Btn small style={{ marginTop: 8 }} onClick={() => { onClose(); premium.open(); }}>
-                {tr("Prendi i crediti nello store ›")}
-              </Btn>
-            )}
-          </div>
-        ) : (
-          <div style={{ marginBottom: 16 }}>
-            {/* scelta del metodo: due schede-radio, quella attiva ha bordo e pallino pieno */}
-            <div className="micro t-faint" style={{ marginBottom: 6 }}>{tr("COME COMPILO LE SETTIMANE?")}</div>
-            <div className="stack-s">
-              {[
-                { on: false, Icon: TrendingUp, title: tr("Aumento lineare"), tag: tr("GRATIS"),
-                  desc: tr("Ogni settimana sale sempre dello stesso passo: +2,5 kg, +1 rep o +5 sec") },
-                { on: true, Icon: Bot, title: tr("Con intelligenza artificiale"),
-                  tag: premium?.is ? tr("INCLUSO ∞") : `⬡ 1 · ${tr("saldo")} ${credits}`,
-                  desc: tr("L'AI calcola gli aumenti sui tuoi dati, sui PR e sul tipo di esercizi") },
-              ].map((o) => {
-                const sel = useAI === o.on;
-                return (
-                  <button key={String(o.on)} onClick={() => setUseAI(o.on)} className="tap cham-s" style={{
-                    width: "100%", textAlign: "left", cursor: "pointer", padding: "10px 12px",
-                    background: sel ? "var(--active)" : "var(--card2)",
-                    border: `1px solid ${sel ? "var(--cyan)" : "var(--soft)"}`,
-                  }}>
-                    <div className="row between g8" style={{ alignItems: "center" }}>
-                      <span className={sel ? "t-cyan" : "t-bright"} style={{ fontSize: 13, fontWeight: 700 }}>
-                        {/* pallino radio: pieno quando l'opzione e selezionata */}
-                        <span style={{
-                          display: "inline-block", width: 14, height: 14, borderRadius: "50%", verticalAlign: -2, marginRight: 8,
-                          border: `2px solid ${sel ? "var(--cyan)" : "var(--faint)"}`,
-                          background: sel ? "var(--cyan)" : "transparent",
-                          boxShadow: sel ? "inset 0 0 0 2.5px var(--card2)" : "none",
-                        }} />
-                        <o.Icon size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 5 }} />
-                        {o.title}
-                      </span>
-                      <span className={"chip cham-s" + (sel ? " chip-on" : "")} style={{ fontSize: 9, flexShrink: 0 }}>{o.tag}</span>
-                    </div>
-                    <div className="tiny t-faint" style={{ marginTop: 3, lineHeight: 1.45, paddingLeft: 22 }}>{o.desc}</div>
-                  </button>
-                );
-              })}
-            </div>
-            {useAI && (
-              <div className="stack-s" style={{ marginTop: 8 }}>
-                <div className="micro t-faint" style={{ marginBottom: 2 }}>{tr("COME DEVE AUMENTARE?")}</div>
-                {PROG_STRATEGIES.map((s) => (
-                  <button key={s.id} onClick={() => setAiMode(s.id)} className="tap cham-s" style={{
-                    width: "100%", textAlign: "left", cursor: "pointer", padding: "9px 12px",
-                    background: aiMode === s.id ? "var(--active)" : "var(--card)",
-                    border: `1px solid ${aiMode === s.id ? "var(--cyan)" : "var(--soft)"}`,
-                  }}>
-                    <div className={aiMode === s.id ? "t-cyan" : "t-bright"} style={{ fontSize: 13, fontWeight: 700 }}>
-                      {tr(s.label)}{s.id === "double" ? ` · ${tr("CONSIGLIATA")}` : ""}
-                    </div>
-                    <div className="tiny t-faint" style={{ marginTop: 2, lineHeight: 1.45 }}>{tr(s.desc)}</div>
-                  </button>
-                ))}
-                <div className="tiny t-faint" style={{ lineHeight: 1.5 }}>
-                  {tr("Tenute e cardio vengono adattati in automatico (secondi/minuti al posto di kg e reps).")}
-                </div>
+            {confirmOff && (
+              <div className="tiny t-faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
+                {tr("Disattivando, la scheda torna ai carichi base e il conteggio delle settimane si ferma.")}
               </div>
             )}
-          </div>
-        )}
-
-        {/* azioni: attiva/rigenera + (se già attiva) disattiva con doppio tocco */}
-        <div className="row g8" style={{ marginTop: 4 }}>
-          {enabled && (
-            confirmOff ? (
-              <Btn small onClick={onDisable} style={{ flex: 1.2, borderColor: "var(--line2)", color: "var(--dim)" }}>
-                {tr("Conferma: disattiva")}
+          </>
+        ) : (
+          <>
+            {/* unica impostazione: quante settimane compongono il ciclo */}
+            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("NUMERO DI SETTIMANE")}</div>
+            <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
+              <Btn small onClick={() => setWeeks((w) => clamp(w - 1))} disabled={weeks <= 2} style={{ padding: "8px 12px" }}>
+                <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
               </Btn>
-            ) : (
-              <Btn small onClick={() => setConfirmOff(true)} style={{ flex: 1.2 }}>{tr("Disattiva")}</Btn>
-            )
-          )}
-          {!enabled && <Btn onClick={onClose} style={{ flex: 1 }}>{tr("Annulla")}</Btn>}
-          <Btn primary={!useAI} ai={useAI} disabled={busy} style={{ flex: 2 }}
-            onClick={() => onConfirm({ weeks, useAI: useAI && aiOk, aiMode })}>
-            {busy ? tr("Generazione...") : useAI && aiOk
-              ? (enabled ? tr("Rigenera con AI") : tr("Attiva con AI"))
-              : (enabled ? tr("Rigenera (lineare)") : tr("Attiva progressione"))}
-          </Btn>
-        </div>
-        {confirmOff && (
-          <div className="tiny t-faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
-            {tr("Disattivando, la scheda torna ai carichi base e il conteggio delle settimane si ferma.")}
-          </div>
+              <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
+                {weeks}
+              </div>
+              <Btn small onClick={() => setWeeks((w) => clamp(w + 1))} disabled={weeks >= 8} style={{ padding: "8px 12px" }}>
+                <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+              </Btn>
+            </div>
+            <div className="tiny t-faint" style={{ marginBottom: 16, lineHeight: 1.5 }}>
+              {tr("Le settimane partono tutte con i carichi attuali della scheda: poi tu o il PT sistemate i valori esercizio per esercizio (modifica scheda → 📈).")}
+            </div>
+            <div className="row g8" style={{ marginTop: 4 }}>
+              <Btn onClick={onClose} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+              <Btn primary disabled={busy} style={{ flex: 2 }} onClick={() => onConfirm({ weeks })}>
+                {tr("Attiva progressione")}
+              </Btn>
+            </div>
+          </>
         )}
       </div>
     </div>

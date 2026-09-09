@@ -1517,102 +1517,30 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
     setView("session");
   };
 
-  /* ─── Progressione settimanale: N settimane di sovraccarico progressivo.
-         Base (gratis): riempimento lineare automatico. Completamento AI
-         (Premium/crediti): strategia scelta nel modale — solo carico, solo
-         ripetizioni o doppia progressione; fallback lineare se l'AI non risponde ─── */
+  /* ─── Progressione settimanale: N settimane che partono TUTTE dai carichi
+         attuali della scheda; poi l'utente (o il PT) sistema i valori esercizio
+         per esercizio dalla modifica scheda (icona 📈). Riattivando una scheda
+         che aveva gia delle settimane, i valori impostati a mano si conservano:
+         il numero di settimane viene solo accorciato o esteso copiando l'ultima ─── */
   const PROG_WEEKS = 4; // default proposto nel modale impostazioni
-  const localProgWeeks = (ex, n = PROG_WEEKS) => {
-    const mode = exMode(ex);
-    return Array.from({ length: n }, (_, i) => ({
-      sets: ex.sets.map((st) => {
-        if (mode === "hold") return { sec: (Number(st.sec) || 60) + 5 * i, elapsed: 0, done: false };
-        if (mode === "time") return { sec: (Number(st.sec) || 600) + 60 * i, dist: st.dist || "", elapsed: 0, done: false };
-        const w = Number(st.w) || 0;
-        const r0 = Number(st.r) || 8;
-        return w > 0 ? { w: w + 2.5 * i, r: r0, done: false } : { w: 0, r: r0 + i, done: false };
-      }),
-    }));
-  };
-  /* istruzioni di strategia per il prompt AI: i tre metodi classici di
-     sovraccarico progressivo (la doppia progressione è quello più usato) */
-  const PROG_STRAT_PROMPT = {
-    weight: "STRATEGIA RICHIESTA — SOLO CARICO: le ripetizioni restano identiche alla settimana 1; aumenta SOLO i kg (+2,5-5% a settimana). Eccezione: per esercizi a corpo libero (0 kg) aumenta le ripetizioni.",
-    reps: "STRATEGIA RICHIESTA — SOLO RIPETIZIONI: il carico resta identico alla settimana 1; aumenta SOLO le ripetizioni (+1-2 a settimana, senza superare ~20).",
-    double: "STRATEGIA RICHIESTA — DOPPIA PROGRESSIONE (il metodo più usato): prima aumenta le ripetizioni a parità di carico; quando arrivano a +3-4 rispetto alla settimana 1, aumenta il carico (+2,5-5%) e riporta le ripetizioni al valore iniziale.",
-  };
-  const genProgression = async (r, opts = {}) => {
-    const nWeeks = Math.max(2, Math.min(8, Number(opts.weeks) || PROG_WEEKS));
-    const useAI = !!opts.useAI;
-    if (useAI && premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
-    const finish = (exWeeks, aiDone) => {
-      const total = exWeeks[0]?.length || nWeeks;
-      setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
-        ...x,
-        progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
-        exercises: x.exercises.map((e, i) => ({ ...e, progression: { weeks: exWeeks[i] } })),
-      }));
-      setProgBusy(null); setProgSetupId(null);
-      fireToast({
-        title: aiDone ? tr("◈ PROGRESSIONE AI GENERATA") : tr("◈ PROGRESSIONE ATTIVA"),
-        sub: `${tr("SETTIMANA")} 1/${total}`,
-      });
-    };
-    /* senza AI: progressione lineare gratuita, nessuna chiamata di rete */
-    if (!useAI) return finish(r.exercises.map((ex) => localProgWeeks(ex, nWeeks)), false);
-    setProgBusy(r.id);
-    const exLine = (e) => {
-      const mode = exMode(e);
-      const pr = prs[e.name] ? ` (PR attuale: ${prs[e.name]} kg)` : "";
-      const sets = e.sets.map((st) => mode === "hold" ? `${st.sec}s` : mode === "time" ? `${Math.round((st.sec || 0) / 60)}min` : `${st.w}kg×${st.r}`).join(", ");
-      return `- ${e.name} [${e.group}${mode === "hold" ? ", tenuta" : mode === "time" ? ", cardio a tempo" : ""}]: ${e.sets.length} serie: ${sets}${pr}`;
-    };
-    let exWeeks = null;
-    try {
-      const data = await aiCall({
-        model: "claude-haiku-4-5-20251001", max_tokens: 4000,
-        messages: [{ role: "user", content: `Sei un personal trainer esperto in sovraccarico progressivo. Genera una progressione di ${nWeeks} settimane per questa scheda di allenamento.
-UTENTE: ${body?.sesso === "M" ? "uomo" : "donna"}, ${body?.eta || 30} anni, ${body?.peso || 75} kg, ${body?.altezza || 175} cm, obiettivo "${body?.obiettivo || "Massa"}", si allena ${body?.giorniAllenamento || 3} volte a settimana.
-SCHEDA "${r.name}" (${r.exercises.length} esercizi):
-${r.exercises.map(exLine).join("\n")}
-${PROG_STRAT_PROMPT[opts.aiMode] || PROG_STRAT_PROMPT.double}
-REGOLE: settimana 1 = carichi attuali; incrementi realistici e sicuri (per la forza +2,5-5% carico o +1-2 ripetizioni a settimana; +5-10s per le tenute; +1-2 min per il cardio); numero di serie invariato; ultima settimana la più impegnativa ma sostenibile.
-Rispondi SOLO con JSON valido, senza markdown né backtick:
-{"weeks":[{"week":1,"exercises":[{"name":"NOME ESATTO come sopra","sets":[{"w":number,"r":number}]}]}]}
-Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}.` }],
-      }, "progression");
-      if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
-        setProgBusy(null); setProgSetupId(null); // chiudo il modale prima di aprire lo store
-        if (premium) premium.open();
-        return fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento AI") });
-      }
-      if (data && data.error) throw new Error("API");
-      const raw = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-      const parsed = parseLoose(raw);
-      const weeksArr = (parsed.weeks || []).slice(0, 8);
-      if (weeksArr.length < 2) throw new Error("bad");
-      /* validazione: per ogni esercizio si prendono le settimane AI (match per
-         nome, altrimenti per posizione) con valori clampati a range sensati */
-      exWeeks = r.exercises.map((ex, ei) => {
-        const mode = exMode(ex);
-        return weeksArr.map((wk) => {
-          const found = (wk.exercises || []).find((x) => x.name === ex.name) || (wk.exercises || [])[ei] || {};
-          const src = Array.isArray(found.sets) && found.sets.length ? found.sets : ex.sets;
-          const sets = ex.sets.map((base, si) => {
-            const st = src[Math.min(si, src.length - 1)] || {};
-            if (mode === "hold") return { sec: Math.max(5, Math.min(600, Number(st.sec ?? base.sec) || 60)), elapsed: 0, done: false };
-            if (mode === "time") return { sec: Math.max(60, Number(st.sec ?? base.sec) || 600), dist: String(st.dist ?? base.dist ?? ""), elapsed: 0, done: false };
-            return { w: Math.max(0, Number(st.w ?? base.w) || 0), r: Math.max(1, Math.min(50, Number(st.r ?? base.r) || 8)), done: false };
-          });
-          return { sets };
-        });
-      });
-    } catch (e) {
-      exWeeks = r.exercises.map((ex) => localProgWeeks(ex, nWeeks)); // fallback lineare +2,5kg/+1rep/+5s
-      fireToast({ title: tr("AI non disponibile: progressione lineare applicata") });
-      return finish(exWeeks, false);
+  const flatWeeks = (ex, n) => {
+    const prev = ex.progression?.weeks;
+    if (prev && prev.length) {
+      const out = prev.slice(0, n).map((w) => ({ sets: w.sets.map((st) => ({ ...st, done: false, elapsed: 0 })) }));
+      while (out.length < n) out.push({ sets: out[out.length - 1].sets.map((st) => ({ ...st })) });
+      return out;
     }
-    finish(exWeeks, true);
+    return Array.from({ length: n }, () => ({ sets: ex.sets.map((st) => ({ ...st, done: false, elapsed: 0 })) }));
+  };
+  const genProgression = (r, opts = {}) => {
+    const nWeeks = Math.max(2, Math.min(8, Number(opts.weeks) || PROG_WEEKS));
+    setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
+      ...x,
+      progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
+      exercises: x.exercises.map((e) => ({ ...e, progression: { weeks: flatWeeks(e, nWeeks) } })),
+    }));
+    setProgBusy(null); setProgSetupId(null);
+    fireToast({ title: tr("◈ PROGRESSIONE ATTIVA"), sub: `${tr("SETTIMANA")} 1/${nWeeks}` });
   };
 
   const abandonSession = () => {
