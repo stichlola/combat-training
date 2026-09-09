@@ -51,8 +51,10 @@ export async function grantPremium(userId, orderId, days = 365) {
 /* Free: una sola prova a settimana per funzione (assaggio che porta all'abbonamento).
    Premium: limiti ampi. Oltre il limite si usano i crediti extra acquistabili. */
 export const WEEKLY_LIMITS = {
-  free:    { import: 1,  nutrition: 1,  scan: 1,  workout: 1, suggest: 1 },
-  premium: { import: 20, nutrition: 25, scan: 40, workout: 25, suggest: 30 },
+  /* progression: completamento AI delle settimane — free solo a crediti (0 prove),
+     premium con limite ampio; oltre il limite si consuma 1 credito */
+  free:    { import: 1,  nutrition: 1,  scan: 1,  workout: 1, suggest: 1, progression: 0 },
+  premium: { import: 20, nutrition: 25, scan: 40, workout: 25, suggest: 30, progression: 12 },
 };
 const wk = () => {
   const d = new Date(), j = new Date(d.getFullYear(), 0, 1);

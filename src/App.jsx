@@ -10,6 +10,7 @@ import { aiCall, featHeaders, parseLoose, resizeImage } from "./lib/ai";
 import { DocImport } from "./components/DocImport";
 import { ExerciseInfoModal } from "./components/ExerciseInfoModal";
 import { RoutineEditor } from "./components/RoutineEditor";
+import { ProgressionSetupModal } from "./components/ProgressionSetupModal";
 import { SessionView } from "./components/SessionView";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
@@ -353,6 +354,7 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
   const [stripeLoading, setStripeLoading] = useState(false);
   const [shopBusy, setShopBusy] = useState(null);
   const [shopTab, setShopTab] = useState("theme"); // sottocategoria negozio: temi | allenamenti
+  const [section, setSection] = useState(premium.is ? "credits" : "sub"); // sezione store: abbonamento | crediti | negozio
   const buyShopLocal = async (it) => {
     if (!onBuyShop) return;
     setShopBusy(it.id);
@@ -434,7 +436,8 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
     s.onload = render;
     s.onerror = () => setErr("Impossibile caricare PayPal");
     document.body.appendChild(s);
-  }, [clientId, product]);
+    /* anche la sezione: cambiando sezione il contenitore PayPal si smonta/rimonta */
+  }, [clientId, product, section]);
 
   const Card = ({ id, title, price, lines, gold }) => (
     <button onClick={() => setProduct(id)} className="tap cham-s" style={{
@@ -498,22 +501,35 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
           </div>
         )}
 
+        {/* Selettore sezioni: una alla volta, così lo store resta compatto */}
+        <div className="row g8" style={{ margin: "14px 0 12px" }}>
+          {[["sub", tr("① ABBONAMENTO")], ["credits", tr("② CREDITI")], ["shop", tr("③ NEGOZIO")]].map(([k, lab]) => (
+            <button key={k} onClick={() => setSection(k)}
+              className={"chip cham-s tap" + (section === k ? " chip-on" : "")}
+              style={{ fontSize: 10, letterSpacing: ".1em", padding: "8px 4px", cursor: "pointer", flex: 1, textAlign: "center" }}>{lab}</button>
+          ))}
+        </div>
+
+        {section === "sub" && premium.is && (
+          <div className="cham-s micro" style={{ padding: "10px 12px", background: "var(--card)", border: "1px solid #ffd76a", lineHeight: 1.8 }}>
+            <span className="t-amber" style={{ fontWeight: 700 }}>{tr("PREMIUM GIÀ ATTIVO")}</span>
+            {premium.until && <><br /><span className="t-faint">{tr("valido fino al")} {new Date(premium.until).toLocaleDateString("it-IT")}</span></>}
+          </div>
+        )}
+
         {/* ① Abbonamento: tutto illimitato */}
-        {!premium.is && (
-          <div style={{ marginTop: 12 }}>
-            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("① ABBONAMENTO")}</div>
-            <div className="stack-s" style={{ marginBottom: 16 }}>
-              <Card id="premium" gold title={tr("◆ Premium — 12 mesi")} price="20€"
-                lines="Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi · 2 mesi risparmiati rispetto al mensile" />
-              <Card id="premium_m" title={tr("◆ Premium — 1 mese")} price="2€"
-                lines="Tutte le funzioni AI sbloccate per 30 giorni · ideale per provare · rinnovo manuale" />
-            </div>
+        {section === "sub" && !premium.is && (
+          <div className="stack-s">
+            <Card id="premium" gold title={tr("◆ Premium — 12 mesi")} price="20€"
+              lines="Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi · 2 mesi risparmiati rispetto al mensile" />
+            <Card id="premium_m" title={tr("◆ Premium — 1 mese")} price="2€"
+              lines="Tutte le funzioni AI sbloccate per 30 giorni · ideale per provare · rinnovo manuale" />
           </div>
         )}
 
         {/* ② Pacchetti crediti: ricariche una tantum */}
-        <div className="hud-label" style={{ margin: "12px 0 8px" }}>{tr("② PACCHETTI CREDITI")}</div>
-        <div className="stack-s" style={{ marginBottom: 16 }}>
+        {section === "credits" && (
+        <div className="stack-s">
           <Card id="pack30" title={tr("Pacchetto 30 crediti")} price="3€"
             lines="Una tantum · 0,10€ a credito · generazioni extra oltre il limite settimanale" />
           <Card id="pack100" title={tr("Pacchetto 100 crediti")} price="8€"
@@ -521,7 +537,11 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
           <Card id="pack300" gold title={tr("Pacchetto 300 crediti")} price="18€"
             lines="Una tantum · 0,06€ a credito — risparmi il 40% · IL PIÙ CONVENIENTE" />
         </div>
+        )}
 
+        {/* Pagamento in €: visibile solo nelle sezioni con qualcosa da comprare */}
+        {((section === "sub" && !premium.is) || section === "credits") && (
+        <div style={{ marginTop: 14 }}>
         {clientId ? (
           <div ref={ppRef} style={{ minHeight: 46 }} />
         ) : (
@@ -556,11 +576,14 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
             </Btn>
           </Panel>
         )}
+        </div>
+        )}
 
         {/* ③ Negozio: qui si spendono i crediti, separato dagli acquisti in € */}
-        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "2px solid var(--soft)" }}>
+        {section === "shop" && (
+        <div>
           <div className="row between" style={{ alignItems: "center", marginBottom: 10 }}>
-            <div className="hud-label">{tr("③ NEGOZIO — SPENDI I CREDITI")}</div>
+            <div className="hud-label">{tr("SPENDI I CREDITI")}</div>
             <span className={"chip cham-s" + ((usage?.credits || 0) > 0 ? " chip-on" : "")} style={{ fontSize: 9 }}>⬡ {usage?.credits ?? 0}</span>
           </div>
           <div className="row g8" style={{ marginBottom: 12, flexWrap: "wrap" }}>
@@ -592,6 +615,7 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
             })}
           </div>
         </div>
+        )}
 
         {!isGuest && (
           <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--soft)" }}>
@@ -1405,9 +1429,10 @@ function RoutineSummaryModal({ routine, onClose }) {
     <Overlay onClose={onClose}>
       <div className="modal-back">
         <div className="modal-box cham glow">
-          <div className="modal-bar">
+          {/* header standard dei modali: titolo a sinistra, X di chiusura a destra */}
+          <div className="row between" style={{ marginBottom: 4 }}>
             <span className="f-hud t-bright" style={{ fontSize: 17, letterSpacing: 2 }}>{routine.name.toUpperCase()}</span>
-            <button className="modal-x" onClick={onClose}><X size={15} /></button>
+            <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
           </div>
           <div className="micro" style={{ marginBottom: 12 }}>{routine.exercises.length} {tr("ESERCIZI")} · {routine.exercises.reduce((a, e) => a + e.sets.length, 0)} {tr("SERIE")}</div>
           <div className="col" style={{ gap: 8, maxHeight: "62vh", overflowY: "auto" }}>
@@ -1436,7 +1461,7 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
   const [report, setReport] = useState(null);
   const [summaryId, setSummaryId] = useState(null);
   const [progBusy, setProgBusy] = useState(null);    // id scheda in generazione AI
-  const [confirmProg, setConfirmProg] = useState(null); // id scheda con riga rigenera/disattiva
+  const [progSetupId, setProgSetupId] = useState(null); // id scheda con modale impostazioni progressione aperto
 
   /* Avanzamento settimane: la settimana sale solo se la scheda è stata
      completata E la settimana di calendario è cambiata */
@@ -1492,12 +1517,14 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
     setView("session");
   };
 
-  /* ─── Progressione AI: N settimane di sovraccarico progressivo calcolate
-         sulla scheda e sui dati dell'utente; fallback lineare se l'AI non risponde ─── */
-  const PROG_WEEKS = 4;
-  const localProgWeeks = (ex) => {
+  /* ─── Progressione settimanale: N settimane di sovraccarico progressivo.
+         Base (gratis): riempimento lineare automatico. Completamento AI
+         (Premium/crediti): strategia scelta nel modale — solo carico, solo
+         ripetizioni o doppia progressione; fallback lineare se l'AI non risponde ─── */
+  const PROG_WEEKS = 4; // default proposto nel modale impostazioni
+  const localProgWeeks = (ex, n = PROG_WEEKS) => {
     const mode = exMode(ex);
-    return Array.from({ length: PROG_WEEKS }, (_, i) => ({
+    return Array.from({ length: n }, (_, i) => ({
       sets: ex.sets.map((st) => {
         if (mode === "hold") return { sec: (Number(st.sec) || 60) + 5 * i, elapsed: 0, done: false };
         if (mode === "time") return { sec: (Number(st.sec) || 600) + 60 * i, dist: st.dist || "", elapsed: 0, done: false };
@@ -1507,8 +1534,32 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
       }),
     }));
   };
-  const genProgression = async (r) => {
-    if (premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
+  /* istruzioni di strategia per il prompt AI: i tre metodi classici di
+     sovraccarico progressivo (la doppia progressione è quello più usato) */
+  const PROG_STRAT_PROMPT = {
+    weight: "STRATEGIA RICHIESTA — SOLO CARICO: le ripetizioni restano identiche alla settimana 1; aumenta SOLO i kg (+2,5-5% a settimana). Eccezione: per esercizi a corpo libero (0 kg) aumenta le ripetizioni.",
+    reps: "STRATEGIA RICHIESTA — SOLO RIPETIZIONI: il carico resta identico alla settimana 1; aumenta SOLO le ripetizioni (+1-2 a settimana, senza superare ~20).",
+    double: "STRATEGIA RICHIESTA — DOPPIA PROGRESSIONE (il metodo più usato): prima aumenta le ripetizioni a parità di carico; quando arrivano a +3-4 rispetto alla settimana 1, aumenta il carico (+2,5-5%) e riporta le ripetizioni al valore iniziale.",
+  };
+  const genProgression = async (r, opts = {}) => {
+    const nWeeks = Math.max(2, Math.min(8, Number(opts.weeks) || PROG_WEEKS));
+    const useAI = !!opts.useAI;
+    if (useAI && premium && premium.guest) return premium.open();  // ospite: nessuna funzione AI
+    const finish = (exWeeks, aiDone) => {
+      const total = exWeeks[0]?.length || nWeeks;
+      setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
+        ...x,
+        progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
+        exercises: x.exercises.map((e, i) => ({ ...e, progression: { weeks: exWeeks[i] } })),
+      }));
+      setProgBusy(null); setProgSetupId(null);
+      fireToast({
+        title: aiDone ? tr("◈ PROGRESSIONE AI GENERATA") : tr("◈ PROGRESSIONE ATTIVA"),
+        sub: `${tr("SETTIMANA")} 1/${total}`,
+      });
+    };
+    /* senza AI: progressione lineare gratuita, nessuna chiamata di rete */
+    if (!useAI) return finish(r.exercises.map((ex) => localProgWeeks(ex, nWeeks)), false);
     setProgBusy(r.id);
     const exLine = (e) => {
       const mode = exMode(e);
@@ -1520,19 +1571,20 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
     try {
       const data = await aiCall({
         model: "claude-haiku-4-5-20251001", max_tokens: 4000,
-        messages: [{ role: "user", content: `Sei un personal trainer esperto in sovraccarico progressivo. Genera una progressione di ${PROG_WEEKS} settimane per questa scheda di allenamento.
+        messages: [{ role: "user", content: `Sei un personal trainer esperto in sovraccarico progressivo. Genera una progressione di ${nWeeks} settimane per questa scheda di allenamento.
 UTENTE: ${body?.sesso === "M" ? "uomo" : "donna"}, ${body?.eta || 30} anni, ${body?.peso || 75} kg, ${body?.altezza || 175} cm, obiettivo "${body?.obiettivo || "Massa"}", si allena ${body?.giorniAllenamento || 3} volte a settimana.
 SCHEDA "${r.name}" (${r.exercises.length} esercizi):
 ${r.exercises.map(exLine).join("\n")}
-REGOLE: settimana 1 = carichi attuali; incrementi realistici e sicuri (+2,5-5% carico OPPURE +1-2 ripetizioni a settimana per la forza; +5-10s per le tenute; +1-2 min per il cardio); numero di serie invariato; ultima settimana la più impegnativa ma sostenibile; per esercizi a corpo libero (0kg) aumenta le ripetizioni.
+${PROG_STRAT_PROMPT[opts.aiMode] || PROG_STRAT_PROMPT.double}
+REGOLE: settimana 1 = carichi attuali; incrementi realistici e sicuri (per la forza +2,5-5% carico o +1-2 ripetizioni a settimana; +5-10s per le tenute; +1-2 min per il cardio); numero di serie invariato; ultima settimana la più impegnativa ma sostenibile.
 Rispondi SOLO con JSON valido, senza markdown né backtick:
 {"weeks":[{"week":1,"exercises":[{"name":"NOME ESATTO come sopra","sets":[{"w":number,"r":number}]}]}]}
 Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}.` }],
       }, "progression");
-      if (data && data.error === "limit_reached") {
+      if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
         setProgBusy(null);
         if (premium) premium.open();
-        return fireToast({ title: tr("Limite settimanale raggiunto"), sub: tr("Passa a Premium o usa i crediti") });
+        return fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento AI") });
       }
       if (data && data.error) throw new Error("API");
       const raw = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
@@ -1556,17 +1608,11 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
         });
       });
     } catch (e) {
-      exWeeks = r.exercises.map(localProgWeeks); // fallback lineare +2,5kg/+1rep/+5s
+      exWeeks = r.exercises.map((ex) => localProgWeeks(ex, nWeeks)); // fallback lineare +2,5kg/+1rep/+5s
       fireToast({ title: tr("AI non disponibile: progressione lineare applicata") });
+      return finish(exWeeks, false);
     }
-    const total = exWeeks[0]?.length || PROG_WEEKS;
-    setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
-      ...x,
-      progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
-      exercises: x.exercises.map((e, i) => ({ ...e, progression: { weeks: exWeeks[i] } })),
-    }));
-    setProgBusy(null); setConfirmProg(null);
-    fireToast({ title: tr("◈ PROGRESSIONE AI GENERATA"), sub: `${tr("SETTIMANA")} 1/${total}` });
+    finish(exWeeks, true);
   };
 
   const abandonSession = () => {
@@ -1611,6 +1657,21 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
     <div className="fade-in two-col">
       {report && <WorkoutReport rec={report} onClose={() => setReport(null)} />}
       {summaryId && (() => { const r = routines.find((x) => x.id === summaryId); return r ? <RoutineSummaryModal routine={r} onClose={() => setSummaryId(null)} /> : null; })()}
+      {/* Impostazioni progressione: si aprono dal pulsante ↗ della scheda, sia
+          per attivarla sia (con anche "Disattiva") quando è già attiva */}
+      {progSetupId && (() => {
+        const r = routines.find((x) => x.id === progSetupId);
+        return r ? (
+          <ProgressionSetupModal routine={r} premium={premium} busy={progBusy === r.id}
+            onClose={() => setProgSetupId(null)}
+            onConfirm={(opts) => genProgression(r, opts)}
+            onDisable={() => {
+              setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : { ...x, progression: { ...x.progression, enabled: false } }));
+              setProgSetupId(null);
+              fireToast({ title: tr("◈ PROGRESSIONE DISATTIVATA"), sub: r.name });
+            }} />
+        ) : null;
+      })()}
       {/* LEFT: routines */}
       <div className="col stack">
 
@@ -1718,15 +1779,7 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
               </div>
             </div>
             <div className="row between" style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--soft)" }}>
-              {confirmProg === r.id ? (
-                <div className="row g8" style={{ width: "100%" }}>
-                  <Btn small ai onClick={() => genProgression(r)} disabled={progBusy === r.id} style={{ flex: 1.4 }}>
-                    {progBusy === r.id ? tr("Rigenerazione...") : tr("Rigenera AI")}
-                  </Btn>
-                  <Btn small onClick={() => { setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : { ...x, progression: { ...x.progression, enabled: false } })); setConfirmProg(null); fireToast({ title: tr("◈ PROGRESSIONE DISATTIVATA"), sub: r.name }); }} style={{ flex: 1 }}>{tr("Disattiva")}</Btn>
-                  <Btn small onClick={() => setConfirmProg(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
-                </div>
-              ) : confirmDel === r.id ? (
+              {confirmDel === r.id ? (
                 <div className="row g8" style={{ width: "100%" }}>
                   <Btn small onClick={() => deleteRoutine(r.id)} style={{ flex: 1, borderColor: "var(--line2)", color: "var(--dim)" }}>{tr("Elimina scheda")}</Btn>
                   <Btn small onClick={() => setConfirmDel(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
@@ -1734,8 +1787,11 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
               ) : (
                 <>
                   <div className="row" style={{ gap: 18 }}>
-                    <span onClick={() => (r.progression?.enabled ? setConfirmProg(r.id) : genProgression(r))}
-                      className="tap icon-tap" title={tr("Progressione AI: calcola le settimane in base ai tuoi dati")}
+                    <span onClick={() => setProgSetupId(r.id)}
+                      className="tap icon-tap"
+                      title={r.progression?.enabled
+                        ? tr("Progressione attiva: modifica le impostazioni o disattivala")
+                        : tr("Progressione settimanale: imposta le settimane e il completamento AI")}
                       style={{ color: r.progression?.enabled ? "#ffd76a" : "#5d87a3" }}>
                       {progBusy === r.id ? <Loader2 size={17} className="spin" /> : <TrendingUp size={17} />}
                     </span>

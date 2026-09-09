@@ -1,4 +1,4 @@
-const CACHE = "combat-training-v2";
+const CACHE = "combat-training-v3";
 const ASSETS = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
