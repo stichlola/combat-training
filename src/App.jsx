@@ -1582,7 +1582,7 @@ Rispondi SOLO con JSON valido, senza markdown né backtick:
 Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}.` }],
       }, "progression");
       if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
-        setProgBusy(null);
+        setProgBusy(null); setProgSetupId(null); // chiudo il modale prima di aprire lo store
         if (premium) premium.open();
         return fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento AI") });
       }

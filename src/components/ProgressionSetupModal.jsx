@@ -117,18 +117,42 @@ export function ProgressionSetupModal({ routine, premium, busy, onConfirm, onDis
           </div>
         ) : (
           <div style={{ marginBottom: 16 }}>
-            <button onClick={() => setUseAI((v) => !v)} className="tap cham-s row between g8" style={{
-              width: "100%", cursor: "pointer", padding: "10px 12px", alignItems: "center",
-              background: useAI ? "var(--active)" : "var(--card2)",
-              border: `1px solid ${useAI ? "var(--cyan)" : "var(--soft)"}`,
-            }}>
-              <span className={useAI ? "t-cyan" : "t-dim"} style={{ fontSize: 13, fontWeight: 700 }}>
-                {tr("L'AI compila le settimane per te")}
-              </span>
-              <span className="micro t-faint" style={{ flexShrink: 0 }}>
-                {premium?.is ? tr("INCLUSO ∞") : `⬡ 1 · ${tr("saldo")} ${credits}`}
-              </span>
-            </button>
+            {/* scelta del metodo: due schede-radio, quella attiva ha bordo e pallino pieno */}
+            <div className="micro t-faint" style={{ marginBottom: 6 }}>{tr("COME COMPILO LE SETTIMANE?")}</div>
+            <div className="stack-s">
+              {[
+                { on: false, Icon: TrendingUp, title: tr("Aumento lineare"), tag: tr("GRATIS"),
+                  desc: tr("Ogni settimana sale sempre dello stesso passo: +2,5 kg, +1 rep o +5 sec") },
+                { on: true, Icon: Bot, title: tr("Con intelligenza artificiale"),
+                  tag: premium?.is ? tr("INCLUSO ∞") : `⬡ 1 · ${tr("saldo")} ${credits}`,
+                  desc: tr("L'AI calcola gli aumenti sui tuoi dati, sui PR e sul tipo di esercizi") },
+              ].map((o) => {
+                const sel = useAI === o.on;
+                return (
+                  <button key={String(o.on)} onClick={() => setUseAI(o.on)} className="tap cham-s" style={{
+                    width: "100%", textAlign: "left", cursor: "pointer", padding: "10px 12px",
+                    background: sel ? "var(--active)" : "var(--card2)",
+                    border: `1px solid ${sel ? "var(--cyan)" : "var(--soft)"}`,
+                  }}>
+                    <div className="row between g8" style={{ alignItems: "center" }}>
+                      <span className={sel ? "t-cyan" : "t-bright"} style={{ fontSize: 13, fontWeight: 700 }}>
+                        {/* pallino radio: pieno quando l'opzione e selezionata */}
+                        <span style={{
+                          display: "inline-block", width: 14, height: 14, borderRadius: "50%", verticalAlign: -2, marginRight: 8,
+                          border: `2px solid ${sel ? "var(--cyan)" : "var(--faint)"}`,
+                          background: sel ? "var(--cyan)" : "transparent",
+                          boxShadow: sel ? "inset 0 0 0 2.5px var(--card2)" : "none",
+                        }} />
+                        <o.Icon size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 5 }} />
+                        {o.title}
+                      </span>
+                      <span className={"chip cham-s" + (sel ? " chip-on" : "")} style={{ fontSize: 9, flexShrink: 0 }}>{o.tag}</span>
+                    </div>
+                    <div className="tiny t-faint" style={{ marginTop: 3, lineHeight: 1.45, paddingLeft: 22 }}>{o.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
             {useAI && (
               <div className="stack-s" style={{ marginTop: 8 }}>
                 <div className="micro t-faint" style={{ marginBottom: 2 }}>{tr("COME DEVE AUMENTARE?")}</div>

@@ -237,7 +237,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
       )}
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       {progIdx != null && draft.exercises[progIdx] && (
-        <ProgressionModal ex={draft.exercises[progIdx]}
+        <ProgressionModal ex={draft.exercises[progIdx]} routineProg={draft.progression}
           onSave={(p) => { upd((d) => ({ ...d, exercises: d.exercises.map((e, i) => i !== progIdx ? e : { ...e, progression: p }) })); setProgIdx(null); }}
           onClose={() => setProgIdx(null)} />
       )}
