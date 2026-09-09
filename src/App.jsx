@@ -14,7 +14,7 @@ import { SessionView } from "./components/SessionView";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
 import { captureInviteHash, captureRefHash, clearInvite, clearRef, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, pendingInviteName, pendingRef, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
-import { SHOP_META, EMERALD_MODE, buildPackRoutines } from "./lib/shopContent";
+import { SHOP_META, EMERALD_MODE, CRIMSON_MODE, buildPackRoutines } from "./lib/shopContent";
 import { dlStart } from "./lib/dnd";
 import { applyProgression, todayISO, currentWeek, progTotal, syncProgression } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb, exMode } from "./lib/exercises";
@@ -352,6 +352,7 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
   const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
   const [stripeLoading, setStripeLoading] = useState(false);
   const [shopBusy, setShopBusy] = useState(null);
+  const [shopTab, setShopTab] = useState("theme"); // sottocategoria negozio: temi | allenamenti
   const buyShopLocal = async (it) => {
     if (!onBuyShop) return;
     setShopBusy(it.id);
@@ -497,45 +498,28 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
           </div>
         )}
 
-        <div className="stack-s" style={{ margin: "12px 0 16px" }}>
-          {!premium.is && (
-            <Card id="premium" gold title={tr("◆ Premium — 12 mesi")} price="20€"
-              lines="Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi · 2 mesi risparmiati rispetto al mensile" />
-          )}
-          {!premium.is && (
-            <Card id="premium_m" title={tr("◆ Premium — 1 mese")} price="2€"
-              lines="Tutte le funzioni AI sbloccate per 30 giorni · ideale per provare · rinnovo manuale" />
-          )}
+        {/* ① Abbonamento: tutto illimitato */}
+        {!premium.is && (
+          <div style={{ marginTop: 12 }}>
+            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("① ABBONAMENTO")}</div>
+            <div className="stack-s" style={{ marginBottom: 16 }}>
+              <Card id="premium" gold title={tr("◆ Premium — 12 mesi")} price="20€"
+                lines="Import scheda PT, nutrizione AI e scan macchinari con limiti settimanali ampi · 2 mesi risparmiati rispetto al mensile" />
+              <Card id="premium_m" title={tr("◆ Premium — 1 mese")} price="2€"
+                lines="Tutte le funzioni AI sbloccate per 30 giorni · ideale per provare · rinnovo manuale" />
+            </div>
+          </div>
+        )}
+
+        {/* ② Pacchetti crediti: ricariche una tantum */}
+        <div className="hud-label" style={{ margin: "12px 0 8px" }}>{tr("② PACCHETTI CREDITI")}</div>
+        <div className="stack-s" style={{ marginBottom: 16 }}>
           <Card id="pack30" title={tr("Pacchetto 30 crediti")} price="3€"
             lines="Una tantum · 0,10€ a credito · generazioni extra oltre il limite settimanale" />
           <Card id="pack100" title={tr("Pacchetto 100 crediti")} price="8€"
             lines="Una tantum · 0,08€ a credito — risparmi il 20%" />
           <Card id="pack300" gold title={tr("Pacchetto 300 crediti")} price="18€"
             lines="Una tantum · 0,06€ a credito — risparmi il 40% · IL PIÙ CONVENIENTE" />
-        </div>
-
-        {/* Extra sbloccabili con i crediti: temi e piani prefatti */}
-        <div className="hud-label" style={{ margin: "14px 0 8px" }}>{tr("SBLOCCA CON I CREDITI")}</div>
-        <div className="stack-s" style={{ marginBottom: 14 }}>
-          {SHOP_META.map((it) => {
-            const owned = unlocks.includes(it.id);
-            return (
-              <div key={it.id} className="cham-s row between g8" style={{ padding: "10px 12px", background: "var(--card2)", border: "1px solid var(--soft)", alignItems: "center" }}>
-                <div className="row g8" style={{ alignItems: "center", minWidth: 0, flex: 1 }}>
-                  <it.Icon size={16} color="var(--cyan)" style={{ flexShrink: 0 }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="t-bright" style={{ fontSize: 13, fontWeight: 700 }}>{tr(it.title)}</div>
-                    <div className="tiny t-faint" style={{ lineHeight: 1.45 }}>{tr(it.desc)}</div>
-                  </div>
-                </div>
-                {owned
-                  ? <span className="micro t-cyan" style={{ fontWeight: 700, flexShrink: 0 }}>{tr("ATTIVO ◈")}</span>
-                  : <Btn small onClick={() => buyShopLocal(it)} disabled={shopBusy === it.id} style={{ flexShrink: 0 }}>
-                      {shopBusy === it.id ? <Loader2 size={12} className="spin" /> : `⬡ ${it.credits}`}
-                    </Btn>}
-              </div>
-            );
-          })}
         </div>
 
         {clientId ? (
@@ -572,6 +556,42 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
             </Btn>
           </Panel>
         )}
+
+        {/* ③ Negozio: qui si spendono i crediti, separato dagli acquisti in € */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "2px solid var(--soft)" }}>
+          <div className="row between" style={{ alignItems: "center", marginBottom: 10 }}>
+            <div className="hud-label">{tr("③ NEGOZIO — SPENDI I CREDITI")}</div>
+            <span className={"chip cham-s" + ((usage?.credits || 0) > 0 ? " chip-on" : "")} style={{ fontSize: 9 }}>⬡ {usage?.credits ?? 0}</span>
+          </div>
+          <div className="row g8" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+            {[["theme", tr("Temi")], ["routines", tr("Allenamenti")]].map(([k, lab]) => (
+              <button key={k} onClick={() => setShopTab(k)}
+                className={"chip cham-s tap" + (shopTab === k ? " chip-on" : "")}
+                style={{ fontSize: 10, letterSpacing: ".12em", padding: "7px 14px", cursor: "pointer" }}>{lab}</button>
+            ))}
+          </div>
+          <div className="stack-s">
+            {SHOP_META.filter((it) => it.kind === shopTab).map((it) => {
+              const owned = unlocks.includes(it.id);
+              return (
+                <div key={it.id} className="cham-s row between g8" style={{ padding: "10px 12px", background: "var(--card2)", border: "1px solid var(--soft)", alignItems: "center" }}>
+                  <div className="row g8" style={{ alignItems: "center", minWidth: 0, flex: 1 }}>
+                    <it.Icon size={16} color="var(--cyan)" style={{ flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div className="t-bright" style={{ fontSize: 13, fontWeight: 700 }}>{tr(it.title)}</div>
+                      <div className="tiny t-faint" style={{ lineHeight: 1.45 }}>{tr(it.desc)}</div>
+                    </div>
+                  </div>
+                  {owned
+                    ? <span className="micro t-cyan" style={{ fontWeight: 700, flexShrink: 0 }}>{tr("ATTIVO ◈")}</span>
+                    : <Btn small onClick={() => buyShopLocal(it)} disabled={shopBusy === it.id} style={{ flexShrink: 0 }}>
+                        {shopBusy === it.id ? <Loader2 size={12} className="spin" /> : `⬡ ${it.credits}`}
+                      </Btn>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {!isGuest && (
           <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--soft)" }}>
@@ -682,6 +702,7 @@ export default function App() {
         if (add.length) setRoutines((rs) => [...rs, ...add]);
       }
       if (item.id === "theme-emerald") setBody((b) => ({ ...b, uiMode: "emerald" }));
+      if (item.id === "theme-crimson") setBody((b) => ({ ...b, uiMode: "crimson" }));
       fireToast({ title: d.already ? tr("Già sbloccato") : tr("◈ SBLOCCATO"), sub: tr(item.title) });
       return { ok: true, credits: d.credits };
     } catch { fireToast({ title: tr("Errore di rete, riprova") }); return { ok: false }; }
@@ -1043,7 +1064,8 @@ export default function App() {
   useEffect(() => {
     document.body.classList.toggle("standard", standard);
     document.body.classList.toggle("emerald", body.uiMode === "emerald");
-    return () => { document.body.classList.remove("standard"); document.body.classList.remove("emerald"); };
+    document.body.classList.toggle("crimson", body.uiMode === "crimson");
+    return () => { document.body.classList.remove("standard"); document.body.classList.remove("emerald"); document.body.classList.remove("crimson"); };
   }, [standard, body.uiMode]);
   /* PT e admin vedono entrambe le facce dell'app: l'ultimo pulsante del menu
      (sempre in fondo) commuta tra area PT (clienti) e area utente normale */
@@ -2517,8 +2539,8 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             {tr("L'app ha due versioni: puoi cambiare quando vuoi, i tuoi dati e i tuoi allenamenti restano sempre gli stessi.")}
           </div>
           <div className="stack g10">
-            {[...UI_MODES, ...(unlocks.includes("theme-emerald") ? [EMERALD_MODE] : [])].map((o) => {
-              const curMode = body.uiMode === "combat" ? "combat" : (body.uiMode === "emerald" && unlocks.includes("theme-emerald") ? "emerald" : "standard");
+            {[...UI_MODES, ...(unlocks.includes("theme-emerald") ? [EMERALD_MODE] : []), ...(unlocks.includes("theme-crimson") ? [CRIMSON_MODE] : [])].map((o) => {
+              const curMode = body.uiMode === "combat" ? "combat" : (body.uiMode === "emerald" && unlocks.includes("theme-emerald") ? "emerald" : (body.uiMode === "crimson" && unlocks.includes("theme-crimson") ? "crimson" : "standard"));
               const active = curMode === o.id;
               return (
                 <button key={o.id} onClick={() => setBody((b) => ({ ...b, uiMode: o.id }))}

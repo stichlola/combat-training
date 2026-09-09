@@ -383,6 +383,21 @@ body.standard{background:#f5f5f4}
 .emerald .guest-banner .t-cyan{color:#6ee7b7}
 .emerald .float-cam-btn{box-shadow:0 4px 12px rgba(5,150,105,.35)}
 
+/* TEMA CRIMSON: variante rosso cremisi del tema standard (sbloccabile con i crediti). */
+.crimson{--cyan:#dc2626;--cyan-hi:#b91c1c;--amber:#991b1b;--green:#b91c1c;
+  --active:#fee2e2;--active2:#fef2f2}
+.crimson .btn-primary{background:linear-gradient(135deg,#f87171,#dc2626)}
+.crimson .btn-primary:hover{background:linear-gradient(135deg,#ef4444,#b91c1c)}
+.crimson .chip-on{background:#fee2e2}
+.crimson .dash-btn{border-color:rgba(220,38,38,.35);background:#fdf4f4}
+.crimson .dash-btn:hover{border-color:rgba(220,38,38,.6);background:#fbe9e9}
+.crimson .info-btn{background:#fbe9e9;border-color:#f3c5c5}
+.crimson .bnav-btn.on .bnav-ico{background:#fee2e2}
+.crimson .hud-input:focus{border-color:#dc2626;box-shadow:0 0 0 4px rgba(220,38,38,.15)}
+.crimson .panel-accent{background:linear-gradient(180deg,#fef2f2,#fdeaea);border-color:#f3c5c5}
+.crimson .guest-banner .t-cyan{color:#fca5a5}
+.crimson .float-cam-btn{box-shadow:0 4px 12px rgba(220,38,38,.35)}
+
 `;
 
 /* ============================== PRIMITIVES ============================== */

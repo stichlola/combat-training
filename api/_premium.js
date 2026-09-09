@@ -179,6 +179,8 @@ export const SHOP_ITEMS = {
   "theme-emerald": { credits: 40 },  // tema grafico Smeraldo
   "pack-strength": { credits: 50 },  // schede pronte: Forza 5x5 A/B
   "pack-core":     { credits: 40 },  // scheda pronta: 30 giorni Core & Addome
+  "theme-crimson": { credits: 40 },  // tema grafico Crimson
+  "pack-ppl":      { credits: 50 },  // schede pronte: Push / Pull / Legs
 };
 
 export async function listUnlocks(userId) {
