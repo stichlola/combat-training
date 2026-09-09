@@ -326,6 +326,44 @@ function QuestModal({ quests, stats, prs, level, streak, onClose }) {
   );
 }
 
+/* Pannello admin (solo l'account admin lo vede): assegna crediti a un utente
+   dato il suo username. La scrittura avviene server-side in /api/admin. */
+function AdminCredits({ fireToast }) {
+  const [uname, setUname] = useState("");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const grant = async () => {
+    if (!uname.trim() || !Number(amount)) return;
+    setBusy(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const r = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+        body: JSON.stringify({ username: uname.trim(), credits: Number(amount) }),
+      });
+      const d = await r.json();
+      if (d.ok) fireToast({ title: tr("◈ CREDITI AGGIUNTI"), sub: `@${d.username} · +${d.added} → ⬡ ${d.credits}` });
+      else fireToast({ title: "⚠", sub: d.error === "user_not_found" ? tr("Utente non trovato") : (d.error || "Errore") });
+    } catch { fireToast({ title: tr("Errore di rete, riprova") }); }
+    setBusy(false);
+  };
+  return (
+    <Panel>
+      <div className="hud-label" style={{ marginBottom: 8 }}>ADMIN — {tr("ASSEGNA CREDITI")}</div>
+      <div className="row g8" style={{ alignItems: "center" }}>
+        <input className="hud-input cham-s" value={uname} onChange={(e) => setUname(e.target.value)}
+          placeholder="username" style={{ flex: 1, minWidth: 0 }} />
+        <input className="hud-input cham-s" type="number" inputMode="numeric" value={amount}
+          onChange={(e) => setAmount(e.target.value)} placeholder={tr("crediti")} style={{ width: 92, textAlign: "center" }} />
+        <Btn small primary onClick={grant} disabled={busy || !uname.trim() || !Number(amount)}>
+          {busy ? <Loader2 size={13} className="spin" /> : tr("Assegna")}
+        </Btn>
+      </div>
+    </Panel>
+  );
+}
+
 function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast, initialCode, onCreateAccount, unlocks = [], onBuyShop }) {
   const [code, setCode] = useState(initialCode || null); // codice emesso per acquisto senza account
   const [redeem, setRedeem] = useState("");
@@ -1331,7 +1369,12 @@ export default function App() {
               onLogout={async () => { await supabase.auth.signOut(); setTab("clients"); }} />
           ) : (
             <>
-              {isAdminUser(user) && <div style={{ marginBottom: 16 }}><PtRequestsAdmin fireToast={fireToast} /></div>}
+              {isAdminUser(user) && (
+                <div className="stack" style={{ marginBottom: 16 }}>
+                  <PtRequestsAdmin fireToast={fireToast} />
+                  <AdminCredits fireToast={fireToast} />
+                </div>
+              )}
               <ProfileTab user={user} body={body} setBody={setBody}
                 fireToast={fireToast} onLogout={async () => { await supabase.auth.signOut(); setTab("training"); }}
                 onUserUpdate={setUser} level={level} rank={rank} streak={streak} premium={premium}
