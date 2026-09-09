@@ -1543,6 +1543,90 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
     fireToast({ title: tr("◈ PROGRESSIONE ATTIVA"), sub: `${tr("SETTIMANA")} 1/${nWeeks}` });
   };
 
+  /* ─── Progressione AI: nessuna opzione, l'AI decide tutto da sola (numero di
+         settimane, carichi e ripetizioni) in base alla scheda e ai dati della
+         persona. Fallback lineare se l'AI non risponde. Ospite → account ─── */
+  const localProgIncr = (ex, n) => {
+    const mode = exMode(ex);
+    return Array.from({ length: n }, (_, i) => ({
+      sets: ex.sets.map((st) => {
+        if (mode === "hold") return { sec: (Number(st.sec) || 60) + 5 * i, elapsed: 0, done: false };
+        if (mode === "time") return { sec: (Number(st.sec) || 600) + 60 * i, dist: st.dist || "", elapsed: 0, done: false };
+        const w = Number(st.w) || 0;
+        const r0 = Number(st.r) || 8;
+        return w > 0 ? { w: w + 2.5 * i, r: r0, done: false } : { w: 0, r: r0 + i, done: false };
+      }),
+    }));
+  };
+  const genAIProgression = async (r) => {
+    if (premium && premium.guest) return premium.needAccount ? premium.needAccount() : premium.open();
+    const finish = (exWeeks, aiDone) => {
+      const total = exWeeks[0]?.length || 4;
+      setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
+        ...x,
+        progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
+        exercises: x.exercises.map((e, i) => ({ ...e, progression: { weeks: exWeeks[i] } })),
+      }));
+      setProgBusy(null);
+      fireToast({
+        title: aiDone ? tr("◈ PROGRESSIONE AI GENERATA") : tr("◈ PROGRESSIONE ATTIVA"),
+        sub: `${tr("SETTIMANA")} 1/${total}`,
+      });
+    };
+    setProgBusy(r.id);
+    const exLine = (e) => {
+      const mode = exMode(e);
+      const pr = prs[e.name] ? ` (PR attuale: ${prs[e.name]} kg)` : "";
+      const sets = e.sets.map((st) => mode === "hold" ? `${st.sec}s` : mode === "time" ? `${Math.round((st.sec || 0) / 60)}min` : `${st.w}kg×${st.r}`).join(", ");
+      return `- ${e.name} [${e.group}${mode === "hold" ? ", tenuta" : mode === "time" ? ", cardio a tempo" : ""}]: ${e.sets.length} serie: ${sets}${pr}`;
+    };
+    let exWeeks = null;
+    try {
+      const data = await aiCall({
+        model: "claude-haiku-4-5-20251001", max_tokens: 4000,
+        messages: [{ role: "user", content: `Sei un personal trainer esperto in sovraccarico progressivo. Genera la progressione settimanale completa per questa scheda di allenamento.
+UTENTE: ${body?.sesso === "M" ? "uomo" : "donna"}, ${body?.eta || 30} anni, ${body?.peso || 75} kg, ${body?.altezza || 175} cm, obiettivo "${body?.obiettivo || "Massa"}", si allena ${body?.giorniAllenamento || 3} volte a settimana.
+SCHEDA "${r.name}" (${r.exercises.length} esercizi):
+${r.exercises.map(exLine).join("\n")}
+DECIDI TU TUTTO: il numero di settimane ideale (da 3 a 6) e come aumentare (carico e/o ripetizioni) in base al tipo di allenamento, agli esercizi e ai dati della persona. Usa il metodo piu adatto (es. doppia progressione per ipertrofia, carico per forza).
+REGOLE: settimana 1 = carichi attuali; incrementi realistici e sicuri (+2,5-5% carico o +1-2 ripetizioni a settimana; +5-10s per le tenute; +1-2 min per il cardio); numero di serie invariato; ultima settimana la piu impegnativa ma sostenibile.
+Rispondi SOLO con JSON valido, senza markdown né backtick:
+{"weeks":[{"week":1,"exercises":[{"name":"NOME ESATTO come sopra","sets":[{"w":number,"r":number}]}]}]}
+Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}.` }],
+      }, "progression");
+      if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
+        setProgBusy(null);
+        if (premium) premium.open();
+        return fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento AI") });
+      }
+      if (data && data.error) throw new Error("API");
+      const raw = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+      const parsed = parseLoose(raw);
+      const weeksArr = (parsed.weeks || []).slice(0, 8);
+      if (weeksArr.length < 2) throw new Error("bad");
+      /* validazione: per ogni esercizio si prendono le settimane AI (match per
+         nome, altrimenti per posizione) con valori clampati a range sensati */
+      exWeeks = r.exercises.map((ex, ei) => {
+        const mode = exMode(ex);
+        return weeksArr.map((wk) => {
+          const found = (wk.exercises || []).find((x) => x.name === ex.name) || (wk.exercises || [])[ei] || {};
+          const src = Array.isArray(found.sets) && found.sets.length ? found.sets : ex.sets;
+          const sets = ex.sets.map((base, si) => {
+            const st = src[Math.min(si, src.length - 1)] || {};
+            if (mode === "hold") return { sec: Math.max(5, Math.min(600, Number(st.sec ?? base.sec) || 60)), elapsed: 0, done: false };
+            if (mode === "time") return { sec: Math.max(60, Number(st.sec ?? base.sec) || 600), dist: String(st.dist ?? base.dist ?? ""), elapsed: 0, done: false };
+            return { w: Math.max(0, Number(st.w ?? base.w) || 0), r: Math.max(1, Math.min(50, Number(st.r ?? base.r) || 8)), done: false };
+          });
+          return { sets };
+        });
+      });
+    } catch (e) {
+      fireToast({ title: tr("AI non disponibile: progressione lineare applicata") });
+      return finish(r.exercises.map((ex) => localProgIncr(ex, 4)), false);
+    }
+    finish(exWeeks, true);
+  };
+
   const abandonSession = () => {
     setSession(null); setConfirmAbandon(false);
     fireToast({ title: tr("◈ SESSIONE ABBANDONATA"), sub: tr("Nessun record salvato") });
@@ -1715,18 +1799,23 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
               ) : (
                 <>
                   <div className="row" style={{ gap: 18 }}>
+                    <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title={tr("Modifica modello")}
+                      style={{ color: "#5d87a3" }}><Pencil size={17} /></span>
                     <span onClick={() => setProgSetupId(r.id)}
                       className="tap icon-tap"
                       title={r.progression?.enabled
-                        ? tr("Progressione attiva: modifica le impostazioni o disattivala")
-                        : tr("Progressione settimanale: imposta le settimane e il completamento AI")}
+                        ? tr("Progressione attiva: gestisci o disattiva")
+                        : tr("Progressione manuale: scegli il numero di settimane")}
                       style={{ color: r.progression?.enabled ? "#ffd76a" : "#5d87a3" }}>
-                      {progBusy === r.id ? <Loader2 size={17} className="spin" /> : <TrendingUp size={17} />}
+                      <TrendingUp size={17} />
+                    </span>
+                    <span onClick={() => genAIProgression(r)}
+                      className="tap icon-tap" title={tr("Progressione AI: calcola tutto lei in base alla scheda e ai tuoi dati")}
+                      style={{ color: "#ffd76a" }}>
+                      {progBusy === r.id ? <Loader2 size={17} className="spin" /> : <Sparkles size={17} />}
                     </span>
                     <span onClick={() => setSummaryId(r.id)} className="tap icon-tap" title={tr("Riepilogo scheda")}
                       style={{ color: "#5d87a3" }}><Info size={17} /></span>
-                    <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title={tr("Modifica modello")}
-                      style={{ color: "#5d87a3" }}><Pencil size={17} /></span>
                     <span onClick={() => setConfirmDel(r.id)} className="tap icon-tap" title={tr("Elimina")}
                       style={{ color: "#5d87a3" }}><Trash2 size={17} /></span>
                   </div>
