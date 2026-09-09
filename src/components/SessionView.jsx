@@ -234,6 +234,8 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
     }
     setHistory((h) => [{
       date: new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }),
+      ts: Date.now(),
+      routineId: session.routineId,
       name: session.name,
       sets: doneSets,
       duration: `${durMin}m`,

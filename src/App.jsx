@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, Gift
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, CheckCircle2, Gift
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -1341,6 +1341,31 @@ export default function App() {
 }
 
 /* ================================ TRAINING ================================ */
+/* ─── Spunta settimanale: scheda completata nella settimana corrente (lun-dom) ─── */
+const weekStartEnd = () => {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // lunedì
+  return [mon.getTime(), mon.getTime() + 7 * 86400000];
+};
+const historyTs = (h) => {
+  if (h.ts) return h.ts;
+  const m = /^(\d{2})\/(\d{2})$/.exec(h.date || ""); // vecchie voci: solo "gg/mm"
+  if (!m) return 0;
+  const y = new Date().getFullYear();
+  let t = new Date(y, +m[2] - 1, +m[1]).getTime();
+  if (t > Date.now()) t = new Date(y - 1, +m[2] - 1, +m[1]).getTime(); // es. 31/12 visto a inizio gennaio
+  return t;
+};
+const routineDoneThisWeek = (r, history) => {
+  const [a, b] = weekStartEnd();
+  return (history || []).some((h) => {
+    const t = historyTs(h);
+    return t >= a && t < b && (h.routineId ? h.routineId === r.id : h.name === r.name);
+  });
+};
+
 /* ─── RIEPILOGO SCHEDA (modale veloce) ─── */
 function RoutineSummaryModal({ routine, onClose }) {
   const fmtSets = (ex) => {
@@ -1524,7 +1549,7 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
         )}
         <div data-dl className="stack">
         {routines.map((r) => (
-          <Panel key={r.id} hover>
+          <Panel key={r.id} hover style={routineDoneThisWeek(r, history) ? { borderColor: "rgba(16,185,129,.5)", boxShadow: "0 0 14px rgba(16,185,129,.12)" } : undefined}>
             <div className="row g8" style={{ alignItems: "flex-start" }}>
               <span className="drag-handle" title={tr("Trascina per riordinare")}
                 onPointerDown={(e) => dlStart(e, moveRoutine)} style={{ marginTop: 2 }}><GripVertical size={15} /></span>
@@ -1533,6 +1558,13 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, addXp, fi
                 <div className="tiny t-dim" style={{ marginTop: 2 }}>
                   {r.exercises.length} ESERCIZI · {r.exercises.reduce((a, e) => a + e.sets.length, 0)} SERIE
                 </div>
+                {routineDoneThisWeek(r, history) && (
+                  <div className="row g6" style={{ marginTop: 6 }}>
+                    <span className="chip cham-s" style={{ background: "rgba(16,185,129,.14)", color: "#10b981", borderColor: "rgba(16,185,129,.45)", fontWeight: 700 }}>
+                      <CheckCircle2 size={11} style={{ display: "inline", verticalAlign: -1, marginRight: 4 }} />{tr("Fatta questa settimana")}
+                    </span>
+                  </div>
+                )}
                 <div className="row wrap g6" style={{ marginTop: 8 }}>
                   {[...new Set(r.exercises.map((e) => e.group))].map((g) => (
                     <span key={g} className="chip cham-s">{tr(g)}</span>

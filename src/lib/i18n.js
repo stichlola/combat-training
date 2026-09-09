@@ -418,7 +418,7 @@ const EN_UI = {
   "modello base": "base template",
   "RECUPERO": "REST", "Avvia": "Start", "Pausa": "Pause", "↻ Reset": "↻ Reset",
   "Timer di recupero": "Rest timer",
-  "Riepilogo scheda": "Routine summary", "tenute": "holds",
+  "Riepilogo scheda": "Routine summary", "tenute": "holds", "Fatta questa settimana": "Done this week",
   "▸ Esecuzione": "▸ How to perform",
   "ANTEPRIMA NON DISPONIBILE": "PREVIEW NOT AVAILABLE",
 
