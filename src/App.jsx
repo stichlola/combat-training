@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, CheckCircle2, Gift, TrendingUp
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, CheckCircle2, Gift, TrendingUp, Share2
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -31,7 +31,7 @@ const UI_MODES = [
   { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
     desc: "La versione gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
 ];
-import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar } from "./ui";
+import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar, shareLink } from "./ui";
 const Trophy3D = React.lazy(() => import("./Trophy3D"));   // three.js caricato solo quando serve
 
 /* ================================== APP ================================== */
@@ -2764,12 +2764,20 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 10 }}>
               {tr("Per ogni amico che si registra dal tuo link:")} <span className="t-amber" style={{ fontWeight: 700 }}>{tr("+30 crediti a te, +10 a lui")}</span>.
             </div>
+            {/* Condividi apre la scelta delle piattaforme (WhatsApp, Instagram…);
+                dove non supportata ricade sulla copia negli appunti */}
             <div className="row g8">
               <input className="hud-input cham-s" readOnly value={`${location.origin}${location.pathname}#ref=${user.id}`}
                 onFocus={(e) => e.target.select()} style={{ flex: 1, fontSize: 11, minWidth: 0 }} />
-              <Btn small primary onClick={() => {
+              <Btn small primary onClick={async () => {
                 const link = `${location.origin}${location.pathname}#ref=${user.id}`;
-                try { navigator.clipboard.writeText(link); fireToast({ title: tr("◈ LINK COPIATO") }); } catch { fireToast({ title: link }); }
+                const r = await shareLink(link, "Fit Training", tr("Unisciti a me su Fit Training: +10 crediti di benvenuto col mio link"));
+                if (r === "copied") fireToast({ title: tr("◈ LINK COPIATO") });
+                else if (r === "failed") fireToast({ title: tr("Copia non riuscita"), sub: link });
+              }}><Share2 size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Condividi")}</Btn>
+              <Btn small onClick={() => {
+                const link = `${location.origin}${location.pathname}#ref=${user.id}`;
+                try { navigator.clipboard.writeText(link); fireToast({ title: tr("◈ LINK COPIATO") }); } catch { fireToast({ title: tr("Copia non riuscita"), sub: link }); }
               }}>{tr("Copia")}</Btn>
             </div>
             <div className="micro t-faint" style={{ marginTop: 8 }}>{tr("Amici iscritti col tuo link")}: <span className="t-cyan" style={{ fontWeight: 700 }}>{refCount}</span></div>

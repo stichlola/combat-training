@@ -457,3 +457,15 @@ export function QBar({ pct, done, animate }) {
 }
 
 export const Overlay = ({ children }) => createPortal(children, document.body);
+
+/* Condivisione nativa (WhatsApp, Instagram, …) via Web Share API; dove non è
+   supportata (es. desktop) ricade sulla copia negli appunti.
+   Ritorna "shared" | "copied" | "failed" | null (annullata dall'utente) */
+export const shareLink = async (url, title, text) => {
+  if (navigator.share) {
+    try { await navigator.share({ title, text, url }); return "shared"; }
+    catch (e) { if (e && e.name === "AbortError") return null; }
+  }
+  try { await navigator.clipboard.writeText(url); return "copied"; }
+  catch { return "failed"; }
+};

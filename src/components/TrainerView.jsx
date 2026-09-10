@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowLeft, Copy, Trash2, UserPlus, Users, Dumbbell, StickyNote, QrCode, LogOut, Pencil, Plus, Upload, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Copy, Trash2, UserPlus, Users, Dumbbell, StickyNote, QrCode, LogOut, Pencil, Plus, Upload, AlertTriangle, Share2 } from "lucide-react";
 import { inviteLink, listClients, saveClientNote, removeClient, getClientRoutines, saveClientRoutines, ptImportsLeft, ptImportConsume, PT_IMPORT_WEEK_LIMIT } from "../lib/trainer";
 import { exMode, isDumbbell } from "../lib/exercises";
 import { tr } from "../lib/i18n";
-import { Btn, Overlay, Panel } from "../ui";
+import { Btn, Overlay, Panel, shareLink } from "../ui";
 import { RoutineEditor } from "./RoutineEditor";
 import { DocImport } from "./DocImport";
 
@@ -20,6 +20,20 @@ export function TrainerView({ user, fireToast }) {
 
   const reload = () => listClients(user.id).then(setClients);
   useEffect(() => { reload(); }, []);
+
+  /* link personale condivisibile: chi lo apre arriva nell'app e si collega
+     in automatico come cliente di questo PT */
+  const link = inviteLink(user.id, user.full_name || user.username);
+  const shareText = tr("Allenati con me su Fit Training: apri il link e ci colleghiamo in automatico");
+  const shareAppLink = async () => {
+    const r = await shareLink(link, "Fit Training", shareText);
+    if (r === "copied") fireToast({ title: tr("◈ LINK COPIATO"), sub: tr("Incollalo dove vuoi") });
+    else if (r === "failed") fireToast({ title: tr("Copia non riuscita"), sub: link });
+  };
+  const copyAppLink = async () => {
+    try { await navigator.clipboard.writeText(link); fireToast({ title: tr("◈ LINK COPIATO"), sub: tr("Incollalo dove vuoi") }); }
+    catch { fireToast({ title: tr("Copia non riuscita"), sub: link }); }
+  };
 
   if (sel) return (
     <ClientDetail user={user} client={sel} fireToast={fireToast}
@@ -37,6 +51,25 @@ export function TrainerView({ user, fireToast }) {
           <UserPlus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Invita cliente")}
         </Btn>
       </div>
+
+      {/* link condivisibile dell'app: "Condividi" apre la scelta delle
+          piattaforme (WhatsApp, Instagram…), "Copia" lo mette negli appunti */}
+      <Panel accent>
+        <div className="hud-label" style={{ marginBottom: 6, color: "var(--pt)" }}>
+          <Share2 size={12} style={{ display: "inline", verticalAlign: -2, marginRight: 5 }} />{tr("CONDIVIDI L'APP")}
+        </div>
+        <div className="tiny t-dim" style={{ marginBottom: 8, lineHeight: 1.55 }}>
+          {tr("Il tuo link personale: chi lo apre arriva nell'app e si collega subito a te.")}
+        </div>
+        <div className="row g8">
+          <input className="hud-input cham-s" readOnly value={link} onFocus={(e) => e.target.select()}
+            style={{ flex: 1, fontSize: 11, minWidth: 0 }} />
+          <Btn small pt onClick={shareAppLink} style={{ flexShrink: 0 }}>
+            <Share2 size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Condividi")}
+          </Btn>
+          <Btn small onClick={copyAppLink} style={{ flexShrink: 0 }}>{tr("Copia")}</Btn>
+        </div>
+      </Panel>
 
       {clients === null && <div className="tiny t-faint" style={{ textAlign: "center", padding: 20 }}>{tr("Caricamento...")}</div>}
 
@@ -96,6 +129,12 @@ function InviteModal({ user, fireToast, onClose }) {
     try { await navigator.clipboard.writeText(link); fireToast({ title: tr("◈ LINK COPIATO"), sub: tr("Incollalo al cliente") }); }
     catch { fireToast({ title: tr("Copia non riuscita"), sub: link }); }
   };
+  const share = async () => {
+    const r = await shareLink(link, "Fit Training",
+      tr("Allenati con me su Fit Training: apri il link e ci colleghiamo in automatico"));
+    if (r === "copied") fireToast({ title: tr("◈ LINK COPIATO"), sub: tr("Incollalo al cliente") });
+    else if (r === "failed") fireToast({ title: tr("Copia non riuscita"), sub: link });
+  };
 
   return (
     <Overlay>
@@ -114,9 +153,14 @@ function InviteModal({ user, fireToast, onClose }) {
         <div className="cham-s" style={{ padding: "8px 10px", background: "var(--card)", border: "1px solid var(--soft)", wordBreak: "break-all", fontSize: 11, color: "var(--dim)", marginBottom: 12 }}>
           {link}
         </div>
-        <Btn pt onClick={copy} style={{ width: "100%" }}>
-          <Copy size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Copia link invito")}
-        </Btn>
+        <div className="row g8">
+          <Btn pt onClick={share} style={{ flex: 1 }}>
+            <Share2 size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Condividi")}
+          </Btn>
+          <Btn onClick={copy} style={{ flex: 1 }}>
+            <Copy size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Copia link invito")}
+          </Btn>
+        </div>
       </div>
     </div>
     </Overlay>
