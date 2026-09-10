@@ -50,19 +50,19 @@ export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onA
             <div className="hud-label" style={{ marginBottom: 8 }}>{tr("NUMERO DI SETTIMANE")}</div>
             <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
               <Btn small disabled={busy || weeks <= 2} style={{ padding: "8px 12px" }}
-                onClick={() => { const n = clamp(weeks - 1); setWeeks(n); onResize && onResize(n); }}>
+                onClick={() => setWeeks((w) => clamp(w - 1))}>
                 <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
               </Btn>
               <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
                 {weeks}
               </div>
               <Btn small disabled={busy || weeks >= 8} style={{ padding: "8px 12px" }}
-                onClick={() => { const n = clamp(weeks + 1); setWeeks(n); onResize && onResize(n); }}>
+                onClick={() => setWeeks((w) => clamp(w + 1))}>
                 <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
               </Btn>
             </div>
             <div className="tiny t-faint" style={{ marginBottom: 10, lineHeight: 1.5 }}>
-              {tr("Aggiungi o togli settimane al volo: i carichi già impostati si conservano (allungando, la nuova settimana copia l'ultima).")}
+              {tr("Cambia il numero e premi Salva: il ciclo riparte dalla settimana 1 con le settimane vuote, da compilare a mano o con l'AI.")}
             </div>
             <div className="tiny t-faint" style={{ marginBottom: 14, lineHeight: 1.5 }}>
               {tr("I carichi delle settimane si modificano dalla scheda (matita → 📈 su ogni esercizio).")}
@@ -75,7 +75,8 @@ export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onA
               ) : (
                 <Btn small onClick={() => setConfirmOff(true)} style={{ flex: 1.2 }}>{tr("Disattiva")}</Btn>
               )}
-              <Btn primary onClick={onClose} style={{ flex: 2 }}>{tr("Chiudi")}</Btn>
+              <Btn primary disabled={busy} style={{ flex: 2 }}
+                onClick={() => { onResize && onResize(weeks); onClose(); }}>{tr("Salva")}</Btn>
             </div>
         {/* AI: fa tutto lei, nessuna opzione */}
         <div className="row" style={{ alignItems: "center", gap: 10, margin: "14px 0 10px" }}>

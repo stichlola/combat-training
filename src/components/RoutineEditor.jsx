@@ -347,19 +347,22 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         <Panel key={tr(ex.name)} accent style={{ padding: 12 }}>
           {/* gruppo sopra il titolo, allineato come in allenamento */}
           <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 27 }}>{tr(ex.group || "").toUpperCase()}</div>
-          <div className="row between g8" style={{ marginBottom: 4, alignItems: "flex-start", flexWrap: "wrap" }}>
-            <div className="row g6 grow wrap" style={{ marginRight: 14, minWidth: 0 }}>
-              <span className="drag-handle" title={tr("Trascina per riordinare")}
-                onPointerDown={(e) => dlStart(e, moveEx)} style={{ flexShrink: 0 }}><GripVertical size={15} /></span>
-              <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
+          <div className="row between g8" style={{ marginBottom: 4, alignItems: "flex-start" }}>
+            <span className="drag-handle" title={tr("Trascina per riordinare")}
+              onPointerDown={(e) => dlStart(e, moveEx)} style={{ flexShrink: 0, marginTop: 2 }}><GripVertical size={15} /></span>
+            {/* INFO sta sempre alla destra del titolo; se va a capo resta
+                allineato col titolo (il wrap avviene dentro questa colonna) */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", flex: 1, minWidth: 0 }}>
+              <span className="t-bright" style={{ fontSize: 14, fontWeight: 700, minWidth: 0 }}>{tr(ex.name)}</span>
               {/* un solo pulsante INFO: ambra quando il PT ha aggiunto note/video */}
               <button onClick={() => setInfo(ex)}
                 className={!ptMode && (ex.ptNote || ex.ptVideo) ? "pt-btn tap" : "info-btn cham-s tap"}
-                title={!ptMode && (ex.ptNote || ex.ptVideo) ? tr("Note e video del tuo PT") : undefined}>
+                title={!ptMode && (ex.ptNote || ex.ptVideo) ? tr("Note e video del tuo PT") : undefined}
+                style={{ flexShrink: 0 }}>
                 <Info size={11} /> INFO
               </button>
               {ex.progression?.enabled && (
-                <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", alignSelf: "center" }}>PROG ×{ex.progression.weeks?.length || 1}</span>
+                <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", alignSelf: "center", flexShrink: 0 }}>PROG ×{ex.progression.weeks?.length || 1}</span>
               )}
             </div>
             <div className="row g8" style={{ flexShrink: 0, marginLeft: "auto", paddingTop: 2 }}>

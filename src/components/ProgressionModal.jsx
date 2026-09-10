@@ -28,7 +28,9 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
 
   const updateSet = (wi, si, field, val) => setWeeks((ws) =>
     ws.map((w, i) => i !== wi ? w : { sets: w.sets.map((s, j) => j !== si ? s : { ...s, [field]: field === "r" ? repVal(val) : (val === "" ? "" : Number(val)) }) }));
-  const addWeek = () => setWeeks((ws) => [...ws, { sets: ws[ws.length - 1].sets.map((s) => ({ ...s })) }]);
+  /* la settimana aggiunta parte VUOTA: i valori li inserisce a mano
+     l'utente/PT oppure li compila l'AI, mai copiati */
+  const addWeek = () => setWeeks((ws) => [...ws, { sets: baseSets() }]);
   const removeWeek = (wi) => setWeeks((ws) => ws.length <= 1 ? ws : ws.filter((_, i) => i !== wi));
   /* singola serie dentro la settimana: si aggiunge clonando l'ultima,
      si può togliere finché ne resta almeno una */

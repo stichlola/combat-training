@@ -1308,17 +1308,8 @@ export default function App() {
         <div className="hud-header-inner">
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <div className="brand">{standard ? "FIT" : "COMBAT"}<span className="t-faint">//</span>TRAINING</div>
-            {myTrainer && !isPT && (
-              <button onClick={() => setPtInfoOpen(true)} className="tap row g6"
-                title={tr("Il tuo personal trainer — tocca per le info")}
-                style={{ cursor: "pointer", alignItems: "center", padding: 0, background: "none", border: "none" }}>
-                <Users size={10} color="var(--cyan)" />
-                <span className="f-hud t-cyan" style={{ fontSize: 9, letterSpacing: ".18em", fontWeight: 700 }}>
-                  PT · {(myTrainer.name || tr("ATTIVO")).toUpperCase()}
-                </span>
-              </button>
-            )}
           </div>
+          {/* nome utente SEMPRE a sinistra; il PT collegato sta a destra */}
           <button onClick={() => setTab("profile")} className="tap row g6"
             style={{ cursor: "pointer", color: isPremium ? "#ffd76a" : tab === "profile" ? "var(--cyan-hi)" : "var(--dim)", position: "relative", flexShrink: 0 }}>
             <span style={{ position: "relative", display: "inline-flex" }}>
@@ -1350,6 +1341,16 @@ export default function App() {
                 </div>
               )}
             </div>
+          )}
+          {myTrainer && !isPT && (
+            <button onClick={() => setPtInfoOpen(true)} className="tap row g6"
+              title={tr("Il tuo personal trainer — tocca per le info")}
+              style={{ cursor: "pointer", alignItems: "center", padding: 0, background: "none", border: "none", flexShrink: 0 }}>
+              <Users size={10} color="var(--cyan)" />
+              <span className="f-hud t-cyan" style={{ fontSize: 9, letterSpacing: ".18em", fontWeight: 700 }}>
+                PT · {(myTrainer.name || tr("ATTIVO")).toUpperCase()}
+              </span>
+            </button>
           )}
           {!isPT && !standard && (
             <div className="row g8" style={{ flexShrink: 0 }}>
@@ -1624,26 +1625,27 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
       return { ...base, w: "", r: "" };
     });
   };
-  const flatWeeks = (ex, n) => {
-    const prev = ex.progression?.weeks;
-    if (prev && prev.length) {
-      const out = prev.slice(0, n).map((w) => ({ sets: w.sets.map((st) => ({ ...st, done: false, elapsed: 0 })) }));
-      while (out.length < n) out.push({ sets: out[out.length - 1].sets.map((st) => ({ ...st })) });
-      return out;
-    }
-    return Array.from({ length: n }, () => ({ sets: emptySets(ex) }));
-  };
-  /* aggiungi/togli una settimana a progressione GIÀ ATTIVA: vale per tutti gli
-     esercizi della scheda, i carichi impostati si conservano (accorcia o estende
-     copiando l'ultima) e la settimana corrente viene clampata al nuovo totale */
+  /* settimane SEMPRE vuote: i valori li inserisce a mano l'utente/PT oppure
+     li compila l'AI — mai copiati dalle settimane precedenti */
+  const flatWeeks = (ex, n) => Array.from({ length: n }, () => ({ sets: emptySets(ex) }));
+  /* aggiungi/togli settimane a progressione GIÀ ATTIVA, applicato SOLO dal
+     pulsante Salva del modale impostazioni. Allungando il ciclo o rifacendolo
+     (senza AI) si riparte da zero: TUTTE le settimane vuote e settimana 1.
+     Accorciando si conservano le prime nn settimane. */
   const resizeProgression = (r, n) => {
     const nn = Math.max(2, Math.min(8, n));
+    const restart = nn >= progTotal(r);
     setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
       ...x,
-      progression: { ...x.progression, week: Math.min(x.progression?.week || 1, nn) },
-      exercises: x.exercises.map((e) => e.progression?.weeks?.length
-        ? { ...e, progression: { ...e.progression, weeks: flatWeeks(e, nn) } }
-        : e),
+      progression: { ...x.progression, week: restart ? 1 : Math.min(x.progression?.week || 1, nn) },
+      exercises: x.exercises.map((e) => {
+        const prev = e.progression?.weeks;
+        if (!prev?.length) return e;
+        const weeks = restart
+          ? Array.from({ length: nn }, () => ({ sets: emptySets(e) }))
+          : prev.slice(0, nn).map((w) => ({ sets: w.sets.map((st) => ({ ...st, done: false, elapsed: 0 })) }));
+        return { ...e, progression: { ...e.progression, weeks } };
+      }),
     }));
   };
   const genProgression = (r, opts = {}) => {
@@ -1758,10 +1760,21 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
     const initial = editId != null ? routines.find((r) => r.id === editId) : null;
     return <RoutineEditor premium={premium} fireToast={fireToast} initial={initial} onClose={() => { setView("home"); setEditId(null); }}
       onQuickSave={initial ? (d) => {
-        /* salvataggio immediato dal modale progressione 📈: TUTTA la scheda subito
-           (l'autosave la manda su Supabase) — niente secondo "Salva" dell'editor */
-        setRoutines((rs) => rs.map((x) => (x.id === d.id ? { ...d, name: d.name.toUpperCase() } : x)));
-        fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: tr("Tutta la scheda è stata salvata subito") });
+        /* salvataggio immediato dal modale progressione 📈: si salva SOLO la
+           progressione (settimane/carichi), il resto della scheda si salva col
+           "Salva" globale dell'editor */
+        setRoutines((rs) => rs.map((x) => {
+          if (x.id !== d.id) return x;
+          return {
+            ...x,
+            progression: d.progression || x.progression,
+            exercises: x.exercises.map((e, i) => {
+              const src = d.exercises[i];
+              return src && src.name === e.name && src.progression ? { ...e, progression: src.progression } : e;
+            }),
+          };
+        }));
+        fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: tr("Solo la progressione: il resto della scheda si salva con Salva") });
       } : null}
       onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
   }
