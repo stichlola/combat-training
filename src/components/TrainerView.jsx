@@ -167,11 +167,40 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
     fireToast({ title: tr("◈ SCHEDE AGGIORNATE"), sub: tr("Il cliente le vedrà al prossimo caricamento") });
   };
 
+  /* Salvataggio immediato delle SOLE note/video PT: rilegge le schede del
+     cliente dal DB e fonde ptNote/ptVideo della bozza (match per id scheda e
+     nome esercizio) — i carichi/serie che il cliente ha nel frattempo modificato
+     non vengono toccati e non serve la conferma di sovrascrittura */
+  const savePtNotes = async (draft) => {
+    const fresh = (await getClientRoutines(client.client_id)) || [];
+    const idx = fresh.findIndex((r) => r.id === draft.id);
+    let next;
+    if (idx >= 0) {
+      const src = fresh[idx];
+      const merged = {
+        ...src,
+        exercises: (src.exercises || []).map((x, i) => {
+          const p = draft.exercises.find((e) => e.name === x.name) || draft.exercises[i];
+          return p ? { ...x, ptNote: p.ptNote || "", ptVideo: p.ptVideo || "" } : x;
+        }),
+      };
+      next = fresh.map((r, i) => (i === idx ? merged : r));
+    } else {
+      /* scheda nuova non ancora sul server: la crea direttamente dalla bozza */
+      if (!draft.name || !draft.exercises.length) return false;
+      next = [...fresh, { ...draft, name: draft.name.toUpperCase() }];
+    }
+    const ok = await saveClientRoutines(client.client_id, next);
+    if (ok) setRoutines(next);
+    return ok;
+  };
+
   /* --- editor scheda (nuova o esistente) --- */
   if (editIdx !== null) return (
     <RoutineEditor premium={null} fireToast={fireToast} showScan={false} ptMode
       initial={editIdx >= 0 ? routines[editIdx] : null}
       onClose={() => setEditIdx(null)}
+      onSavePt={savePtNotes}
       onSave={(draft) => {
         setPending(editIdx >= 0 ? routines.map((r, i) => (i === editIdx ? draft : r)) : [...(routines || []), draft]);
         setEditIdx(null);

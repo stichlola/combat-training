@@ -15,7 +15,7 @@ import { Btn, Overlay, Panel } from "../ui";
 /* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ----------------
    ptMode: lo usa il personal trainer sulle schede del cliente — sblocca per ogni
    esercizio la sezione arancione "note PT" (note mirate + video esecuzione). */
-export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, showScan = true, ptMode = false }) {
+export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, onSavePt = null, showScan = true, ptMode = false }) {
   const [draft, setDraft] = useState(() => initial
     ? JSON.parse(JSON.stringify(initial))
     : { id: Date.now(), name: "", exercises: [] });
@@ -30,6 +30,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, sh
   const [sugBusy, setSugBusy] = useState(false);
   const [sugList, setSugList] = useState(null);   // [{ name, group, why, on }]
   const [sugErr, setSugErr] = useState(null);
+  const [ptBusy, setPtBusy] = useState(false);    // salvataggio immediato delle note PT in corso
 
   const upd = (fn) => setDraft((d) => fn(d));
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
@@ -369,6 +370,24 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                   <input className="hud-input cham-s" value={ex.ptVideo || ""}
                     onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptVideo: e.target.value }) }))}
                     placeholder="https://youtube.com/watch?v=..." style={{ fontSize: 12, padding: "6px 8px" }} />
+                  {/* Salva SUBITO solo note/video PT: niente "Salva" della scheda né
+                      conferma di sovrascrittura — fonde i campi PT sulla copia fresca del cliente */}
+                  {onSavePt && (
+                    <Btn small pt disabled={ptBusy} style={{ marginTop: 10, width: "100%" }}
+                      title={tr("Salva subito note e video sul profilo del cliente, senza chiudere la scheda")}
+                      onClick={async () => {
+                        setPtBusy(true);
+                        const ok = await onSavePt(draft);
+                        setPtBusy(false);
+                        fireToast(ok
+                          ? { title: tr("◈ NOTE PT SALVATE"), sub: tr("Il cliente le vede subito nella sua scheda") }
+                          : { title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") });
+                      }}>
+                      {ptBusy
+                        ? <Loader2 size={12} className="spin" />
+                        : <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} />} {ptBusy ? tr("Salvataggio...") : tr("Salva note")}
+                    </Btn>
+                  )}
                 </div>
               )}
             </div>

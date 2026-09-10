@@ -1037,6 +1037,41 @@ export default function App() {
     }, 800);
   }, [user, hydrated, body, nutri, routines, prs, session, history, quests, stats, xp, level]);
 
+  /* Note/video del PT sempre freschi: aprendo Training si rileggono le schede dal
+     server e si fondono SOLO i campi ptNote/ptVideo (match per id scheda e nome
+     esercizio). Così il cliente vede subito le note nuove e — altrettanto
+     importante — il suo autosalvataggio successivo non le sovrascrive più con la
+     copia vecchia che aveva in memoria. Se nulla è cambiato, niente scritture. */
+  useEffect(() => {
+    if (!user || user.guest || !hydrated || tab !== "training") return;
+    (async () => {
+      try {
+        const { data } = await supabase.from("user_data").select("routines")
+          .eq("user_id", user.id).maybeSingle();
+        const fresh = data?.routines;
+        if (!Array.isArray(fresh) || !fresh.length) return;
+        setRoutines((cur) => {
+          const list = cur || [];
+          const next = list.map((r) => {
+            const srv = fresh.find((x) => x.id === r.id);
+            if (!srv || !Array.isArray(srv.exercises)) return r;
+            let changed = false;
+            const exs = (r.exercises || []).map((e, i) => {
+              const s = srv.exercises.find((x) => x.name === e.name) || srv.exercises[i];
+              if (!s) return e;
+              const pn = s.ptNote || "", pv = s.ptVideo || "";
+              if ((e.ptNote || "") === pn && (e.ptVideo || "") === pv) return e;
+              changed = true;
+              return { ...e, ptNote: pn, ptVideo: pv };
+            });
+            return changed ? { ...r, exercises: exs } : r;
+          });
+          return next.some((r, i) => r !== list[i]) ? next : cur;
+        });
+      } catch { /* offline o policy mancante: restano i dati locali */ }
+    })();
+  }, [user, hydrated, tab]);
+
   const fireToast = (t) => {
     setToast(t);
     clearTimeout(tRef.current);
@@ -1487,6 +1522,19 @@ function RoutineSummaryModal({ routine, onClose }) {
                 </div>
                 <div className="micro" style={{ marginTop: 5, color: "var(--cyan)", letterSpacing: 1 }}>{fmtSets(ex)}{ex.rest ? `  ·  REC ${ex.rest}s` : ""}</div>
                 {ex.note ? <div className="micro" style={{ marginTop: 4, fontStyle: "italic" }}>“{ex.note}”</div> : null}
+                {/* note/video del PT: visibili direttamente nel riepilogo scheda */}
+                {(ex.ptNote || ex.ptVideo) && (
+                  <div className="pt-box" style={{ marginTop: 6, padding: "7px 10px" }}>
+                    <div className="hud-label" style={{ fontSize: 8, color: "var(--pt)", marginBottom: ex.ptNote ? 3 : 0 }}>{tr("NOTE DEL TUO PT")}</div>
+                    {ex.ptNote && <div style={{ fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", color: "var(--text)" }}>{ex.ptNote}</div>}
+                    {ex.ptVideo && (
+                      <a href={ex.ptVideo} target="_blank" rel="noreferrer" className="micro"
+                        style={{ color: "var(--pt)", display: "inline-block", marginTop: ex.ptNote ? 4 : 2 }}>
+                        ▸ {tr("APRI IL VIDEO")}
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
