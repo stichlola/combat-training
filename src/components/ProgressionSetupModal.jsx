@@ -6,12 +6,14 @@ import { Btn, Overlay } from "../ui";
 
 /* ---------------- Modale progressione settimanale ----------------
    Manuale: un'unica impostazione, il NUMERO DI SETTIMANE — le settimane partono
-   tutte con gli stessi valori della scheda e poi l'utente (o il PT) sistema i
-   carichi esercizio per esercizio dalla modifica scheda (📈).
+   TUTTE VUOTE e poi l'utente (o il PT) inserisce i carichi esercizio per
+   esercizio dalla modifica scheda (📈); i valori li compila solo l'AI.
    AI: nessuna opzione — un pulsante solo, l'AI decide settimane e carichi da
    sola in base alla scheda e ai dati della persona (Premium o 1 credito).
-   Se la progressione è già attiva, lo stesso modale permette di disattivarla. */
-export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onAI, onClose }) {
+   Se la progressione è già attiva, lo stesso modale permette di aggiungere o
+   togliere settimane al volo (i carichi impostati si conservano) e di
+   disattivarla. */
+export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onAI, onResize, onClose }) {
   const enabled = !!routine.progression?.enabled;
   const total = progTotal(routine);
   const curWeek = enabled ? currentWeek(routine.progression, total) : null;
@@ -44,6 +46,24 @@ export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onA
 
         {enabled ? (
           <>
+            {/* aggiungi/togli settimane a ciclo attivo: i valori impostati si conservano */}
+            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("NUMERO DI SETTIMANE")}</div>
+            <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
+              <Btn small disabled={busy || weeks <= 2} style={{ padding: "8px 12px" }}
+                onClick={() => { const n = clamp(weeks - 1); setWeeks(n); onResize && onResize(n); }}>
+                <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+              </Btn>
+              <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
+                {weeks}
+              </div>
+              <Btn small disabled={busy || weeks >= 8} style={{ padding: "8px 12px" }}
+                onClick={() => { const n = clamp(weeks + 1); setWeeks(n); onResize && onResize(n); }}>
+                <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+              </Btn>
+            </div>
+            <div className="tiny t-faint" style={{ marginBottom: 10, lineHeight: 1.5 }}>
+              {tr("Aggiungi o togli settimane al volo: i carichi già impostati si conservano (allungando, la nuova settimana copia l'ultima).")}
+            </div>
             <div className="tiny t-faint" style={{ marginBottom: 14, lineHeight: 1.5 }}>
               {tr("I carichi delle settimane si modificano dalla scheda (matita → 📈 su ogni esercizio).")}
             </div>
@@ -93,7 +113,7 @@ export function ProgressionSetupModal({ routine, busy, onConfirm, onDisable, onA
               </Btn>
             </div>
             <div className="tiny t-faint" style={{ marginBottom: 16, lineHeight: 1.5 }}>
-              {tr("Le settimane partono tutte con i carichi attuali della scheda: poi tu o il PT sistemate i valori esercizio per esercizio (modifica scheda → 📈).")}
+              {tr("Le settimane partono vuote: poi tu o il PT inserite pesi e ripetizioni esercizio per esercizio (modifica scheda → 📈). Con l'AI i valori si compilano da soli.")}
             </div>
             <div className="row g8" style={{ marginTop: 4 }}>
               <Btn onClick={onClose} style={{ flex: 1 }}>{tr("Annulla")}</Btn>

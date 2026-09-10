@@ -10,7 +10,14 @@ import { Btn, Overlay } from "../ui";
    Interruttore generale e data di inizio stanno a livello di scheda, nell'editor. */
 export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
   const mode = exMode(ex); // undefined = forza · "hold" = tenuta · "time" = cardio
-  const baseSets = () => ex.sets.map((s) => ({ ...s, done: false, elapsed: 0 }));
+  /* la prima settimana parte VUOTA: i carichi li inserisce a mano l'utente/PT,
+     oppure li compila l'AI dal modale impostazioni della scheda */
+  const baseSets = () => ex.sets.map((s) => {
+    const base = { ...s, done: false, elapsed: 0 };
+    if (mode === "time") return { ...base, sec: "", dist: "" };
+    if (mode === "hold") return { ...base, sec: "" };
+    return { ...base, w: "", r: "" };
+  });
 
   const [weeks, setWeeks] = useState(() => {
     const w = ex.progression?.weeks;

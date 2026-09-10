@@ -1608,12 +1608,22 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
     setView("session");
   };
 
-  /* ─── Progressione settimanale: N settimane che partono TUTTE dai carichi
-         attuali della scheda; poi l'utente (o il PT) sistema i valori esercizio
-         per esercizio dalla modifica scheda (icona 📈). Riattivando una scheda
-         che aveva gia delle settimane, i valori impostati a mano si conservano:
-         il numero di settimane viene solo accorciato o esteso copiando l'ultima ─── */
+  /* ─── Progressione settimanale (manuale): N settimane che partono TUTTE
+         VUOTE — pesi e ripetizioni li inserisce a mano l'utente o il PT dalla
+         modifica scheda (icona 📈); i valori li compila solo l'AI.
+         Riattivando o ridimensionando una scheda che aveva già delle settimane,
+         i valori impostati a mano si conservano: il numero viene solo accorciato
+         o esteso copiando l'ultima settimana ─── */
   const PROG_WEEKS = 4; // default proposto nel modale impostazioni
+  const emptySets = (ex) => {
+    const mode = exMode(ex);
+    return ex.sets.map((st) => {
+      const base = { ...st, done: false, elapsed: 0 };
+      if (mode === "time") return { ...base, sec: "", dist: "" };
+      if (mode === "hold") return { ...base, sec: "" };
+      return { ...base, w: "", r: "" };
+    });
+  };
   const flatWeeks = (ex, n) => {
     const prev = ex.progression?.weeks;
     if (prev && prev.length) {
@@ -1621,7 +1631,20 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
       while (out.length < n) out.push({ sets: out[out.length - 1].sets.map((st) => ({ ...st })) });
       return out;
     }
-    return Array.from({ length: n }, () => ({ sets: ex.sets.map((st) => ({ ...st, done: false, elapsed: 0 })) }));
+    return Array.from({ length: n }, () => ({ sets: emptySets(ex) }));
+  };
+  /* aggiungi/togli una settimana a progressione GIÀ ATTIVA: vale per tutti gli
+     esercizi della scheda, i carichi impostati si conservano (accorcia o estende
+     copiando l'ultima) e la settimana corrente viene clampata al nuovo totale */
+  const resizeProgression = (r, n) => {
+    const nn = Math.max(2, Math.min(8, n));
+    setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
+      ...x,
+      progression: { ...x.progression, week: Math.min(x.progression?.week || 1, nn) },
+      exercises: x.exercises.map((e) => e.progression?.weeks?.length
+        ? { ...e, progression: { ...e.progression, weeks: flatWeeks(e, nn) } }
+        : e),
+    }));
   };
   const genProgression = (r, opts = {}) => {
     const nWeeks = Math.max(2, Math.min(8, Number(opts.weeks) || PROG_WEEKS));
@@ -1636,19 +1659,8 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
 
   /* ─── Progressione AI: nessuna opzione, l'AI decide tutto da sola (numero di
          settimane, carichi e ripetizioni) in base alla scheda e ai dati della
-         persona. Fallback lineare se l'AI non risponde. Ospite → account ─── */
-  const localProgIncr = (ex, n) => {
-    const mode = exMode(ex);
-    return Array.from({ length: n }, (_, i) => ({
-      sets: ex.sets.map((st) => {
-        if (mode === "hold") return { sec: (Number(st.sec) || 60) + 5 * i, elapsed: 0, done: false };
-        if (mode === "time") return { sec: (Number(st.sec) || 600) + 60 * i, dist: st.dist || "", elapsed: 0, done: false };
-        const w = Number(st.w) || 0;
-        const r0 = Number(st.r) || 8;
-        return w > 0 ? { w: w + 2.5 * i, r: r0, done: false } : { w: 0, r: r0 + i, done: false };
-      }),
-    }));
-  };
+         persona. Se l'AI non risponde: progressione base con settimane vuote.
+         Ospite → account ─── */
   const genAIProgression = async (r) => {
     if (premium && premium.guest) {
       setProgSetupId(null);
@@ -1715,8 +1727,10 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
         });
       });
     } catch (e) {
-      fireToast({ title: tr("AI non disponibile: progressione lineare applicata") });
-      return finish(r.exercises.map((ex) => localProgIncr(ex, 4)), false);
+      /* AI non raggiungibile: si attiva comunque la progressione base, con le
+         settimane VUOTE da compilare a mano (i valori li mette solo l'AI) */
+      fireToast({ title: tr("AI non disponibile: progressione base attivata"), sub: tr("Settimane vuote: compilale tu o il PT") });
+      return finish(r.exercises.map((ex) => flatWeeks(ex, 4)), false);
     }
     finish(exWeeks, true);
   };
@@ -1771,6 +1785,7 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
           <ProgressionSetupModal routine={r} premium={premium} busy={progBusy === r.id}
             onClose={() => setProgSetupId(null)}
             onConfirm={(opts) => genProgression(r, opts)}
+            onResize={(n) => resizeProgression(r, n)}
             onAI={() => genAIProgression(r)}
             onDisable={() => {
               setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : { ...x, progression: { ...x.progression, enabled: false } }));
