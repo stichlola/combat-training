@@ -465,6 +465,12 @@ const EN_UI = {
 
   /* --- editor --- */
   "Nuova scheda": "New routine", "Salva": "Save", "‹ Annulla": "‹ Cancel",
+  "Esporta PDF": "Export PDF", "◈ PDF ESPORTATO": "◈ PDF EXPORTED",
+  "Esportazione non riuscita": "Export failed",
+  "Cliente": "Client", "Personal trainer": "Personal trainer",
+  "Progressione": "Progression", "Scheda": "Routine",
+  "Note": "Notes", "Video": "Video", "SEC": "SEC", "DIST": "DIST",
+  "Generato con Fit Training": "Generated with Fit Training",
   "Nome scheda (es. LEG DAY)": "Routine name (e.g. LEG DAY)",
   "Filtra esercizi...": "Filter exercises...",
   "Scansiona macchinario": "Scan machine",

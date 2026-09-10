@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowLeft, Copy, Trash2, UserPlus, Users, Dumbbell, StickyNote, QrCode, LogOut, Pencil, Plus, Upload, AlertTriangle, Share2 } from "lucide-react";
+import { ArrowLeft, Copy, Trash2, UserPlus, Users, Dumbbell, StickyNote, QrCode, LogOut, Pencil, Plus, Upload, AlertTriangle, Share2, FileDown } from "lucide-react";
 import { inviteLink, listClients, saveClientNote, removeClient, getClientRoutines, saveClientRoutines, ptImportsLeft, ptImportConsume, PT_IMPORT_WEEK_LIMIT } from "../lib/trainer";
 import { exMode, isDumbbell } from "../lib/exercises";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel, shareLink } from "../ui";
 import { RoutineEditor } from "./RoutineEditor";
+import { exportRoutinePdf } from "../lib/exportPdf";
 import { DocImport } from "./DocImport";
 
 /* ---------------- Vista Personal Trainer ----------------
@@ -265,6 +266,23 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
     return ok;
   };
 
+  /* Esporta la scheda in PDF (jsPDF caricato on-demand): intestazione con
+     cliente/PT, tabelle serie per esercizio, settimane di progressione se
+     attive, note PT e link video */
+  const exportPdf = async (r) => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const fname = exportRoutinePdf(doc, r, {
+        clientName: client.full_name || client.username || client.client_email || "",
+        ptName: user.full_name || user.username || "",
+      });
+      fireToast({ title: tr("◈ PDF ESPORTATO"), sub: fname });
+    } catch (e) {
+      fireToast({ title: tr("Esportazione non riuscita"), sub: tr("Riprova tra poco") });
+    }
+  };
+
   /* --- editor scheda (nuova o esistente) --- */
   if (editIdx !== null) return (
     <RoutineEditor premium={null} fireToast={fireToast} showScan={false} ptMode
@@ -379,6 +397,9 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
               </span>
               <div className="row g8" style={{ flexShrink: 0 }}>
                 <span className="micro t-dim">{r.exercises.length} {tr("ESERCIZI")}</span>
+                <span onClick={() => exportPdf(r)} className="tap" style={{ cursor: "pointer", padding: "2px 6px", color: "var(--pt)" }} title={tr("Esporta PDF")}>
+                  <FileDown size={14} />
+                </span>
                 <span onClick={() => setEditIdx(ri)} className="tap" style={{ cursor: "pointer", padding: "2px 6px", color: "var(--pt)" }} title={tr("Modifica scheda")}>
                   <Pencil size={14} />
                 </span>
