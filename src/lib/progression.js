@@ -70,3 +70,31 @@ export const todayISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
+
+/* ---------------- Ripetizioni a intervallo ("8-10" o "8/10") ----------------
+   Le ripetizioni possono essere un intervallo (doppia progressione): restano
+   stringhe nei dati; i calcoli numerici (volume, stime) usano la media. */
+export const REP_RANGE = /^\s*(\d{1,3})\s*[-/]\s*(\d{1,3})\s*$/;
+export const parseReps = (v) => {
+  const m = REP_RANGE.exec(String(v ?? ""));
+  if (m) return { lo: +m[1], hi: +m[2] };
+  const n = Number(v);
+  return String(v ?? "").trim() !== "" && Number.isFinite(n) ? { lo: n, hi: n } : null;
+};
+export const repsNum = (v) => { const p = parseReps(v); return p ? Math.round((p.lo + p.hi) / 2) : 0; };
+/* valore da campo input: l'intervallo (anche mentre si digita, es. "8-") resta
+   testo, il numero singolo diventa numero, vuoto resta vuoto */
+export const repVal = (raw) => {
+  if (raw === "" || raw == null) return "";
+  const t = String(raw).trim();
+  if (/[-/]/.test(t) && /^[\d\s\-/]+$/.test(t)) return t.replace(/\s+/g, "");
+  const n = Number(t);
+  return Number.isFinite(n) ? n : "";
+};
+/* import esterno (foto/PDF/AI): intervallo normalizzato "8-10", altrimenti numero */
+export const repImport = (v, fallback) => {
+  const m = REP_RANGE.exec(String(v ?? ""));
+  if (m) return `${m[1]}-${m[2]}`;
+  const n = Number(v);
+  return String(v ?? "").trim() !== "" && Number.isFinite(n) ? n : fallback;
+};

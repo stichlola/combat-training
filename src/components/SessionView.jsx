@@ -8,7 +8,7 @@ import { ResultsScreen } from "./ResultsScreen";
 import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
 import { exMode, holdSets, isDumbbell, isHold } from "../lib/exercises";
-import { markProgDone } from "../lib/progression";
+import { markProgDone, repVal, repsNum } from "../lib/progression";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
 
@@ -133,7 +133,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const updateSet = (ei, si, field, val) => upd((s) => ({
     ...s,
     exercises: s.exercises.map((e, i) => i !== ei ? e : {
-      ...e, sets: e.sets.map((st, j) => j !== si ? st : { ...st, [field]: val === "" ? "" : Number(val) }),
+      ...e, sets: e.sets.map((st, j) => j !== si ? st : { ...st, [field]: field === "r" ? repVal(val) : (val === "" ? "" : Number(val)) }),
     }),
   }));
 
@@ -215,7 +215,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const fmt = (sec) => `${Math.floor((sec || 0) / 60)}:${String((sec || 0) % 60).padStart(2, "0")}`;
 
   const volume = session.exercises.reduce((v, e) => e.mode === "time" ? v :
-    v + e.sets.filter((s) => s.done && !s.warmup).reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0), 0);
+    v + e.sets.filter((s) => s.done && !s.warmup).reduce((a, s) => a + (Number(s.w) || 0) * repsNum(s.r), 0), 0);
   const cardioSec = session.exercises.reduce((v, e) => e.mode !== "time" ? v :
     v + e.sets.reduce((a, s) => a + (s.elapsed || 0), 0), 0);
   const totalSets = session.exercises.reduce((a, e) => a + e.sets.length, 0);
@@ -506,7 +506,8 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                   </button>
                   <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w} readOnly={locked}
                     onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px", opacity: locked ? .6 : 1 }} />
-                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r} readOnly={locked}
+                  <input className="hud-input cham-s" type="text" inputMode="decimal" value={s.r} readOnly={locked}
+                    title={tr("Puoi usare un intervallo, es. 8-10")}
                     onChange={(e) => updateSet(ei, si, "r", e.target.value)} style={{ textAlign: "center", padding: "8px 4px", opacity: locked ? .6 : 1 }} />
                   <button onClick={() => toggleSet(ei, si)} className={`check-btn cham-s tap ${s.done ? "check-on" : ""}`}>
                     <Check size={15} strokeWidth={3} />

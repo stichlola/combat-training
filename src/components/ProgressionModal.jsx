@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Plus, Trash2, TrendingUp } from "lucide-react";
 import { exMode } from "../lib/exercises";
 import { tr } from "../lib/i18n";
-import { currentWeek } from "../lib/progression";
+import { currentWeek, parseReps, repVal } from "../lib/progression";
 import { Btn, Overlay } from "../ui";
 
 /* ---------------- Modale settimane di un esercizio (solo editor scheda) ----------------
@@ -27,7 +27,7 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
   const curWeek = routineProg?.enabled ? Math.min(routineProg.week || 1, weeks.length) : null;
 
   const updateSet = (wi, si, field, val) => setWeeks((ws) =>
-    ws.map((w, i) => i !== wi ? w : { sets: w.sets.map((s, j) => j !== si ? s : { ...s, [field]: val === "" ? "" : Number(val) }) }));
+    ws.map((w, i) => i !== wi ? w : { sets: w.sets.map((s, j) => j !== si ? s : { ...s, [field]: field === "r" ? repVal(val) : (val === "" ? "" : Number(val)) }) }));
   const addWeek = () => setWeeks((ws) => [...ws, { sets: ws[ws.length - 1].sets.map((s) => ({ ...s })) }]);
   const removeWeek = (wi) => setWeeks((ws) => ws.length <= 1 ? ws : ws.filter((_, i) => i !== wi));
   /* singola serie dentro la settimana: si aggiunge clonando l'ultima,
@@ -44,10 +44,20 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
   const autoField = mode === undefined ? "w" : "sec"; // forza→kg, hold/time→sec (reps via pulsante dedicato)
   const autoFill = (field) => setWeeks((ws) => {
     const first = ws[0].sets;
+    const step = Number(inc) || 0;
     /* ogni settimana mantiene il proprio numero di serie: come base si usa la
-       stessa serie della settimana 1 quando esiste, altrimenti il valore proprio */
+       stessa serie della settimana 1 quando esiste, altrimenti il valore proprio.
+       Ripetizioni a intervallo ("8-10"): si alzano entrambi gli estremi */
     return ws.map((w, i) => ({
-      sets: w.sets.map((s, j) => ({ ...s, [field]: (Number((first[j] || s)[field]) || 0) + (Number(inc) || 0) * i })),
+      sets: w.sets.map((s, j) => {
+        const cur = (first[j] || s)[field];
+        if (field === "r") {
+          const p = parseReps(cur);
+          if (p && p.lo !== p.hi) return { ...s, r: `${Math.max(1, p.lo + step * i)}-${Math.max(1, p.hi + step * i)}` };
+          return { ...s, r: (p ? p.lo : 0) + step * i };
+        }
+        return { ...s, [field]: (Number(cur) || 0) + step * i };
+      }),
     }));
   });
 
@@ -116,8 +126,10 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
                         onChange={(e) => updateSet(wi, si, "w", e.target.value)}
                         style={{ textAlign: "center", padding: "6px 4px", width: 64 }} />
                       <span className="micro">{tr("KG")}</span>
-                      <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r}
+                      <input className="hud-input cham-s" type="text" inputMode="decimal" value={s.r}
+                        title={tr("Puoi usare un intervallo, es. 8-10")}
                         onChange={(e) => updateSet(wi, si, "r", e.target.value)}
+                        placeholder="8-10"
                         style={{ textAlign: "center", padding: "6px 4px", width: 64 }} />
                       <span className="micro">{tr("REPS")}</span>
                     </>

@@ -195,12 +195,39 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
     return ok;
   };
 
+  /* Salvataggio immediato della progressione dal modale 📈: fonde i piani
+     settimanali degli esercizi (ex.progression) e l'interruttore di scheda
+     sulla copia fresca del cliente — carichi e serie che ha nel frattempo
+     modificato lui non vengono toccati */
+  const quickSaveProgression = async (draft) => {
+    const fresh = (await getClientRoutines(client.client_id)) || [];
+    const idx = fresh.findIndex((r) => r.id === draft.id);
+    if (idx < 0) return false; // scheda nuova: serve il Salva normale
+    const src = fresh[idx];
+    const merged = {
+      ...src,
+      progression: draft.progression || src.progression,
+      exercises: (src.exercises || []).map((x, i) => {
+        const p = draft.exercises.find((e) => e.name === x.name) || draft.exercises[i];
+        return p && p.progression ? { ...x, progression: p.progression } : x;
+      }),
+    };
+    const next = fresh.map((r, i) => (i === idx ? merged : r));
+    const ok = await saveClientRoutines(client.client_id, next);
+    if (ok) {
+      setRoutines(next);
+      fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: tr("Il cliente la vede subito nella sua scheda") });
+    }
+    return ok;
+  };
+
   /* --- editor scheda (nuova o esistente) --- */
   if (editIdx !== null) return (
     <RoutineEditor premium={null} fireToast={fireToast} showScan={false} ptMode
       initial={editIdx >= 0 ? routines[editIdx] : null}
       onClose={() => setEditIdx(null)}
       onSavePt={savePtNotes}
+      onQuickSave={quickSaveProgression}
       onSave={(draft) => {
         setPending(editIdx >= 0 ? routines.map((r, i) => (i === editIdx ? draft : r)) : [...(routines || []), draft]);
         setEditIdx(null);

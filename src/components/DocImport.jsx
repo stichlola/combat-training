@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { FileText, Loader2, Upload } from "lucide-react";
 import { featHeaders, parseLoose, resizeImage } from "../lib/ai";
 import { ALL_EXERCISES, GROUPS, findGroup, matchToDb } from "../lib/exercises";
-import { todayISO } from "../lib/progression";
+import { todayISO, repImport } from "../lib/progression";
 import { tr } from "../lib/i18n";
 import { Btn, Panel } from "../ui";
 
@@ -90,7 +90,7 @@ PROGRESSIONE SETTIMANALE: se uno stesso allenamento è programmato su più setti
             : { name, group, note, isCustom: true, desc: "", img: "" }; // nuovo: descrizione e immagine editabili
           /* progressione settimanale rilevata nel documento: precompilata, attivazione manuale */
           const weeks = Array.isArray(e.weeks) && e.weeks.length > 1
-            ? e.weeks.map((w) => ({ sets: (w.sets || []).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 10 })) }))
+            ? e.weeks.map((w) => ({ sets: (w.sets || []).map((s) => ({ w: Number(s.w) || 0, r: repImport(s.r, 10) })) }))
                 .filter((w) => w.sets.length)
             : null;
           if (weeks && weeks.length > 1) base.progression = { weeks };
@@ -100,7 +100,7 @@ PROGRESSIONE SETTIMANALE: se uno stesso allenamento è programmato su più setti
           };
           return {
             ...base,
-            sets: (e.sets || []).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 10, done: false })),
+            sets: (e.sets || []).map((s) => ({ w: Number(s.w) || 0, r: repImport(s.r, 10), done: false })),
           };
           }).filter((e) => e.sets.length),
         };

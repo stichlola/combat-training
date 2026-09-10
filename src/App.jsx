@@ -17,7 +17,7 @@ import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
 import { captureInviteHash, captureRefHash, clearInvite, clearRef, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, pendingInviteName, pendingRef, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
 import { SHOP_META, EMERALD_MODE, CRIMSON_MODE, buildPackRoutines } from "./lib/shopContent";
 import { dlStart } from "./lib/dnd";
-import { applyProgression, todayISO, currentWeek, progTotal, syncProgression } from "./lib/progression";
+import { applyProgression, todayISO, currentWeek, progTotal, syncProgression, repsNum, REP_RANGE } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb, exMode } from "./lib/exercises";
 import { ACHIEVEMENTS, BASE_FACTS, DEFAULT_PRS, DEFAULT_ROUTINES, EMPTY_STATS, LEVEL_TITLES, QUEST_METRICS, QUEST_POOL_DAILY, QUEST_POOL_WEEKLY, dayKey, freshQuests, weekKey, xpForLevel } from "./lib/game";
 import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
@@ -1698,7 +1698,7 @@ DECIDI TU TUTTO: il numero di settimane ideale (da 3 a 6) e come aumentare (cari
 REGOLE: settimana 1 = carichi attuali; incrementi realistici e sicuri (+2,5-5% carico o +1-2 ripetizioni a settimana; +5-10s per le tenute; +1-2 min per il cardio); numero di serie invariato; ultima settimana la piu impegnativa ma sostenibile.
 Rispondi SOLO con JSON valido, senza markdown né backtick:
 {"weeks":[{"week":1,"exercises":[{"name":"NOME ESATTO come sopra","sets":[{"w":number,"r":number}]}]}]}
-Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}.` }],
+Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}. Per le ripetizioni puoi indicare un intervallo (doppia progressione) come stringa "8-10".` }],
       }, "progression");
       if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
         setProgBusy(null); setProgSetupId(null);
@@ -1721,7 +1721,14 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
             const st = src[Math.min(si, src.length - 1)] || {};
             if (mode === "hold") return { sec: Math.max(5, Math.min(600, Number(st.sec ?? base.sec) || 60)), elapsed: 0, done: false };
             if (mode === "time") return { sec: Math.max(60, Number(st.sec ?? base.sec) || 600), dist: String(st.dist ?? base.dist ?? ""), elapsed: 0, done: false };
-            return { w: Math.max(0, Number(st.w ?? base.w) || 0), r: Math.max(1, Math.min(50, Number(st.r ?? base.r) || 8)), done: false };
+            /* ripetizioni: numero singolo oppure intervallo "8-10" (doppia progressione) */
+            const rm = REP_RANGE.exec(String(st.r ?? ""));
+            return {
+              w: Math.max(0, Number(st.w ?? base.w) || 0),
+              r: rm ? `${Math.max(1, Math.min(50, +rm[1]))}-${Math.max(1, Math.min(50, +rm[2]))}`
+                    : Math.max(1, Math.min(50, Number(st.r ?? base.r) || 8)),
+              done: false,
+            };
           });
           return { sets };
         });
@@ -1750,6 +1757,12 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
   if (view === "builder") {
     const initial = editId != null ? routines.find((r) => r.id === editId) : null;
     return <RoutineEditor premium={premium} fireToast={fireToast} initial={initial} onClose={() => { setView("home"); setEditId(null); }}
+      onQuickSave={initial ? (d) => {
+        /* salvataggio immediato dal modale progressione 📈: TUTTA la scheda subito
+           (l'autosave la manda su Supabase) — niente secondo "Salva" dell'editor */
+        setRoutines((rs) => rs.map((x) => (x.id === d.id ? { ...d, name: d.name.toUpperCase() } : x)));
+        fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: tr("Tutta la scheda è stata salvata subito") });
+      } : null}
       onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
   }
   /* Import e generazione AI AGGIUNGONO sempre una scheda nuova: mai
@@ -1993,7 +2006,7 @@ function WorkoutReport({ rec, onClose }) {
   const bestOf = (ex) => {
     if (ex.mode === "time") return null;
     let best = -1, idx = -1;
-    ex.sets.forEach((s, i) => { const v = (s.w || 0) * (s.r || 0); if (s.done && v > best) { best = v; idx = i; } });
+    ex.sets.forEach((s, i) => { const v = (Number(s.w) || 0) * repsNum(s.r); if (s.done && v > best) { best = v; idx = i; } });
     return idx;
   };
   return (

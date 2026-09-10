@@ -6,7 +6,7 @@ import { ExercisePickerModal } from "./ExercisePicker";
 import { MachineScan } from "./MachineScan";
 import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
-import { todayISO } from "../lib/progression";
+import { todayISO, repVal } from "../lib/progression";
 import { exMode, holdSets, isDumbbell, isHold, EXERCISE_DB, GROUPS, ALL_EXERCISES, findGroup, matchToDb } from "../lib/exercises";
 import { aiCall, parseLoose } from "../lib/ai";
 import { tr } from "../lib/i18n";
@@ -15,7 +15,7 @@ import { Btn, Overlay, Panel } from "../ui";
 /* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ----------------
    ptMode: lo usa il personal trainer sulle schede del cliente — sblocca per ogni
    esercizio la sezione arancione "note PT" (note mirate + video esecuzione). */
-export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, onSavePt = null, showScan = true, ptMode = false }) {
+export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, onSavePt = null, onQuickSave = null, showScan = true, ptMode = false }) {
   const [draft, setDraft] = useState(() => initial
     ? JSON.parse(JSON.stringify(initial))
     : { id: Date.now(), name: "", exercises: [] });
@@ -94,7 +94,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
   const updateSet = (ei, si, field, val) => upd((d) => ({
     ...d,
     exercises: d.exercises.map((e, i) => i !== ei ? e : {
-      ...e, sets: e.sets.map((s, j) => j !== si ? s : { ...s, [field]: val === "" ? "" : Number(val) }),
+      ...e, sets: e.sets.map((s, j) => j !== si ? s : { ...s, [field]: field === "r" ? repVal(val) : (val === "" ? "" : Number(val)) }),
     }),
   }));
 
@@ -239,7 +239,15 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       {progIdx != null && draft.exercises[progIdx] && (
         <ProgressionModal ex={draft.exercises[progIdx]} routineProg={draft.progression}
-          onSave={(p) => { upd((d) => ({ ...d, exercises: d.exercises.map((e, i) => i !== progIdx ? e : { ...e, progression: p }) })); setProgIdx(null); }}
+          onSave={(p) => {
+            /* salva SUBITO tutta la scheda, non solo la bozza aperta: lato utente
+               aggiorna lo stato (autosave cloud), lato PT fonde il piano sul DB
+               del cliente — non serve più premere anche il "Salva" dell'editor */
+            const newDraft = { ...draft, exercises: draft.exercises.map((e, i) => i !== progIdx ? e : { ...e, progression: p }) };
+            setDraft(newDraft);
+            setProgIdx(null);
+            if (onQuickSave) onQuickSave(newDraft);
+          }}
           onClose={() => setProgIdx(null)} />
       )}
       {setMenu && (
@@ -426,7 +434,8 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                     onChange={(e) => updateSet(ei, si, "w", e.target.value)}
                     style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
                   <span className="micro">{tr("KG")}</span>
-                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.r}
+                  <input className="hud-input cham-s" type="text" inputMode="decimal" value={s.r}
+                    title={tr("Puoi usare un intervallo, es. 8-10")}
                     onChange={(e) => updateSet(ei, si, "r", e.target.value)}
                     style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
                   <span className="micro">{tr("REPS")}</span>
