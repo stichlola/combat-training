@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check, Camera } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
@@ -8,7 +8,7 @@ import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
 import { todayISO, repVal } from "../lib/progression";
 import { exMode, holdSets, isDumbbell, isHold, EXERCISE_DB, GROUPS, ALL_EXERCISES, findGroup, matchToDb } from "../lib/exercises";
-import { aiCall, parseLoose } from "../lib/ai";
+import { aiCall, parseLoose, resizeImage } from "../lib/ai";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
 
@@ -31,9 +31,49 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
   const [sugList, setSugList] = useState(null);   // [{ name, group, why, on }]
   const [sugErr, setSugErr] = useState(null);
   const [ptBusy, setPtBusy] = useState(false);    // salvataggio immediato delle note PT in corso
+  const [ptScanBusy, setPtScanBusy] = useState(null); // indice esercizio in analisi AI (foto)
+  const [ptScanIdx, setPtScanIdx] = useState(null);   // esercizio a cui si riferisce la foto
+  const ptCamRef = useRef(null);
 
   const upd = (fn) => setDraft((d) => fn(d));
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
+
+  /* Fotocamera AI nelle note PT (tutti i PT: lato server i trainer hanno le
+     funzioni premium sbloccate): il PT fotografa il cliente che esegue
+     l'esercizio, l'AI scrive la nota tecnica (errori, attenzioni, consigli).
+     La nota si AGGIUNGE a quella già presente: il PT rilegge e poi salva. */
+  const analyzePtPhoto = async (f, ei) => {
+    const ex = draft.exercises[ei];
+    if (!ex) return;
+    setPtScanBusy(ei);
+    try {
+      const { b64, type } = await resizeImage(f, 1024);
+      const data = await aiCall({
+        model: "claude-sonnet-5", max_tokens: 600,
+        messages: [{ role: "user", content: [
+          { type: "image", source: { type: "base64", media_type: type, data: b64 } },
+          { type: "text", text: `Sei un personal trainer esperto. Nella foto un cliente sta eseguendo (o si appresta a eseguire) l'esercizio "${ex.name}" (gruppo: ${ex.group || "—"}).
+Osserva postura, assetto, presa e setup visibili. Scrivi una NOTA TECNICA BREVE per il cliente (3-5 punti secchi): cosa correggere, a cosa prestare attenzione, un consiglio di esecuzione. Tono diretto e pratico, in italiano, senza preamboli né titoli.
+Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile, rispondi SOLO: FOTO_NON_VALIDA` },
+        ] }],
+      }, "scan");
+      if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
+        fireToast({ title: tr("Limite scansioni raggiunto"), sub: tr("Si azzera all'inizio della settimana") });
+        return;
+      }
+      if (data && data.error) throw new Error("API");
+      const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+      if (!text || text.includes("FOTO_NON_VALIDA")) {
+        fireToast({ title: tr("Foto non utilizzabile"), sub: tr("Inquadra il cliente mentre esegue l'esercizio") });
+        return;
+      }
+      upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptNote: x.ptNote ? `${x.ptNote}\n${text}` : text }) }));
+      fireToast({ title: tr("◈ NOTA AI INSERITA"), sub: tr("Rileggila e premi «Salva note»") });
+    } catch (e) {
+      fireToast({ title: tr("Analisi non riuscita"), sub: tr("Riprova con una foto più chiara") });
+    }
+    setPtScanBusy(null);
+  };
 
   /* Marca la serie come riscaldamento (W) o normale */
   const toggleWarmup = (ei, si) => upd((d) => ({
@@ -378,24 +418,34 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                   <input className="hud-input cham-s" value={ex.ptVideo || ""}
                     onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptVideo: e.target.value }) }))}
                     placeholder="https://youtube.com/watch?v=..." style={{ fontSize: 12, padding: "6px 8px" }} />
-                  {/* Salva SUBITO solo note/video PT: niente "Salva" della scheda né
-                      conferma di sovrascrittura — fonde i campi PT sulla copia fresca del cliente */}
-                  {onSavePt && (
-                    <Btn small pt disabled={ptBusy} style={{ marginTop: 10, width: "100%" }}
-                      title={tr("Salva subito note e video sul profilo del cliente, senza chiudere la scheda")}
-                      onClick={async () => {
-                        setPtBusy(true);
-                        const ok = await onSavePt(draft);
-                        setPtBusy(false);
-                        fireToast(ok
-                          ? { title: tr("◈ NOTE PT SALVATE"), sub: tr("Il cliente le vede subito nella sua scheda") }
-                          : { title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") });
-                      }}>
-                      {ptBusy
+                  <div className="row g8" style={{ marginTop: 10 }}>
+                    {/* fotocamera AI: foto del cliente che esegue → nota tecnica bozza */}
+                    <Btn small ai disabled={ptScanBusy === ei} style={{ flex: 1 }}
+                      title={tr("Fotografa il cliente mentre esegue: l'AI scrive la nota tecnica")}
+                      onClick={() => { setPtScanIdx(ei); ptCamRef.current && ptCamRef.current.click(); }}>
+                      {ptScanBusy === ei
                         ? <Loader2 size={12} className="spin" />
-                        : <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} />} {ptBusy ? tr("Salvataggio...") : tr("Salva note")}
+                        : <Camera size={12} style={{ display: "inline", verticalAlign: -2 }} />} {ptScanBusy === ei ? tr("Analisi...") : tr("Foto AI")}
                     </Btn>
-                  )}
+                    {/* Salva SUBITO solo note/video PT: niente "Salva" della scheda né
+                        conferma di sovrascrittura — fonde i campi PT sulla copia fresca del cliente */}
+                    {onSavePt && (
+                      <Btn small pt disabled={ptBusy} style={{ flex: 1 }}
+                        title={tr("Salva subito note e video sul profilo del cliente, senza chiudere la scheda")}
+                        onClick={async () => {
+                          setPtBusy(true);
+                          const ok = await onSavePt(draft);
+                          setPtBusy(false);
+                          fireToast(ok
+                            ? { title: tr("◈ NOTE PT SALVATE"), sub: tr("Il cliente le vede subito nella sua scheda") }
+                            : { title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") });
+                        }}>
+                        {ptBusy
+                          ? <Loader2 size={12} className="spin" />
+                          : <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} />} {ptBusy ? tr("Salvataggio...") : tr("Salva note")}
+                      </Btn>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -460,6 +510,14 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
         <Sparkles size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Suggerisci esercizi AI")}
       </Btn>
+      {/* input fotocamera nascosto per l'analisi AI delle note PT */}
+      <input ref={ptCamRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+        onChange={(e) => {
+          const f = e.target.files && e.target.files[0];
+          const ei = ptScanIdx;
+          e.target.value = "";
+          if (f && ei != null) analyzePtPhoto(f, ei);
+        }} />
       {showPicker && (
         <ExercisePickerModal
           activeNames={draft.exercises.map((e) => e.name)}
