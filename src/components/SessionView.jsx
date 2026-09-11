@@ -427,6 +427,14 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                 {tr("Conferma eliminazione")}</button>
             ) : (
               <div className="row" style={{ gap: 14, flexShrink: 0, paddingTop: 4, marginLeft: "auto" }}>
+                {/* 📈 piano settimanale di QUESTO esercizio: in alto a destra,
+                    accanto a cambio/elimina; accessibile anche a modifiche bloccate */}
+                {ex.progression?.weeks?.length > 0 && (
+                  <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
+                    title={tr("Vedi e modifica la progressione di questo esercizio")}
+                    style={{ cursor: "pointer", color: "#ffd76a" }}>
+                    <TrendingUp size={16} /></span>
+                )}
                 {!locked && (
                   <>
                     <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }}
@@ -455,13 +463,6 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                 title={`${tr("SETTIMANA")} ${ex.progWeek}${ex.progTotal ? `/${ex.progTotal}` : ""} — ${tr("Progressione settimanale attiva")}`}>
                 SETT. {ex.progWeek}{ex.progTotal ? `/${ex.progTotal}` : ""}
               </span>
-            )}
-            {/* vedi/modifica il piano settimanale di QUESTO esercizio */}
-            {ex.progression?.weeks?.length > 0 && (
-              <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
-                title={tr("Vedi e modifica la progressione di questo esercizio")}
-                style={{ cursor: "pointer", color: "#ffd76a", display: "inline-flex", alignItems: "center" }}>
-                <TrendingUp size={13} /></span>
             )}
             {/* recupero: sempre ancorato a destra nella riga */}
             <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
