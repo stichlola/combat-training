@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen } from "lucide-react";
+import { Plus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen, TrendingUp } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
+import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
 import { FloatingTimer } from "./FloatingTimer";
 import { MachineScan } from "./MachineScan";
@@ -23,6 +24,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi (aggiungi/sostituisci)
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
+  const [progIdx, setProgIdx] = useState(null); // esercizio con piano settimanale aperto (📈)
   const [confirmExDel, setConfirmExDel] = useState(null); // eliminazione esercizio in attesa di conferma
   /* Blocco modifiche: solo spunta serie + timer. Parte ATTIVO di default e
      ricorda l'ultima scelta (globale, vale per ogni allenamento in corso). */
@@ -267,6 +269,23 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   return (
     <div className="fade-in stack" style={{ maxWidth: 640, paddingBottom: 70 }}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
+      {/* 📈 piano settimanale del SOLO esercizio: si vede e si modifica anche
+          durante la sessione; il salvataggio aggiorna subito la scheda (autosave
+          cloud), le serie già caricate in questa sessione restano invariate */}
+      {progIdx != null && session.exercises[progIdx] && (
+        <ProgressionModal ex={session.exercises[progIdx]}
+          routineProg={(routines || []).find((r) => r.id === session.routineId)?.progression}
+          onClose={() => setProgIdx(null)}
+          onSave={(p) => {
+            const exName = session.exercises[progIdx].name;
+            setRoutines((rs) => rs.map((r) => r.id !== session.routineId ? r : {
+              ...r, exercises: r.exercises.map((x) => x.name === exName ? { ...x, progression: p } : x),
+            }));
+            upd((s) => ({ ...s, exercises: s.exercises.map((x, i) => i !== progIdx ? x : { ...x, progression: p, progTotal: p.weeks?.length || x.progTotal }) }));
+            setProgIdx(null);
+            fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: tr("Le serie di questa sessione non cambiano") });
+          }} />
+      )}
       {setMenu && (
         <SetMenu isTime={["time", "hold"].includes(exMode(session.exercises[setMenu.ei]))}
           warmup={!!session.exercises[setMenu.ei].sets[setMenu.si].warmup}
@@ -371,6 +390,18 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             <div className="micro">{tr("DURATA")}</div>
           </div>
         </div>
+        {/* settimana di progressione in EVIDENZA nella parte alta */}
+        {session.exercises.some((e) => e.progWeek) && (() => {
+          const p = session.exercises.find((e) => e.progWeek);
+          return (
+            <div className="row" style={{ justifyContent: "center", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,215,106,.25)" }}>
+              <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", fontWeight: 700, fontSize: 11, letterSpacing: ".12em", padding: "5px 12px" }}>
+                <TrendingUp size={11} style={{ display: "inline", verticalAlign: -1, marginRight: 4 }} />
+                {tr("SETTIMANA")} {p.progWeek}{p.progTotal ? `/${p.progTotal}` : ""} · {tr("PROGRESSIONE ATTIVA")}
+              </span>
+            </div>
+          );
+        })()}
       </Panel>
       </div>
 
@@ -424,6 +455,13 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                 title={`${tr("SETTIMANA")} ${ex.progWeek}${ex.progTotal ? `/${ex.progTotal}` : ""} — ${tr("Progressione settimanale attiva")}`}>
                 SETT. {ex.progWeek}{ex.progTotal ? `/${ex.progTotal}` : ""}
               </span>
+            )}
+            {/* vedi/modifica il piano settimanale di QUESTO esercizio */}
+            {ex.progression?.weeks?.length > 0 && (
+              <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
+                title={tr("Vedi e modifica la progressione di questo esercizio")}
+                style={{ cursor: "pointer", color: "#ffd76a", display: "inline-flex", alignItems: "center" }}>
+                <TrendingUp size={13} /></span>
             )}
             {/* recupero: sempre ancorato a destra nella riga */}
             <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
