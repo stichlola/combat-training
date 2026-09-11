@@ -1,12 +1,12 @@
 import React, { useState, useRef } from "react";
-import { Plus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check, Camera } from "lucide-react";
+import { Plus, Minus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check, Camera } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
 import { MachineScan } from "./MachineScan";
 import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
-import { todayISO, repVal } from "../lib/progression";
+import { todayISO, repVal, progTotal, currentWeek } from "../lib/progression";
 import { exMode, holdSets, isDumbbell, isHold, EXERCISE_DB, GROUPS, ALL_EXERCISES, findGroup, matchToDb } from "../lib/exercises";
 import { aiCall, parseLoose, resizeImage } from "../lib/ai";
 import { tr } from "../lib/i18n";
@@ -15,7 +15,7 @@ import { Btn, Overlay, Panel } from "../ui";
 /* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ----------------
    ptMode: lo usa il personal trainer sulle schede del cliente — sblocca per ogni
    esercizio la sezione arancione "note PT" (note mirate + video esecuzione). */
-export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, onSavePt = null, onQuickSave = null, showScan = true, ptMode = false }) {
+export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, onSavePt = null, onQuickSave = null, onAIProgression = null, showScan = true, ptMode = false }) {
   const [draft, setDraft] = useState(() => initial
     ? JSON.parse(JSON.stringify(initial))
     : { id: Date.now(), name: "", exercises: [] });
@@ -36,6 +36,81 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
   const ptCamRef = useRef(null);
 
   const upd = (fn) => setDraft((d) => fn(d));
+
+  /* ── Progressione settimanale: TUTTA la gestione è qui dentro (prima era in
+     un modale sulla scheda principale). I cambiamenti strutturali aggiornano la
+     bozza e, per le schede esistenti, si salvano SUBITO via onQuickSave (che
+     salva solo la progressione); per le schede nuove valgono al Salva globale ── */
+  const [progWeeksN, setProgWeeksN] = useState(() =>
+    Math.max(2, Math.min(8, initial?.progression?.enabled ? progTotal(initial) : 4)));
+  const [progBusy, setProgBusy] = useState(false);   // AI al lavoro
+  const [confirmProgOff, setConfirmProgOff] = useState(false);
+  const clampW = (n) => Math.max(2, Math.min(8, n));
+  const emptySetsFor = (ex) => {
+    const mode = exMode(ex);
+    return ex.sets.map((st) => {
+      const base = { ...st, done: false, elapsed: 0 };
+      if (mode === "time") return { ...base, sec: "", dist: "" };
+      if (mode === "hold") return { ...base, sec: "" };
+      return { ...base, w: "", r: "" };
+    });
+  };
+  const applyProg = (fn) => {
+    const nd = fn(draft);
+    upd(() => nd);
+    if (onQuickSave) onQuickSave(nd);
+  };
+  const activateProg = () => {
+    const n = clampW(progWeeksN);
+    applyProg((d) => ({
+      ...d,
+      progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
+      exercises: d.exercises.map((e) => ({ ...e, progression: { weeks: Array.from({ length: n }, () => ({ sets: emptySetsFor(e) })) } })),
+    }));
+    fireToast({ title: tr("◈ PROGRESSIONE ATTIVA"), sub: `${tr("SETTIMANA")} 1/${n}` });
+  };
+  const disableProg = () => {
+    applyProg((d) => ({ ...d, progression: { ...d.progression, enabled: false } }));
+    setConfirmProgOff(false);
+    fireToast({ title: tr("◈ PROGRESSIONE DISATTIVATA"), sub: draft.name });
+  };
+  /* cambio numero settimane (pulsante Salva): allungando o rifacendo il ciclo
+     senza AI si riparte da zero con le settimane VUOTE; accorciando si
+     conservano le prime n */
+  const resizeProg = () => {
+    const nn = clampW(progWeeksN);
+    applyProg((d) => {
+      const restart = nn >= progTotal(d);
+      return {
+        ...d,
+        progression: { ...d.progression, week: restart ? 1 : Math.min(d.progression?.week || 1, nn) },
+        exercises: d.exercises.map((e) => {
+          const prev = e.progression?.weeks;
+          if (!prev?.length) return e;
+          const weeks = restart
+            ? Array.from({ length: nn }, () => ({ sets: emptySetsFor(e) }))
+            : prev.slice(0, nn).map((w) => ({ sets: w.sets.map((st) => ({ ...st, done: false, elapsed: 0 })) }));
+          return { ...e, progression: { ...e.progression, weeks } };
+        }),
+      };
+    });
+    fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: `${tr("SETTIMANA")} 1/${nn}` });
+  };
+  /* AI: decide da sola settimane e carichi (Premium o 1 credito). La chiamata,
+     i gate e i toast sono nel chiamante (App); qui si applica il risultato */
+  const runProgAI = async () => {
+    if (!onAIProgression || progBusy) return;
+    setProgBusy(true);
+    const res = await onAIProgression(draft);
+    setProgBusy(false);
+    if (!res || !res.exWeeks) return; // ospite/crediti: toast già mostrato
+    applyProg((d) => ({
+      ...d,
+      progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
+      exercises: d.exercises.map((e, i) => ({ ...e, progression: { weeks: res.exWeeks[i] || [] } })),
+    }));
+    fireToast({ title: res.aiDone ? tr("◈ PROGRESSIONE AI GENERATA") : tr("◈ PROGRESSIONE ATTIVA"), sub: `${tr("SETTIMANA")} 1/${res.total}` });
+  };
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
 
   /* Fotocamera AI nelle note PT (tutti i PT: lato server i trainer hanno le
@@ -306,39 +381,120 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
       <input className="hud-input cham-s" value={draft.name}
         onChange={(e) => upd((d) => ({ ...d, name: e.target.value }))} placeholder={tr("Nome scheda (es. LEG DAY)")} />
 
-      {/* Progressione settimanale: interruttore e inizio valgono per TUTTA la scheda;
-          le settimane dei singoli esercizi si gestiscono dall'icona 📈 su ogni card */}
+      {/* Progressione settimanale: gestione completa dentro la modifica scheda
+          (attivazione, numero settimane col Salva, AI, disattivazione). I valori
+          delle settimane si compilano esercizio per esercizio dall'icona 📈 */}
       <div className="cham-s" style={{
         padding: "10px 12px", marginBottom: 14,
         background: draft.progression?.enabled ? "rgba(255,215,106,.08)" : "var(--card2)",
         border: `1px solid ${draft.progression?.enabled ? "#ffd76a" : "var(--soft)"}`,
       }}>
-        <button onClick={() => upd((d) => ({ ...d, progression: { enabled: !d.progression?.enabled, startDate: d.progression?.startDate || todayISO() } }))}
-          className="tap" style={{ width: "100%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", padding: 0 }}>
-          <span className={`f-hud ${draft.progression?.enabled ? "t-amber" : "t-dim"}`} style={{ fontWeight: 700, fontSize: 12, letterSpacing: ".12em" }}>
-            <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {draft.progression?.enabled ? tr("▸ PROGRESSIONE ATTIVA") : tr("▸ PROGRESSIONE DISATTIVATA")}
-          </span>
-          <span style={{
-            width: 38, height: 20, borderRadius: 10, position: "relative", flexShrink: 0,
-            background: draft.progression?.enabled ? "#ffd76a" : "var(--soft2)", transition: "background .2s",
-          }}>
-            <span style={{
-              position: "absolute", top: 2, left: draft.progression?.enabled ? 20 : 2, width: 16, height: 16,
-              borderRadius: "50%", background: draft.progression?.enabled ? "var(--bg)" : "#5d87a3", transition: "left .2s",
-            }} />
-          </span>
-        </button>
-        {draft.progression?.enabled && (
-          <div className="row g8" style={{ marginTop: 10, alignItems: "center" }}>
-            <span className="micro" style={{ flexShrink: 0 }}>{tr("INIZIO SETTIMANA 1")}</span>
-            <input type="date" className="hud-input cham-s" value={draft.progression.startDate}
-              onChange={(e) => upd((d) => ({ ...d, progression: { ...d.progression, startDate: e.target.value } }))}
-              style={{ padding: "6px 8px", fontSize: 12 }} />
-          </div>
+        {draft.progression?.enabled ? (
+          <>
+            <div className="row between" style={{ alignItems: "center" }}>
+              <span className="f-hud t-amber" style={{ fontWeight: 700, fontSize: 12, letterSpacing: ".12em" }}>
+                <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("▸ PROGRESSIONE ATTIVA")}
+              </span>
+              <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", flexShrink: 0 }}>
+                {tr("SETTIMANA")} {currentWeek(draft.progression, progTotal(draft))}/{progTotal(draft)}
+              </span>
+            </div>
+            <div className="row g8" style={{ marginTop: 10, alignItems: "center" }}>
+              <span className="micro" style={{ flexShrink: 0 }}>{tr("INIZIO SETTIMANA 1")}</span>
+              <input type="date" className="hud-input cham-s" value={draft.progression.startDate || todayISO()}
+                onChange={(e) => applyProg((d) => ({ ...d, progression: { ...d.progression, startDate: e.target.value } }))}
+                style={{ padding: "6px 8px", fontSize: 12 }} />
+            </div>
+            <div className="hud-label" style={{ margin: "12px 0 8px" }}>{tr("NUMERO DI SETTIMANE")}</div>
+            <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
+              <Btn small disabled={progBusy || progWeeksN <= 2} style={{ padding: "8px 12px" }}
+                onClick={() => setProgWeeksN((w) => clampW(w - 1))}>
+                <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+              </Btn>
+              <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
+                {progWeeksN}
+              </div>
+              <Btn small disabled={progBusy || progWeeksN >= 8} style={{ padding: "8px 12px" }}
+                onClick={() => setProgWeeksN((w) => clampW(w + 1))}>
+                <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+              </Btn>
+            </div>
+            <div className="tiny t-faint" style={{ marginBottom: 10, lineHeight: 1.5 }}>
+              {tr("Cambia il numero e premi Salva: il ciclo riparte dalla settimana 1 con le settimane vuote, da compilare a mano o con l'AI.")}
+            </div>
+            <div className="row g8" style={{ marginTop: 4 }}>
+              {confirmProgOff ? (
+                <Btn small onClick={disableProg} style={{ flex: 1.2, borderColor: "var(--line2)", color: "var(--dim)" }}>
+                  {tr("Conferma: disattiva")}
+                </Btn>
+              ) : (
+                <Btn small onClick={() => setConfirmProgOff(true)} style={{ flex: 1.2 }}>{tr("Disattiva")}</Btn>
+              )}
+              <Btn small primary disabled={progBusy} onClick={resizeProg} style={{ flex: 2 }}>{tr("Salva")}</Btn>
+            </div>
+            {onAIProgression && (
+              <>
+                <div className="row" style={{ alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
+                  <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+                  <span className="micro t-faint">{tr("OPPURE")}</span>
+                  <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+                </div>
+                <Btn ai full onClick={runProgAI} disabled={progBusy}>
+                  {progBusy
+                    ? <><Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Generazione...")}</>
+                    : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Ricalcola con l'AI")}</>}
+                </Btn>
+                <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.5, textAlign: "center" }}>
+                  {tr("L'AI decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
+                </div>
+              </>
+            )}
+            <div className="micro t-faint" style={{ marginTop: 10, lineHeight: 1.5 }}>
+              {tr("I carichi delle settimane si compilano esercizio per esercizio dall'icona 📈: la scheda userà i valori della settimana corrente.")}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="f-hud t-dim" style={{ fontWeight: 700, fontSize: 12, letterSpacing: ".12em", marginBottom: 10 }}>
+              <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("PROGRESSIONE SETTIMANALE")}
+            </div>
+            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("NUMERO DI SETTIMANE")}</div>
+            <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
+              <Btn small onClick={() => setProgWeeksN((w) => clampW(w - 1))} disabled={progWeeksN <= 2} style={{ padding: "8px 12px" }}>
+                <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+              </Btn>
+              <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
+                {progWeeksN}
+              </div>
+              <Btn small onClick={() => setProgWeeksN((w) => clampW(w + 1))} disabled={progWeeksN >= 8} style={{ padding: "8px 12px" }}>
+                <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+              </Btn>
+            </div>
+            <div className="tiny t-faint" style={{ marginBottom: 14, lineHeight: 1.5 }}>
+              {tr("Le settimane partono vuote: poi tu o il PT inserite pesi e ripetizioni esercizio per esercizio (modifica scheda → 📈). Con l'AI i valori si compilano da soli.")}
+            </div>
+            <Btn primary full disabled={progBusy || !draft.exercises.length} onClick={activateProg}>
+              {tr("Attiva progressione")}
+            </Btn>
+            {onAIProgression && (
+              <>
+                <div className="row" style={{ alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
+                  <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+                  <span className="micro t-faint">{tr("OPPURE")}</span>
+                  <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+                </div>
+                <Btn ai full onClick={runProgAI} disabled={progBusy || !draft.exercises.length}>
+                  {progBusy
+                    ? <><Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Generazione...")}</>
+                    : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Calcola tutto con l'AI")}</>}
+                </Btn>
+                <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.5, textAlign: "center" }}>
+                  {tr("L'AI decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
+                </div>
+              </>
+            )}
+          </>
         )}
-        <div className="micro t-faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
-          {tr("Se attiva, aggiungi le settimane dall'icona 📈 su ogni esercizio: la scheda userà i valori della settimana corrente.")}
-        </div>
       </div>
 
       {/* Esercizi nel modello: card e serie trascinabili per riordinare, pulsante INFO visibile */}

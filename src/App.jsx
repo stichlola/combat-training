@@ -10,7 +10,6 @@ import { aiCall, featHeaders, parseLoose, resizeImage } from "./lib/ai";
 import { DocImport } from "./components/DocImport";
 import { ExerciseInfoModal } from "./components/ExerciseInfoModal";
 import { RoutineEditor } from "./components/RoutineEditor";
-import { ProgressionSetupModal } from "./components/ProgressionSetupModal";
 import { SessionView } from "./components/SessionView";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
@@ -1552,8 +1551,6 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [report, setReport] = useState(null);
   const [summaryId, setSummaryId] = useState(null);
-  const [progBusy, setProgBusy] = useState(null);    // id scheda in generazione AI
-  const [progSetupId, setProgSetupId] = useState(null); // id scheda con modale impostazioni progressione aperto
 
   /* Avanzamento settimane: la settimana sale solo se la scheda è stata
      completata E la settimana di calendario è cambiata */
@@ -1615,7 +1612,6 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
          Riattivando o ridimensionando una scheda che aveva già delle settimane,
          i valori impostati a mano si conservano: il numero viene solo accorciato
          o esteso copiando l'ultima settimana ─── */
-  const PROG_WEEKS = 4; // default proposto nel modale impostazioni
   const emptySets = (ex) => {
     const mode = exMode(ex);
     return ex.sets.map((st) => {
@@ -1628,60 +1624,14 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
   /* settimane SEMPRE vuote: i valori li inserisce a mano l'utente/PT oppure
      li compila l'AI — mai copiati dalle settimane precedenti */
   const flatWeeks = (ex, n) => Array.from({ length: n }, () => ({ sets: emptySets(ex) }));
-  /* aggiungi/togli settimane a progressione GIÀ ATTIVA, applicato SOLO dal
-     pulsante Salva del modale impostazioni. Allungando il ciclo o rifacendolo
-     (senza AI) si riparte da zero: TUTTE le settimane vuote e settimana 1.
-     Accorciando si conservano le prime nn settimane. */
-  const resizeProgression = (r, n) => {
-    const nn = Math.max(2, Math.min(8, n));
-    const restart = nn >= progTotal(r);
-    setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
-      ...x,
-      progression: { ...x.progression, week: restart ? 1 : Math.min(x.progression?.week || 1, nn) },
-      exercises: x.exercises.map((e) => {
-        const prev = e.progression?.weeks;
-        if (!prev?.length) return e;
-        const weeks = restart
-          ? Array.from({ length: nn }, () => ({ sets: emptySets(e) }))
-          : prev.slice(0, nn).map((w) => ({ sets: w.sets.map((st) => ({ ...st, done: false, elapsed: 0 })) }));
-        return { ...e, progression: { ...e.progression, weeks } };
-      }),
-    }));
-  };
-  const genProgression = (r, opts = {}) => {
-    const nWeeks = Math.max(2, Math.min(8, Number(opts.weeks) || PROG_WEEKS));
-    setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
-      ...x,
-      progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
-      exercises: x.exercises.map((e) => ({ ...e, progression: { weeks: flatWeeks(e, nWeeks) } })),
-    }));
-    setProgBusy(null); setProgSetupId(null);
-    fireToast({ title: tr("◈ PROGRESSIONE ATTIVA"), sub: `${tr("SETTIMANA")} 1/${nWeeks}` });
-  };
-
-  /* ─── Progressione AI: nessuna opzione, l'AI decide tutto da sola (numero di
-         settimane, carichi e ripetizioni) in base alla scheda e ai dati della
-         persona. Se l'AI non risponde: progressione base con settimane vuote.
-         Ospite → account ─── */
-  const genAIProgression = async (r) => {
+  /* ─── Progressione AI su richiesta dell'editor (pannello progressione dentro
+     la modifica scheda): ritorna { exWeeks, total, aiDone } — è il chiamante ad
+     applicarla alla bozza. null se ospite/crediti insufficienti (toast già
+     mostrato). Se l'AI non risponde: progressione base con settimane VUOTE ─── */
+  const askAIProgression = async (r) => {
     if (premium && premium.guest) {
-      setProgSetupId(null);
       return premium.needAccount ? premium.needAccount() : premium.open();
     }
-    const finish = (exWeeks, aiDone) => {
-      const total = exWeeks[0]?.length || 4;
-      setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : {
-        ...x,
-        progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
-        exercises: x.exercises.map((e, i) => ({ ...e, progression: { weeks: exWeeks[i] } })),
-      }));
-      setProgBusy(null); setProgSetupId(null);
-      fireToast({
-        title: aiDone ? tr("◈ PROGRESSIONE AI GENERATA") : tr("◈ PROGRESSIONE ATTIVA"),
-        sub: `${tr("SETTIMANA")} 1/${total}`,
-      });
-    };
-    setProgBusy(r.id);
     const exLine = (e) => {
       const mode = exMode(e);
       const pr = prs[e.name] ? ` (PR attuale: ${prs[e.name]} kg)` : "";
@@ -1703,9 +1653,9 @@ Rispondi SOLO con JSON valido, senza markdown né backtick:
 Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number (secondi),"dist":string}. Per le ripetizioni puoi indicare un intervallo (doppia progressione) come stringa "8-10".` }],
       }, "progression");
       if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
-        setProgBusy(null); setProgSetupId(null);
         if (premium) premium.open();
-        return fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento AI") });
+        fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento AI") });
+        return null;
       }
       if (data && data.error) throw new Error("API");
       const raw = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
@@ -1739,9 +1689,9 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
       /* AI non raggiungibile: si attiva comunque la progressione base, con le
          settimane VUOTE da compilare a mano (i valori li mette solo l'AI) */
       fireToast({ title: tr("AI non disponibile: progressione base attivata"), sub: tr("Settimane vuote: compilale tu o il PT") });
-      return finish(r.exercises.map((ex) => flatWeeks(ex, 4)), false);
+      return { exWeeks: r.exercises.map((ex) => flatWeeks(ex, 4)), total: 4, aiDone: false };
     }
-    finish(exWeeks, true);
+    return { exWeeks, total: exWeeks[0]?.length || 4, aiDone: true };
   };
 
   const abandonSession = () => {
@@ -1776,6 +1726,7 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
         }));
         fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: tr("Solo la progressione: il resto della scheda si salva con Salva") });
       } : null}
+      onAIProgression={askAIProgression}
       onSave={(r) => saveRoutine(r, initial ? "◈ MODELLO AGGIORNATO" : "◈ SCHEDA SALVATA")} />;
   }
   /* Import e generazione AI AGGIUNGONO sempre una scheda nuova: mai
@@ -1803,23 +1754,6 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
     <div className="fade-in two-col">
       {report && <WorkoutReport rec={report} onClose={() => setReport(null)} />}
       {summaryId && (() => { const r = routines.find((x) => x.id === summaryId); return r ? <RoutineSummaryModal routine={r} onClose={() => setSummaryId(null)} /> : null; })()}
-      {/* Impostazioni progressione: si aprono dal pulsante ↗ della scheda, sia
-          per attivarla sia (con anche "Disattiva") quando è già attiva */}
-      {progSetupId && (() => {
-        const r = routines.find((x) => x.id === progSetupId);
-        return r ? (
-          <ProgressionSetupModal routine={r} premium={premium} busy={progBusy === r.id}
-            onClose={() => setProgSetupId(null)}
-            onConfirm={(opts) => genProgression(r, opts)}
-            onResize={(n) => resizeProgression(r, n)}
-            onAI={() => genAIProgression(r)}
-            onDisable={() => {
-              setRoutines((rs) => rs.map((x) => x.id !== r.id ? x : { ...x, progression: { ...x.progression, enabled: false } }));
-              setProgSetupId(null);
-              fireToast({ title: tr("◈ PROGRESSIONE DISATTIVATA"), sub: r.name });
-            }} />
-        ) : null;
-      })()}
       {/* LEFT: routines */}
       <div className="col stack">
 
@@ -1937,14 +1871,6 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
                   <div className="row" style={{ gap: 18 }}>
                     <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title={tr("Modifica modello")}
                       style={{ color: "#5d87a3" }}><Pencil size={17} /></span>
-                    <span onClick={() => setProgSetupId(r.id)}
-                      className="tap icon-tap"
-                      title={r.progression?.enabled
-                        ? tr("Progressione attiva: gestisci o disattiva")
-                        : tr("Progressione manuale: scegli il numero di settimane")}
-                      style={{ color: r.progression?.enabled ? "#ffd76a" : "#5d87a3" }}>
-                      <TrendingUp size={17} />
-                    </span>
                     <span onClick={() => setSummaryId(r.id)} className="tap icon-tap" title={tr("Riepilogo scheda")}
                       style={{ color: "#5d87a3" }}><Info size={17} /></span>
                     <span onClick={() => setConfirmDel(r.id)} className="tap icon-tap" title={tr("Elimina")}

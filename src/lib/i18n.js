@@ -958,6 +958,7 @@ const EN_DESC = {
   "Aggiungi o togli settimane al volo: i carichi già impostati si conservano (allungando, la nuova settimana copia l'ultima).": "Add or remove weeks on the fly: the loads already set are kept (when extending, the new week copies the last one).",
   "Cambia il numero e premi Salva: il ciclo riparte dalla settimana 1 con le settimane vuote, da compilare a mano o con l'AI.": "Change the number and press Save: the cycle restarts from week 1 with empty weeks, to fill in by hand or with AI.",
   "Solo la progressione: il resto della scheda si salva con Salva": "Only the progression: the rest of the routine is saved with Save",
+  "I carichi delle settimane si compilano esercizio per esercizio dall'icona 📈: la scheda userà i valori della settimana corrente.": "Weekly loads are filled in per exercise from the 📈 icon: the routine will use the current week's values.",
   "AI non disponibile: progressione base attivata": "AI unavailable: base progression activated",
   "Settimane vuote: compilale tu o il PT": "Empty weeks: fill them in yourself or with your coach",
   "I carichi delle settimane si modificano dalla scheda (matita → 📈 su ogni esercizio).": "Week loads can be edited from the routine (pencil → 📈 on each exercise).",
