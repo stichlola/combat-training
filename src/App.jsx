@@ -1544,6 +1544,92 @@ function RoutineSummaryModal({ routine, onClose }) {
   );
 }
 
+function ProgressionEditModal({ routines, onSave, onClose }) {
+  const activeRoutines = routines.filter((r) => r.progression?.enabled);
+  const [weeksMap, setWeeksMap] = useState(() => {
+    const map = {};
+    activeRoutines.forEach((r) => {
+      map[r.id] = r.progression.week || 1;
+    });
+    return map;
+  });
+
+  const handleSave = () => {
+    onSave(weeksMap);
+    onClose();
+  };
+
+  return (
+    <Overlay>
+      <div className="modal-back" onClick={onClose}>
+        <div className="modal-box cham glow fade-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+          <div className="row between" style={{ marginBottom: 12 }}>
+            <span className="f-hud t-bright" style={{ fontSize: 17, letterSpacing: 2 }}>
+              <TrendingUp size={16} style={{ display: "inline", verticalAlign: -2, marginRight: 8, color: "var(--cyan)" }} />
+              {tr("MODIFICA SETTIMANA")}
+            </span>
+            <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
+          </div>
+          
+          <div className="tiny t-faint" style={{ marginBottom: 16, lineHeight: 1.5 }}>
+            {tr("Seleziona la settimana attiva per ciascuna delle tue schede in progressione. Le modifiche verranno applicate subito.")}
+          </div>
+
+          <div className="col" style={{ gap: 12, maxHeight: "55vh", overflowY: "auto", paddingRight: 4, marginBottom: 18 }}>
+            {activeRoutines.map((r) => {
+              const total = progTotal(r);
+              const currentWk = weeksMap[r.id];
+              
+              return (
+                <div key={r.id} className="soft-box cham-s" style={{ padding: "12px", background: "var(--card)", border: "1px solid var(--soft)" }}>
+                  <div className="row between" style={{ alignItems: "center", marginBottom: 8 }}>
+                    <span className="t-bright" style={{ fontWeight: 700, fontSize: 14 }}>{r.name}</span>
+                    <span className="micro t-faint">{tr("Totale")}: {total} {tr("settimane")}</span>
+                  </div>
+                  
+                  <div className="row g8" style={{ alignItems: "center" }}>
+                    <span className="micro t-faint" style={{ flexShrink: 0 }}>{tr("SETTIMANA CORRENTE")}:</span>
+                    <div className="row g4" style={{ flex: 1, flexWrap: "wrap" }}>
+                      {Array.from({ length: total }).map((_, i) => {
+                        const wkNum = i + 1;
+                        const active = currentWk === wkNum;
+                        return (
+                          <button
+                            key={wkNum}
+                            onClick={() => setWeeksMap((m) => ({ ...m, [r.id]: wkNum }))}
+                            className="tap cham-s f-hud"
+                            style={{
+                              padding: "6px 10px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              background: active ? "#ffd76a" : "rgba(255,255,255,.03)",
+                              color: active ? "#000" : "var(--bright)",
+                              border: `1px solid ${active ? "#ffd76a" : "var(--soft)"}`,
+                              transition: "all 0.1s"
+                            }}
+                          >
+                            {wkNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="row g8">
+            <Btn small onClick={onClose} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+            <Btn small primary onClick={handleSave} style={{ flex: 1 }}>{tr("Salva")}</Btn>
+          </div>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+
 function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
   const [view, setView] = useState("home");
   const [editId, setEditId] = useState(null);
@@ -1551,6 +1637,7 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [report, setReport] = useState(null);
   const [summaryId, setSummaryId] = useState(null);
+  const [editProgressionOpen, setEditProgressionOpen] = useState(false);
 
   /* Avanzamento settimane: la settimana viene incrementata immediatamente alla fine
      dell'allenamento (syncProgression funge da fallback per schede legacy con doneKey) */
@@ -1754,6 +1841,30 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
     <div className="fade-in two-col">
       {report && <WorkoutReport rec={report} onClose={() => setReport(null)} />}
       {summaryId && (() => { const r = routines.find((x) => x.id === summaryId); return r ? <RoutineSummaryModal routine={r} onClose={() => setSummaryId(null)} /> : null; })()}
+      {editProgressionOpen && (
+        <ProgressionEditModal
+          routines={routines}
+          onSave={(weeksMap) => {
+            setRoutines((rs) =>
+              rs.map((r) => {
+                if (r.progression?.enabled && weeksMap[r.id] !== undefined) {
+                  return {
+                    ...r,
+                    progression: {
+                      ...r.progression,
+                      week: weeksMap[r.id],
+                      doneKey: null
+                    }
+                  };
+                }
+                return r;
+              })
+            );
+            fireToast({ title: tr("◈ PROGRESSIONI AGGIORNATE"), sub: tr("Settimana modificata con successo") });
+          }}
+          onClose={() => setEditProgressionOpen(false)}
+        />
+      )}
       {/* LEFT: routines */}
       <div className="col stack">
 
@@ -1781,11 +1892,14 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
 
         {/* Banner progressioni: a che settimana è arrivata ogni scheda */}
         {routines.some((r) => r.progression?.enabled) && (
-          <Panel style={{ borderColor: "#ffd76a", background: "rgba(255,215,106,.05)" }}>
-            <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 12 }}>
-              <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("PROGRESSIONE SETTIMANALE")}
+          <Panel hover onClick={() => setEditProgressionOpen(true)} style={{ borderColor: "#ffd76a", background: "rgba(255,215,106,.05)", cursor: "pointer" }}>
+            <div className="row between" style={{ alignItems: "center" }}>
+              <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".18em", fontSize: 12 }}>
+                <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("PROGRESSIONE SETTIMANALE")}
+              </div>
+              <span className="micro t-amber tap" style={{ fontSize: 10, fontWeight: 700 }}>{tr("GESTISCI")} ✎</span>
             </div>
-            <div className="tiny t-faint" style={{ marginTop: 2 }}>{tr("La settimana avanza quando completi la scheda e cambia la settimana")}</div>
+            <div className="tiny t-faint" style={{ marginTop: 2 }}>{tr("La settimana avanza quando finisci un allenamento. Clicca qui per modificarla.")}</div>
             {routines.filter((r) => r.progression?.enabled).map((r) => {
               const total = progTotal(r);
               const wk = currentWeek(r.progression, total);
@@ -2706,18 +2820,16 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             {/* Condividi apre la scelta delle piattaforme (WhatsApp, Instagram…);
                 dove non supportata ricade sulla copia negli appunti */}
             <div className="row g8">
-              <input className="hud-input cham-s" readOnly value={`${location.origin}${location.pathname}#ref=${user.id}`}
-                onFocus={(e) => e.target.select()} style={{ flex: 1, fontSize: 11, minWidth: 0 }} />
               <Btn small primary onClick={async () => {
                 const link = `${location.origin}${location.pathname}#ref=${user.id}`;
                 const r = await shareLink(link, "Fit Training", tr("Unisciti a me su Fit Training: +10 crediti di benvenuto col mio link"));
                 if (r === "copied") fireToast({ title: tr("◈ LINK COPIATO") });
                 else if (r === "failed") fireToast({ title: tr("Copia non riuscita"), sub: link });
-              }}><Share2 size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Condividi")}</Btn>
+              }} style={{ flex: 1 }}><Share2 size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Condividi")}</Btn>
               <Btn small onClick={() => {
                 const link = `${location.origin}${location.pathname}#ref=${user.id}`;
                 try { navigator.clipboard.writeText(link); fireToast({ title: tr("◈ LINK COPIATO") }); } catch { fireToast({ title: tr("Copia non riuscita"), sub: link }); }
-              }}>{tr("Copia")}</Btn>
+              }} style={{ flex: 1 }}>{tr("Copia")}</Btn>
             </div>
             <div className="micro t-faint" style={{ marginTop: 8 }}>{tr("Amici iscritti col tuo link")}: <span className="t-cyan" style={{ fontWeight: 700 }}>{refCount}</span></div>
           </Panel>
@@ -3417,17 +3529,7 @@ function SourcePlanView({ plan, targets, body, picks, setPicks, onImport, onRege
 }
 
 function NutriSubTabs({ value, onChange }) {
-  return (
-    <div className="row g6">
-      {[["plan", tr("PASTI GIORNALIERI")], ["compose", tr("FONTI E COMPOSIZIONE")]].map(([k, l]) => (
-        <button key={k} onClick={() => onChange(k)}
-          className={`tap cham-s chip ${value === k ? "chip-on" : ""}`}
-          style={{ cursor: "pointer", flex: 1, textAlign: "center", padding: "8px 0", fontSize: 10 }}>
-          {l}
-        </button>
-      ))}
-    </div>
-  );
+  return null;
 }
 
 /* ---------------- Opzioni pasto: editor ---------------- */
@@ -3694,6 +3796,7 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
   const [prefs, setPrefs] = useState(nutri && nutri.prefs ? nutri.prefs : "");  // preferenze / digiuno intermittente
+  const [fasting, setFasting] = useState(nutri && nutri.fasting ? true : false); // digiuno intermittente
   const [importing, setImporting] = useState(false);
   const [regenOpen, setRegenOpen] = useState(false); // pagina rigenerazione: chiede le preferenze
   const [editMeal, setEditMeal] = useState(null);   // card pasto aperta per modifica
@@ -3707,6 +3810,10 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
     /* se i target sono stati modificati a mano, i pasti si rigenerano su QUELLI */
     const targets = useCurrentTargets && nutri ? nutri.targets : calcTargets(body, days, goal);
     let meals = null, sourcePlan = null;
+    let actualPrefs = prefs;
+    if (fasting) {
+      actualPrefs = (actualPrefs ? actualPrefs + "\n" : "") + "PROTOCOLLO DIGIUNO INTERMITTENTE 16/8: Salta completamente la colazione. La finestra di digiuno termina a pranzo. Genera solo pasti compatibili con il digiuno intermittente (Pranzo, Spuntino, Cena, o un eventuale post-workout tardivo), saltando interamente la Colazione.";
+    }
     try {
       const response = await fetch("/api/ai", {
         method: "POST",
@@ -3717,7 +3824,7 @@ function NutritionTab({ premium, body, nutri, setNutri, fireToast, goProfile }) 
             role: "user",
             content: `Genera un piano alimentare giornaliero per palestra. Target: ${targets.kcal} kcal, ${targets.p}g proteine, ${targets.c}g carboidrati, ${targets.f}g grassi. Utente: ${body.sesso === "M" ? "uomo" : "donna"}, ${body.peso}kg, obiettivo ${goal.toLowerCase()}, si allena ${days} volte a settimana.
 Alimenti semplici da palestra (pollo, riso, avena, uova, whey, pesce...).
-${prefs.trim() ? `PREFERENZE E VINCOLI DELL'UTENTE (rispettali sempre): ${prefs.trim()}` : "Nessuna preferenza particolare."}
+${actualPrefs.trim() ? `PREFERENZE E VINCOLI DELL'UTENTE (rispettali sempre): ${actualPrefs.trim()}` : "Nessuna preferenza particolare."}
 NUMERO PASTI: rispetta le preferenze. Se l'utente indica digiuno intermittente o una finestra alimentare, genera SOLO i pasti compatibili (anche 2 soli), distribuendo comunque tutti i macro nella finestra. Altrimenti usa 5 pasti: Colazione, Pranzo, Spuntino pre-workout, Post-workout, Cena.
 VARIETÀ: per OGNI pasto genera ESATTAMENTE 3 OPZIONI alternative diverse tra loro (ingredienti diversi) ma equivalenti nei macro, così da poter ruotare i pasti nei vari giorni. Mai meno di 3 opzioni.
 Rispondi SOLO con JSON valido senza markdown né backtick, con QUESTE DUE CHIAVI:
@@ -3751,7 +3858,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
     }
     const normMeals = {};
     for (const [k, v] of Object.entries(meals || {})) normMeals[k] = asOptions(v);
-    setNutri({ goal, days, targets, meals: normMeals, prefs,
+    setNutri({ goal, days, targets, meals: normMeals, prefs, fasting,
       sourcePlan: sourcePlan || (nutri && nutri.sourcePlan) || null });
     setLoading(false);
     fireToast({ title: tr("◈ PIANO GENERATO"), sub: `${targets.kcal} kcal · P${targets.p} C${targets.c} G${targets.f}` });
@@ -3899,6 +4006,16 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
           <div className="hud-label" style={{ marginBottom: 6 }}>Allenamenti/settimana · <span className="t-cyan">{days}</span></div>
           <input type="range" min="2" max="6" value={days} onChange={(e) => setDays(Number(e.target.value))} />
         </div>
+        <div style={{ marginTop: 8 }}>
+          <label className="row g8" style={{ alignItems: "center", cursor: "pointer", userSelect: "none" }}>
+            <input type="checkbox" checked={fasting} onChange={(e) => setFasting(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "var(--cyan)" }} />
+            <span className="tiny t-bright" style={{ fontWeight: 700 }}>{tr("DIGIUNO INTERMITTENTE (SALTA COLAZIONE)")}</span>
+          </label>
+          <div className="tiny t-faint" style={{ marginLeft: 24, marginTop: 2, lineHeight: 1.4 }}>
+            {tr("Applica il protocollo classico 16/8 saltando interamente la colazione.")}
+          </div>
+        </div>
         <div>
           <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Preferenze alimentari")} <span className="t-faint">({tr("opzionale")})</span></div>
           <textarea className="hud-input cham-s" value={prefs} onChange={(e) => setPrefs(e.target.value)} rows={3} autoFocus
@@ -3912,19 +4029,6 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
             : tr("◈ Genera piano AI")}
         </Btn>
       </Panel>
-
-      <button onClick={() => setImporting(true)} className="tap" style={{ width: "100%", cursor: "pointer" }}>
-        <Panel accent hover>
-          <div className="row g12">
-            <Upload size={20} color="var(--cyan-hi)" />
-            <div className="grow">
-              <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 13 }}>{tr("IMPORTA PIANO NUTRIZIONALE")}</div>
-              <div className="tiny t-dim">{tr("Carica il piano del tuo nutrizionista (PDF, foto, testo) — l'AI lo converte")}</div>
-            </div>
-            <ChevronRight size={16} color="var(--faint)" />
-          </div>
-        </Panel>
-      </button>
     </div>
   );
 
@@ -4008,6 +4112,16 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
         <div>
           <div className="hud-label" style={{ marginBottom: 6 }}>Allenamenti/settimana · <span className="t-cyan">{days}</span></div>
           <input type="range" min="2" max="6" value={days} onChange={(e) => setDays(Number(e.target.value))} />
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <label className="row g8" style={{ alignItems: "center", cursor: "pointer", userSelect: "none" }}>
+            <input type="checkbox" checked={fasting} onChange={(e) => setFasting(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "var(--cyan)" }} />
+            <span className="tiny t-bright" style={{ fontWeight: 700 }}>{tr("DIGIUNO INTERMITTENTE (SALTA COLAZIONE)")}</span>
+          </label>
+          <div className="tiny t-faint" style={{ marginLeft: 24, marginTop: 2, lineHeight: 1.4 }}>
+            {tr("Applica il protocollo classico 16/8 saltando interamente la colazione.")}
+          </div>
         </div>
         <div>
           <div className="hud-label" style={{ marginBottom: 6 }}>{tr("Preferenze alimentari")} <span className="t-faint">({tr("opzionale")})</span></div>

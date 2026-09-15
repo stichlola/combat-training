@@ -915,6 +915,19 @@ const EN_DESC = {
   "Questo è il tuo link invito": "This is your own invite link",
   "Condividilo con un cliente: non puoi essere il tuo PT": "Share it with a client: you can't be your own PT",
 
+  "MODIFICA SETTIMANA": "EDIT WEEK",
+  "Seleziona la settimana attiva per ciascuna delle tue schede in progressione. Le modifiche verranno applicate subito.":
+    "Select the active week for each of your progression routines. Changes will be applied immediately.",
+  "SETTIMANA CORRENTE": "CURRENT WEEK",
+  "◈ PROGRESSIONI AGGIORNATE": "◈ PROGRESSIONS UPDATED",
+  "Settimana modificata con successo": "Week changed successfully",
+  "GESTISCI": "MANAGE",
+  "La settimana avanza quando finisci un allenamento. Clicca qui per modificarla.":
+    "The week advances when you finish a workout. Click here to edit it.",
+  "DIGIUNO INTERMITTENTE (SALTA COLAZIONE)": "INTERMITTENT FASTING (SKIP BREAKFAST)",
+  "Applica il protocollo classico 16/8 saltando interamente la colazione.":
+    "Apply classical 16/8 protocol by skipping breakfast entirely.",
+
   /* Progressione settimanale — modale impostazioni */
   "La scheda passa da sola alla settimana successiva quando la completi e cambia la settimana di calendario.": "The routine moves to the next week by itself once you complete it and the calendar week changes.",
   "① NUMERO DI SETTIMANE": "① NUMBER OF WEEKS",

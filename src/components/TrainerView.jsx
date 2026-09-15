@@ -63,12 +63,10 @@ export function TrainerView({ user, fireToast }) {
           {tr("Il tuo link personale: chi lo apre arriva nell'app e si collega subito a te.")}
         </div>
         <div className="row g8">
-          <input className="hud-input cham-s" readOnly value={link} onFocus={(e) => e.target.select()}
-            style={{ flex: 1, fontSize: 11, minWidth: 0 }} />
-          <Btn small pt onClick={shareAppLink} style={{ flexShrink: 0 }}>
+          <Btn small pt onClick={shareAppLink} style={{ flex: 1 }}>
             <Share2 size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Condividi")}
           </Btn>
-          <Btn small onClick={copyAppLink} style={{ flexShrink: 0 }}>{tr("Copia")}</Btn>
+          <Btn small onClick={copyAppLink} style={{ flex: 1 }}>{tr("Copia")}</Btn>
         </div>
       </Panel>
 
