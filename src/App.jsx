@@ -1581,7 +1581,7 @@ function ProgressionEditModal({ routines, onSave, onClose }) {
               const currentWk = weeksMap[r.id];
               
               return (
-                <div key={r.id} className="soft-box cham-s" style={{ padding: "12px", background: "var(--card)", border: "1px solid var(--soft)" }}>
+                <div key={r.id} className="soft-box cham-s" style={{ padding: "12px", background: "var(--card)", border: "1px solid var(--soft)", marginBottom: 12 }}>
                   <div className="row between" style={{ alignItems: "center", marginBottom: 8 }}>
                     <span className="t-bright" style={{ fontWeight: 700, fontSize: 14 }}>{r.name}</span>
                     <span className="micro t-faint">{tr("Totale")}: {total} {tr("settimane")}</span>
@@ -3015,24 +3015,10 @@ const rescaleMeals = (meals, oldT, newT) => {
 /* Piano di fallback locale (se l'API non risponde): template scalato sulle kcal */
 /* Piano template usato se l'AI non risponde: come la generazione AI,
    3 OPZIONI equivalenti per ogni pasto (ruotano da sole ogni giorno) */
-const FALLBACK_PLAN = (t) => {
-  const scale = t.kcal / 2400;
+const FALLBACK_PLAN = (t, fasting) => {
+  const scale = fasting ? t.kcal / 1950 : t.kcal / 2400;
   const s = (g) => Math.round((g * scale) / 5) * 5;
-  return {
-    Colazione: [
-      [
-        { nome: "Avena", q: `${s(80)}g` }, { nome: "Yogurt greco 0%", q: `${s(200)}g` },
-        { nome: "Banana", q: "1 media" }, { nome: "Mandorle", q: `${s(15)}g` },
-      ],
-      [
-        { nome: "Uova", q: "3" }, { nome: "Pane integrale", q: `${s(80)}g` },
-        { nome: "Marmellata", q: `${s(20)}g` }, { nome: "Spremuta d'arancia", q: "1" },
-      ],
-      [
-        { nome: "Fiocchi di latte", q: `${s(250)}g` }, { nome: "Avena", q: `${s(70)}g` },
-        { nome: "Miele", q: `${s(15)}g` }, { nome: "Frutta fresca", q: `${s(150)}g` },
-      ],
-    ],
+  const plan = {
     Pranzo: [
       [
         { nome: "Petto di pollo", q: `${s(180)}g` }, { nome: "Riso basmati", q: `${s(90)}g` },
@@ -3087,7 +3073,24 @@ const FALLBACK_PLAN = (t) => {
       ],
     ],
   };
-};
+  if (!fasting) {
+    plan.Colazione = [
+      [
+        { nome: "Avena", q: `${s(80)}g` }, { nome: "Yogurt greco 0%", q: `${s(200)}g` },
+        { nome: "Banana", q: "1 media" }, { nome: "Mandorle", q: `${s(15)}g` },
+      ],
+      [
+        { nome: "Uova", q: "3" }, { nome: "Pane integrale", q: `${s(80)}g` },
+        { nome: "Marmellata", q: `${s(20)}g` }, { nome: "Spremuta d'arancia", q: "1" },
+      ],
+      [
+        { nome: "Fiocchi di latte", q: `${s(250)}g` }, { nome: "Avena", q: `${s(70)}g` },
+        { nome: "Miele", q: `${s(15)}g` }, { nome: "Frutta fresca", q: `${s(150)}g` },
+      ],
+    ];
+  }
+  return plan;
+};;
 
 function MacroBar({ label, grams, kcalPerG, totalKcal, color, pct: pctProp }) {
   const pct = pctProp != null ? pctProp : Math.round(((grams * kcalPerG) / totalKcal) * 100);
@@ -3854,7 +3857,7 @@ In "sourcePlan" le quantità ("q") devono essere già calcolate sui target dell'
         sourcePlan = parsed.sourcePlan || null;
       } else meals = parsed; // compatibilità con la vecchia risposta
     } catch (e) {
-      meals = FALLBACK_PLAN(targets); // offline/errore: piano template scalato
+      meals = FALLBACK_PLAN(targets, fasting); // offline/errore: piano template scalato
     }
     const normMeals = {};
     for (const [k, v] of Object.entries(meals || {})) normMeals[k] = asOptions(v);
