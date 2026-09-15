@@ -106,29 +106,29 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
                   )}
                   {mode === "time" ? (
                     <>
-                      <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec ? Math.round(s.sec / 60) : ""}
+                      <input className="hud-input cham-s" type="number" inputMode="numeric" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.sec ? Math.round(s.sec / 60) : ""}
                         onChange={(e) => updateSet(wi, si, "sec", e.target.value === "" ? "" : Number(e.target.value) * 60)}
                         style={{ textAlign: "center", padding: "6px 4px", width: 64 }} />
                       <span className="micro">{tr("MIN")}</span>
-                      <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist}
+                      <input className="hud-input cham-s" type="number" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.dist}
                         onChange={(e) => updateSet(wi, si, "dist", e.target.value)} placeholder="—"
                         style={{ textAlign: "center", padding: "6px 4px", width: 64 }} />
                       <span className="micro">{tr("KM")}</span>
                     </>
                   ) : mode === "hold" ? (
                     <>
-                      <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec || ""}
+                      <input className="hud-input cham-s" type="number" inputMode="numeric" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.sec || ""}
                         onChange={(e) => updateSet(wi, si, "sec", e.target.value)} placeholder="60"
                         style={{ textAlign: "center", padding: "6px 4px", width: 64 }} />
                       <span className="micro">{tr("SEC")}</span>
                     </>
                   ) : (
                     <>
-                      <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
+                      <input className="hud-input cham-s" type="number" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.w}
                         onChange={(e) => updateSet(wi, si, "w", e.target.value)}
                         style={{ textAlign: "center", padding: "6px 4px", width: 64 }} />
                       <span className="micro">{tr("KG")}</span>
-                      <input className="hud-input cham-s" type="text" inputMode="decimal" value={s.r}
+                      <input className="hud-input cham-s" type="text" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.r}
                         title={tr("Puoi usare un intervallo, es. 8-10")}
                         onChange={(e) => updateSet(wi, si, "r", e.target.value)}
                         placeholder="8-10"

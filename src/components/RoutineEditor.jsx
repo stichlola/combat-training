@@ -43,6 +43,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
      salva solo la progressione); per le schede nuove valgono al Salva globale ── */
   const [progWeeksN, setProgWeeksN] = useState(() =>
     Math.max(2, Math.min(8, initial?.progression?.enabled ? progTotal(initial) : 4)));
+  const [selectedWeek, setSelectedWeek] = useState(() => initial?.progression?.week || 1);
   const [progBusy, setProgBusy] = useState(false);   // AI al lavoro
   const [confirmProgOff, setConfirmProgOff] = useState(false);
   const clampW = (n) => Math.max(2, Math.min(8, n));
@@ -55,6 +56,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
       return { ...base, w: "", r: "" };
     });
   };
+  const activeSelectedWeek = draft.progression?.enabled ? Math.max(1, Math.min(selectedWeek, progWeeksN)) : 1;
   const applyProg = (fn) => {
     const nd = fn(draft);
     upd(() => nd);
@@ -151,12 +153,37 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
   };
 
   /* Marca la serie come riscaldamento (W) o normale */
-  const toggleWarmup = (ei, si) => upd((d) => ({
-    ...d,
-    exercises: d.exercises.map((e, i) => i !== ei ? e : {
-      ...e, sets: e.sets.map((x, j) => j !== si ? x : { ...x, warmup: !x.warmup }),
-    }),
-  }));
+  const toggleWarmup = (ei, si) => upd((d) => {
+    const isProg = d.progression?.enabled;
+    return {
+      ...d,
+      exercises: d.exercises.map((e, i) => {
+        if (i !== ei) return e;
+        if (isProg && e.progression?.weeks?.[activeSelectedWeek - 1]) {
+          const updatedWeeks = e.progression.weeks.map((wk, wi) => {
+            if (wi !== activeSelectedWeek - 1) return wk;
+            return {
+              ...wk,
+              sets: wk.sets.map((x, j) => j !== si ? x : { ...x, warmup: !x.warmup })
+            };
+          });
+          const baseSets = activeSelectedWeek === 1
+            ? e.sets.map((x, j) => j !== si ? x : { ...x, warmup: !x.warmup })
+            : e.sets;
+          return {
+            ...e,
+            sets: baseSets,
+            progression: { ...e.progression, weeks: updatedWeeks }
+          };
+        } else {
+          return {
+            ...e,
+            sets: e.sets.map((x, j) => j !== si ? x : { ...x, warmup: !x.warmup })
+          };
+        }
+      })
+    };
+  });
 
   const toggleEx = (name, group) => upd((d) => hasEx(name)
     ? { ...d, exercises: d.exercises.filter((e) => e.name !== name) }
@@ -206,28 +233,114 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
     if (list.length) fireToast({ title: tr("◈ ESERCIZI AGGIUNTI"), sub: list.map((f) => tr(f.name)).join(", ") });
   };
 
-  const updateSet = (ei, si, field, val) => upd((d) => ({
-    ...d,
-    exercises: d.exercises.map((e, i) => i !== ei ? e : {
-      ...e, sets: e.sets.map((s, j) => j !== si ? s : { ...s, [field]: field === "r" ? repVal(val) : (val === "" ? "" : Number(val)) }),
-    }),
-  }));
+  const updateSet = (ei, si, field, val) => upd((d) => {
+    const isProg = d.progression?.enabled;
+    const newVal = field === "r" ? repVal(val) : (val === "" ? "" : Number(val));
+    return {
+      ...d,
+      exercises: d.exercises.map((e, i) => {
+        if (i !== ei) return e;
+        if (isProg && e.progression?.weeks?.[activeSelectedWeek - 1]) {
+          const updatedWeeks = e.progression.weeks.map((wk, wi) => {
+            if (wi !== activeSelectedWeek - 1) return wk;
+            return {
+              ...wk,
+              sets: wk.sets.map((s, j) => j !== si ? s : { ...s, [field]: newVal })
+            };
+          });
+          const baseSets = activeSelectedWeek === 1
+            ? e.sets.map((s, j) => j !== si ? s : { ...s, [field]: newVal })
+            : e.sets;
+          return {
+            ...e,
+            sets: baseSets,
+            progression: { ...e.progression, weeks: updatedWeeks }
+          };
+        } else {
+          return {
+            ...e,
+            sets: e.sets.map((s, j) => j !== si ? s : { ...s, [field]: newVal })
+          };
+        }
+      })
+    };
+  });
 
-  const removeSet = (ei, si) => upd((d) => ({
-    ...d,
-    exercises: d.exercises.map((e, i) => i !== ei ? e : { ...e, sets: e.sets.filter((_, j) => j !== si) })
-      .filter((e) => e.sets.length > 0),
-  }));
+  const removeSet = (ei, si) => upd((d) => {
+    const isProg = d.progression?.enabled;
+    return {
+      ...d,
+      exercises: d.exercises.map((e, i) => {
+        if (i !== ei) return e;
+        if (isProg && e.progression?.weeks?.[activeSelectedWeek - 1]) {
+          const updatedWeeks = e.progression.weeks.map((wk, wi) => {
+            if (wi !== activeSelectedWeek - 1) return wk;
+            return {
+              ...wk,
+              sets: wk.sets.filter((_, j) => j !== si)
+            };
+          });
+          const baseSets = activeSelectedWeek === 1
+            ? e.sets.filter((_, j) => j !== si)
+            : e.sets;
+          return {
+            ...e,
+            sets: baseSets,
+            progression: { ...e.progression, weeks: updatedWeeks }
+          };
+        } else {
+          return {
+            ...e,
+            sets: e.sets.filter((_, j) => j !== si)
+          };
+        }
+      }).filter((e) => {
+        if (isProg) {
+          const wk = e.progression?.weeks?.[activeSelectedWeek - 1];
+          return wk ? wk.sets.length > 0 : e.sets.length > 0;
+        }
+        return e.sets.length > 0;
+      })
+    };
+  });
 
-  const addSet = (ei) => upd((d) => ({
-    ...d,
-    exercises: d.exercises.map((e, i) => i !== ei ? e : {
-      ...e,
-      sets: [...e.sets, exMode(e) === "time" ? { sec: 600, dist: "", elapsed: 0, done: false }
-        : exMode(e) === "hold" ? { sec: e.sets[e.sets.length - 1]?.sec || 60, elapsed: 0, done: false }
-        : { ...e.sets[e.sets.length - 1], done: false }],
-    }),
-  }));
+  const addSet = (ei) => upd((d) => {
+    const isProg = d.progression?.enabled;
+    return {
+      ...d,
+      exercises: d.exercises.map((e, i) => {
+        if (i !== ei) return e;
+        const newSet = exMode(e) === "time" ? { sec: 600, dist: "", elapsed: 0, done: false }
+          : exMode(e) === "hold" ? { sec: e.sets[e.sets.length - 1]?.sec || 60, elapsed: 0, done: false }
+          : { ...e.sets[e.sets.length - 1], done: false };
+
+        if (isProg && e.progression?.weeks?.[activeSelectedWeek - 1]) {
+          const updatedWeeks = e.progression.weeks.map((wk, wi) => {
+            if (wi !== activeSelectedWeek - 1) return wk;
+            const weekSets = wk.sets;
+            const weekNewSet = exMode(e) === "time" ? { sec: 600, dist: "", elapsed: 0, done: false }
+              : exMode(e) === "hold" ? { sec: weekSets[weekSets.length - 1]?.sec || 60, elapsed: 0, done: false }
+              : { ...weekSets[weekSets.length - 1], done: false };
+            return {
+              ...wk,
+              sets: [...weekSets, weekNewSet]
+            };
+          });
+          const baseSets = activeSelectedWeek === 1 ? [...e.sets, newSet] : e.sets;
+          return {
+            ...e,
+            sets: baseSets,
+            progression: { ...e.progression, weeks: updatedWeeks }
+          };
+        } else {
+          return {
+            ...e,
+            sets: [...e.sets, newSet]
+          };
+        }
+      })
+    };
+  });
 
   /* Riordino: card esercizi e serie trascinabili su/giù dalle maniglie */
   const moveEx = (from, to) => upd((d) => {
@@ -237,16 +350,41 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
     return { ...d, exercises: exs };
   });
 
-  const moveSet = (ei, from, to) => upd((d) => ({
-    ...d,
-    exercises: d.exercises.map((e, i) => {
-      if (i !== ei) return e;
-      const sets = [...e.sets];
-      const [m] = sets.splice(from, 1);
-      sets.splice(to, 0, m);
-      return { ...e, sets };
-    }),
-  }));
+  const moveSet = (ei, from, to) => upd((d) => {
+    const isProg = d.progression?.enabled;
+    return {
+      ...d,
+      exercises: d.exercises.map((e, i) => {
+        if (i !== ei) return e;
+        if (isProg && e.progression?.weeks?.[activeSelectedWeek - 1]) {
+          const updatedWeeks = e.progression.weeks.map((wk, wi) => {
+            if (wi !== activeSelectedWeek - 1) return wk;
+            const sets = [...wk.sets];
+            const [m] = sets.splice(from, 1);
+            sets.splice(to, 0, m);
+            return { ...wk, sets };
+          });
+          let baseSets = e.sets;
+          if (activeSelectedWeek === 1) {
+            const bSets = [...e.sets];
+            const [m] = bSets.splice(from, 1);
+            bSets.splice(to, 0, m);
+            baseSets = bSets;
+          }
+          return {
+            ...e,
+            sets: baseSets,
+            progression: { ...e.progression, weeks: updatedWeeks }
+          };
+        } else {
+          const sets = [...e.sets];
+          const [m] = sets.splice(from, 1);
+          sets.splice(to, 0, m);
+          return { ...e, sets };
+        }
+      })
+    };
+  });
 
   /* Suggerimenti AI: propone esercizi del catalogo coerenti con la scheda
      (funzione premium con quota settimanale "suggest" — 1 prova gratuita) */
@@ -399,6 +537,37 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                 {tr("SETTIMANA")} {currentWeek(draft.progression, progTotal(draft))}/{progTotal(draft)}
               </span>
             </div>
+            <div className="hud-label" style={{ margin: "12px 0 6px" }}>{tr("VISUALIZZA E MODIFICA SETTIMANA")}:</div>
+            <div className="row g4" style={{ marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
+              {Array.from({ length: progWeeksN }).map((_, i) => {
+                const wNum = i + 1;
+                const isSel = activeSelectedWeek === wNum;
+                const isCurrentActive = draft.progression?.week === wNum;
+                return (
+                  <button
+                    key={wNum}
+                    type="button"
+                    className={`tap cham-s ${isSel ? "active" : ""}`}
+                    onClick={() => setSelectedWeek(wNum)}
+                    style={{
+                      flex: 1,
+                      padding: "6px 8px",
+                      fontSize: 11,
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                      background: isSel ? "#ffd76a" : "var(--card)",
+                      color: isSel ? "#000" : (isCurrentActive ? "#ffd76a" : "var(--dim)"),
+                      border: `1px solid ${isSel ? "#ffd76a" : (isCurrentActive ? "rgba(255, 215, 106, 0.4)" : "var(--soft)")}`,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      minWidth: 50,
+                    }}
+                  >
+                    W{wNum}
+                  </button>
+                );
+              })}
+            </div>
             <div className="row g8" style={{ marginTop: 10, alignItems: "center" }}>
               <span className="micro" style={{ flexShrink: 0 }}>{tr("INIZIO SETTIMANA 1")}</span>
               <input type="date" className="hud-input cham-s" value={draft.progression.startDate || todayISO()}
@@ -499,163 +668,196 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
 
       {/* Esercizi nel modello: card e serie trascinabili per riordinare, pulsante INFO visibile */}
       <div data-dl className="stack" style={{ marginTop: 0 }}>
-      {draft.exercises.map((ex, ei) => (
-        <Panel key={tr(ex.name)} accent style={{ padding: 12 }}>
-          {/* gruppo sopra il titolo, allineato come in allenamento */}
-          <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 27 }}>{tr(ex.group || "").toUpperCase()}</div>
-          <div className="row between g8" style={{ marginBottom: 4, alignItems: "flex-start" }}>
-            <span className="drag-handle" title={tr("Trascina per riordinare")}
-              onPointerDown={(e) => dlStart(e, moveEx)} style={{ flexShrink: 0, marginTop: 2 }}><GripVertical size={15} /></span>
-            {/* INFO sta sempre alla destra del titolo; se va a capo resta
-                allineato col titolo (il wrap avviene dentro questa colonna) */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", flex: 1, minWidth: 0 }}>
-              <span className="t-bright" style={{ fontSize: 14, fontWeight: 700, minWidth: 0 }}>{tr(ex.name)}</span>
-              {/* un solo pulsante INFO: ambra quando il PT ha aggiunto note/video */}
-              <button onClick={() => setInfo(ex)}
-                className={!ptMode && (ex.ptNote || ex.ptVideo) ? "pt-btn tap" : "info-btn cham-s tap"}
-                title={!ptMode && (ex.ptNote || ex.ptVideo) ? tr("Note e video del tuo PT") : undefined}
-                style={{ flexShrink: 0 }}>
-                <Info size={11} /> INFO
-              </button>
-              {ex.progression?.enabled && (
-                <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", alignSelf: "center", flexShrink: 0 }}>PROG ×{ex.progression.weeks?.length || 1}</span>
-              )}
-            </div>
-            <div className="row g8" style={{ flexShrink: 0, marginLeft: "auto", paddingTop: 2 }}>
-              <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
-                title={tr("Progressione settimanale")}
-                style={{ cursor: "pointer", color: draft.progression?.enabled && ex.progression?.weeks?.length ? "#ffd76a" : "var(--dim)" }}>
-                <TrendingUp size={14} /></span>
-              <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }} className="tap icon-tap"
-                title={tr("Sostituisci esercizio")} style={{ cursor: "pointer", color: "var(--dim)" }}>
-                <ArrowLeftRight size={14} /></span>
-              <span onClick={() => toggleEx(ex.name, ex.group)} className="tap icon-tap" title={tr("Elimina esercizio")}
-                style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={14} /></span>
-            </div>
-          </div>
-          <div className="row g8" style={{ marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <input className="hud-input cham-s grow" value={ex.note || ""}
-              onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, note: e.target.value }) }))}
-              placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", color: "#8fb2c9", minWidth: 0 }} />
-            <div className="row g4" style={{ alignItems: "center", flexShrink: 0 }}>
-              <span className="micro t-faint">REC</span>
-              <input type="number" inputMode="numeric"
-                value={ex.rest ?? 90}
-                onChange={(e) => upd((d) => ({
-                  ...d,
-                  exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, rest: e.target.value === "" ? "" : Number(e.target.value) }),
-                }))}
-                className="hud-input cham-s"
-                style={{ width: 50, textAlign: "center", padding: "6px 4px", fontSize: 12 }} />
-              <span className="micro t-faint">s</span>
-            </div>
-          </div>
-          {isDumbbell(ex.name) && !exMode(ex) && (
-            <div className="micro t-faint" style={{ marginBottom: 8, lineHeight: 1.5 }}>ⓘ {tr("Inserisci il peso del singolo manubrio — il totale è calcolato da sé")}</div>
-          )}
-          {/* Note PT (solo lato personal trainer): mirate all'esercizio — il cliente
-              le vedrà dal pulsante arancione INFO PT, insieme all'eventuale video */}
-          {ptMode && (
-            <div style={{ marginBottom: 10 }}>
-              <button onClick={() => setPtEditIdx(ptEditIdx === ei ? null : ei)}
-                className={ex.ptNote || ex.ptVideo ? "pt-btn tap" : "dash-btn cham-s tap"}
-                style={ex.ptNote || ex.ptVideo ? { padding: "7px 10px", fontSize: 10 } : { borderColor: "var(--pt)", color: "var(--pt)", padding: 7 }}>
-                <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} /> {tr("NOTE PT")}{(ex.ptNote || ex.ptVideo) ? " ✓" : ""}
-              </button>
-              {ptEditIdx === ei && (
-                <div className="pt-box fade-in" style={{ marginTop: 8 }}>
-                  <div className="hud-label" style={{ marginBottom: 4, fontSize: 8, color: "var(--pt)" }}>
-                    {tr("Note per il cliente — dove sbaglia, come migliorare, a cosa prestare attenzione")}
-                  </div>
-                  <textarea className="hud-input cham-s" rows={3} value={ex.ptNote || ""}
-                    onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptNote: e.target.value }) }))}
-                    placeholder={tr("Es. tieni i gomiti a 45°, non rimbalzare il bilanciere, scendi lento 3s...")}
-                    style={{ resize: "vertical", fontSize: 12, lineHeight: 1.6, marginBottom: 8 }} />
-                  <div className="hud-label" style={{ marginBottom: 4, fontSize: 8, color: "var(--pt)" }}>
-                    {tr("Video esecuzione personalizzato (link YouTube, Vimeo o mp4) — opzionale")}
-                  </div>
-                  <input className="hud-input cham-s" value={ex.ptVideo || ""}
-                    onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptVideo: e.target.value }) }))}
-                    placeholder="https://youtube.com/watch?v=..." style={{ fontSize: 12, padding: "6px 8px" }} />
-                  <div className="row g8" style={{ marginTop: 10 }}>
-                    {/* fotocamera AI: foto del cliente che esegue → nota tecnica bozza */}
-                    <Btn small ai disabled={ptScanBusy === ei} style={{ flex: 1 }}
-                      title={tr("Fotografa il cliente mentre esegue: l'AI scrive la nota tecnica")}
-                      onClick={() => { setPtScanIdx(ei); ptCamRef.current && ptCamRef.current.click(); }}>
-                      {ptScanBusy === ei
-                        ? <Loader2 size={12} className="spin" />
-                        : <Camera size={12} style={{ display: "inline", verticalAlign: -2 }} />} {ptScanBusy === ei ? tr("Analisi...") : tr("Foto AI")}
-                    </Btn>
-                    {/* Salva SUBITO solo note/video PT: niente "Salva" della scheda né
-                        conferma di sovrascrittura — fonde i campi PT sulla copia fresca del cliente */}
-                    {onSavePt && (
-                      <Btn small pt disabled={ptBusy} style={{ flex: 1 }}
-                        title={tr("Salva subito note e video sul profilo del cliente, senza chiudere la scheda")}
-                        onClick={async () => {
-                          setPtBusy(true);
-                          const ok = await onSavePt(draft);
-                          setPtBusy(false);
-                          fireToast(ok
-                            ? { title: tr("◈ NOTE PT SALVATE"), sub: tr("Il cliente le vede subito nella sua scheda") }
-                            : { title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") });
-                        }}>
-                        {ptBusy
-                          ? <Loader2 size={12} className="spin" />
-                          : <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} />} {ptBusy ? tr("Salvataggio...") : tr("Salva note")}
-                      </Btn>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <div data-dl>
-          {ex.sets.map((s, si) => (
-            <div key={si} className={`row g8 ${s.warmup ? "set-warmup cham-s" : ""}`}
-              style={{ marginBottom: 5, alignItems: "center", ...(s.warmup ? { padding: "4px 6px" } : {}) }}>
+      {draft.exercises.map((ex, ei) => {
+        const isProgActive = draft.progression?.enabled && ex.progression?.weeks?.[activeSelectedWeek - 1];
+        const displaySets = isProgActive ? ex.progression.weeks[activeSelectedWeek - 1].sets : ex.sets;
+        const displayNote = isProgActive ? (ex.progression.weeks[activeSelectedWeek - 1].note ?? "") : (ex.note || "");
+        return (
+          <Panel key={tr(ex.name)} accent style={{ padding: 12 }}>
+            {/* gruppo sopra il titolo, allineato come in allenamento */}
+            <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 27 }}>{tr(ex.group || "").toUpperCase()}</div>
+            <div className="row between g8" style={{ marginBottom: 4, alignItems: "flex-start" }}>
               <span className="drag-handle" title={tr("Trascina per riordinare")}
-                onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={13} /></span>
-              <button className={`set-chip cham-s ${s.warmup ? "warmup" : ""}`} title={tr("Opzioni serie")}
-                onClick={(e) => { e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
-                {ex.mode !== "time" && s.warmup ? "W" : ex.mode !== "time" ? ex.sets.slice(0, si + 1).filter((x) => !x.warmup).length : si + 1}
-              </button>
-              {exMode(ex) === "time" ? (
-                <>
-                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec ? Math.round(s.sec / 60) : ""}
-                    onChange={(e) => updateSet(ei, si, "sec", e.target.value === "" ? "" : Number(e.target.value) * 60)}
-                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">{tr("MIN")}</span>
-                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist}
-                    onChange={(e) => updateSet(ei, si, "dist", e.target.value)} placeholder="—"
-                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">{tr("KM")}</span>
-                </>
-              ) : exMode(ex) === "hold" ? (
-                <>
-                  <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec || ""}
-                    onChange={(e) => updateSet(ei, si, "sec", e.target.value)} placeholder="60"
-                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">{tr("SEC")}</span>
-                </>
-              ) : (
-                <>
-                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w}
-                    onChange={(e) => updateSet(ei, si, "w", e.target.value)}
-                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">{tr("KG")}</span>
-                  <input className="hud-input cham-s" type="text" inputMode="decimal" value={s.r}
-                    title={tr("Puoi usare un intervallo, es. 8-10")}
-                    onChange={(e) => updateSet(ei, si, "r", e.target.value)}
-                    style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
-                  <span className="micro">{tr("REPS")}</span>
-                </>
-              )}
+                onPointerDown={(e) => dlStart(e, moveEx)} style={{ flexShrink: 0, marginTop: 2 }}><GripVertical size={15} /></span>
+              {/* INFO sta sempre alla destra del titolo; se va a capo resta
+                  allineato col titolo (il wrap avviene dentro questa colonna) */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", flex: 1, minWidth: 0 }}>
+                <span className="t-bright" style={{ fontSize: 14, fontWeight: 700, minWidth: 0 }}>{tr(ex.name)}</span>
+                {/* un solo pulsante INFO: ambra quando il PT ha aggiunto note/video */}
+                <button onClick={() => setInfo(ex)}
+                  className={!ptMode && (ex.ptNote || ex.ptVideo) ? "pt-btn tap" : "info-btn cham-s tap"}
+                  title={!ptMode && (ex.ptNote || ex.ptVideo) ? tr("Note e video del tuo PT") : undefined}
+                  style={{ flexShrink: 0 }}>
+                  <Info size={11} /> INFO
+                </button>
+                {ex.progression?.enabled && (
+                  <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", alignSelf: "center", flexShrink: 0 }}>PROG ×{ex.progression.weeks?.length || 1}</span>
+                )}
+              </div>
+              <div className="row g8" style={{ flexShrink: 0, marginLeft: "auto", paddingTop: 2 }}>
+                <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
+                  title={tr("Progressione settimanale")}
+                  style={{ cursor: "pointer", color: draft.progression?.enabled && ex.progression?.weeks?.length ? "#ffd76a" : "var(--dim)" }}>
+                  <TrendingUp size={14} /></span>
+                <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }} className="tap icon-tap"
+                  title={tr("Sostituisci esercizio")} style={{ cursor: "pointer", color: "var(--dim)" }}>
+                  <ArrowLeftRight size={14} /></span>
+                <span onClick={() => toggleEx(ex.name, ex.group)} className="tap icon-tap" title={tr("Elimina esercizio")}
+                  style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={14} /></span>
+              </div>
             </div>
-          ))}
-          </div>
-          <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>{tr("+ SERIE")}</button>
-        </Panel>
-      ))}
+            <div className="row g8" style={{ marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <input className="hud-input cham-s grow" value={displayNote} autoComplete="off" data-lpignore="true" data-form-type="other"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  upd((d) => {
+                    const isProg = d.progression?.enabled;
+                    return {
+                      ...d,
+                      exercises: d.exercises.map((x, i) => {
+                        if (i !== ei) return x;
+                        if (isProg && x.progression?.weeks?.[activeSelectedWeek - 1]) {
+                          const updatedWeeks = x.progression.weeks.map((wk, wi) => {
+                            if (wi !== activeSelectedWeek - 1) return wk;
+                            return { ...wk, note: val };
+                          });
+                          const baseNote = activeSelectedWeek === 1 ? val : x.note;
+                          return {
+                            ...x,
+                            note: baseNote,
+                            progression: { ...x.progression, weeks: updatedWeeks }
+                          };
+                        } else {
+                          return { ...x, note: val };
+                        }
+                      })
+                    };
+                  });
+                }}
+                placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", color: "#8fb2c9", minWidth: 0 }} />
+              <div className="row g4" style={{ alignItems: "center", flexShrink: 0 }}>
+                <span className="micro t-faint">REC</span>
+                <input type="number" inputMode="numeric" autoComplete="off" data-lpignore="true" data-form-type="other"
+                  value={ex.rest ?? 90}
+                  onChange={(e) => upd((d) => ({
+                    ...d,
+                    exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, rest: e.target.value === "" ? "" : Number(e.target.value) }),
+                  }))}
+                  className="hud-input cham-s"
+                  style={{ width: 50, textAlign: "center", padding: "6px 4px", fontSize: 12 }} />
+                <span className="micro t-faint">s</span>
+              </div>
+            </div>
+            {isDumbbell(ex.name) && !exMode(ex) && (
+              <div className="micro t-faint" style={{ marginBottom: 8, lineHeight: 1.5 }}>ⓘ {tr("Inserisci il peso del singolo manubrio — il totale è calcolato da sé")}</div>
+            )}
+            {/* Note PT (solo lato personal trainer): mirate all'esercizio — il cliente
+                le vedrà dal pulsante arancione INFO PT, insieme all'eventuale video */}
+            {ptMode && (
+              <div style={{ marginBottom: 10 }}>
+                <button onClick={() => setPtEditIdx(ptEditIdx === ei ? null : ei)}
+                  className={ex.ptNote || ex.ptVideo ? "pt-btn tap" : "dash-btn cham-s tap"}
+                  style={ex.ptNote || ex.ptVideo ? { padding: "7px 10px", fontSize: 10 } : { borderColor: "var(--pt)", color: "var(--pt)", padding: 7 }}>
+                  <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} /> {tr("NOTE PT")}{(ex.ptNote || ex.ptVideo) ? " ✓" : ""}
+                </button>
+                {ptEditIdx === ei && (
+                  <div className="pt-box fade-in" style={{ marginTop: 8 }}>
+                    <div className="hud-label" style={{ marginBottom: 4, fontSize: 8, color: "var(--pt)" }}>
+                      {tr("Note per il cliente — dove sbaglia, come migliorare, a cosa prestare attenzione")}
+                    </div>
+                    <textarea className="hud-input cham-s" rows={3} value={ex.ptNote || ""} autoComplete="off" data-lpignore="true" data-form-type="other"
+                      onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptNote: e.target.value }) }))}
+                      placeholder={tr("Es. tieni i gomiti a 45°, non rimbalzare il bilanciere, scendi lento 3s...")}
+                      style={{ resize: "vertical", fontSize: 12, lineHeight: 1.6, marginBottom: 8 }} />
+                    <div className="hud-label" style={{ marginBottom: 4, fontSize: 8, color: "var(--pt)" }}>
+                      {tr("Video esecuzione personalizzato (link YouTube, Vimeo o mp4) — opzionale")}
+                    </div>
+                    <input className="hud-input cham-s" value={ex.ptVideo || ""} autoComplete="off" data-lpignore="true" data-form-type="other"
+                      onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptVideo: e.target.value }) }))}
+                      placeholder="https://youtube.com/watch?v=..." style={{ fontSize: 12, padding: "6px 8px" }} />
+                    <div className="row g8" style={{ marginTop: 10 }}>
+                      {/* fotocamera AI: foto del cliente che esegue → nota tecnica bozza */}
+                      <Btn small ai disabled={ptScanBusy === ei} style={{ flex: 1 }}
+                        title={tr("Fotografa il cliente mentre esegue: l'AI scrive la nota tecnica")}
+                        onClick={() => { setPtScanIdx(ei); ptCamRef.current && ptCamRef.current.click(); }}>
+                        {ptScanBusy === ei
+                          ? <Loader2 size={12} className="spin" />
+                          : <Camera size={12} style={{ display: "inline", verticalAlign: -2 }} />} {ptScanBusy === ei ? tr("Analisi...") : tr("Foto AI")}
+                      </Btn>
+                      {/* Salva SUBITO solo note/video PT: niente "Salva" della scheda né
+                          conferma di sovrascrittura — fonde i campi PT sulla copia fresca del cliente */}
+                      {onSavePt && (
+                        <Btn small pt disabled={ptBusy} style={{ flex: 1 }}
+                          title={tr("Salva subito note e video sul profilo del cliente, senza chiudere la scheda")}
+                          onClick={async () => {
+                            setPtBusy(true);
+                            const ok = await onSavePt(draft);
+                            setPtBusy(false);
+                            fireToast(ok
+                              ? { title: tr("◈ NOTE PT SALVATE"), sub: tr("Il cliente le vede subito nella sua scheda") }
+                              : { title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") });
+                          }}>
+                          {ptBusy
+                            ? <Loader2 size={12} className="spin" />
+                            : <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} />} {ptBusy ? tr("Salvataggio...") : tr("Salva note")}
+                        </Btn>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <div data-dl>
+            {displaySets.map((s, si) => (
+              <div key={si} className={`row g8 ${s.warmup ? "set-warmup cham-s" : ""}`}
+                style={{ marginBottom: 5, alignItems: "center", ...(s.warmup ? { padding: "4px 6px" } : {}) }}>
+                {!ptMode ? (
+                  <span className="drag-handle" title={tr("Trascina per riordinare")}
+                    onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={13} /></span>
+                ) : <span className="drag-handle" title={tr("Trascina per riordinare")}
+                    onPointerDown={(e) => dlStart(e, (f, t) => moveSet(ei, f, t))}><GripVertical size={13} /></span>}
+                <button className={`set-chip cham-s ${s.warmup ? "warmup" : ""}`} title={tr("Opzioni serie")}
+                  onClick={(e) => { e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
+                  {ex.mode !== "time" && s.warmup ? "W" : ex.mode !== "time" ? displaySets.slice(0, si + 1).filter((x) => !x.warmup).length : si + 1}
+                </button>
+                {exMode(ex) === "time" ? (
+                  <>
+                    <input className="hud-input cham-s" type="number" inputMode="numeric" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.sec ? Math.round(s.sec / 60) : ""}
+                      onChange={(e) => updateSet(ei, si, "sec", e.target.value === "" ? "" : Number(e.target.value) * 60)}
+                      style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                    <span className="micro">{tr("MIN")}</span>
+                    <input className="hud-input cham-s" type="number" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.dist}
+                      onChange={(e) => updateSet(ei, si, "dist", e.target.value)} placeholder="—"
+                      style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                    <span className="micro">{tr("KM")}</span>
+                  </>
+                ) : exMode(ex) === "hold" ? (
+                  <>
+                    <input className="hud-input cham-s" type="number" inputMode="numeric" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.sec || ""}
+                      onChange={(e) => updateSet(ei, si, "sec", e.target.value)} placeholder="60"
+                      style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                    <span className="micro">{tr("SEC")}</span>
+                  </>
+                ) : (
+                  <>
+                    <input className="hud-input cham-s" type="number" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.w}
+                      onChange={(e) => updateSet(ei, si, "w", e.target.value)}
+                      style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                    <span className="micro">{tr("KG")}</span>
+                    <input className="hud-input cham-s" type="text" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.r}
+                      title={tr("Puoi usare un intervallo, es. 8-10")}
+                      onChange={(e) => updateSet(ei, si, "r", e.target.value)}
+                      style={{ textAlign: "center", padding: "7px 4px", width: 70 }} />
+                    <span className="micro">{tr("REPS")}</span>
+                  </>
+                )}
+              </div>
+            ))}
+            </div>
+            <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>{tr("+ SERIE")}</button>
+          </Panel>
+        );
+      })}
       </div>
 
       {/* L'elenco esercizi si apre in un popup: aggiunta multipla con conferma,

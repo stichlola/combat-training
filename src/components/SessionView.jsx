@@ -47,13 +47,58 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       replaceRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [replaceIdx]);
 
+  const syncSetChangeToRoutine = (ei, newSets, newNote) => {
+    const ex = session?.exercises?.[ei];
+    if (!ex || !ex.progWeek || !session.routineId) return;
+    
+    setRoutines((arr) => arr.map((r) => {
+      if (r.id !== session.routineId) return r;
+      return {
+        ...r,
+        exercises: r.exercises.map((x) => {
+          if (x.name !== ex.name) return x;
+          const weeks = x.progression?.weeks;
+          if (!weeks || !weeks[ex.progWeek - 1]) return x;
+          
+          const updatedWeeks = weeks.map((wk, wi) => {
+            if (wi !== ex.progWeek - 1) return wk;
+            const updatedWk = { ...wk };
+            if (newSets !== undefined) {
+              updatedWk.sets = newSets.map(s => ({ ...s, done: false, elapsed: 0 }));
+            }
+            if (newNote !== undefined) {
+              updatedWk.note = newNote;
+            }
+            return updatedWk;
+          });
+          
+          const baseSets = ex.progWeek === 1 && newSets !== undefined 
+            ? newSets.map(s => ({ ...s, done: false, elapsed: 0 })) 
+            : x.sets;
+          const baseNote = ex.progWeek === 1 && newNote !== undefined ? newNote : x.note;
+          
+          return {
+            ...x,
+            sets: baseSets,
+            note: baseNote,
+            progression: { ...x.progression, weeks: updatedWeeks }
+          };
+        })
+      };
+    }));
+  };
+
   /* Marca la serie come riscaldamento (W) o normale */
-  const toggleWarmup = (ei, si) => upd((s) => ({
-    ...s,
-    exercises: s.exercises.map((e, i) => i !== ei ? e : {
-      ...e, sets: e.sets.map((x, j) => j !== si ? x : { ...x, warmup: !x.warmup }),
-    }),
-  }));
+  const toggleWarmup = (ei, si) => {
+    const ex = session.exercises[ei];
+    if (!ex) return;
+    const updatedSets = ex.sets.map((x, j) => j !== si ? x : { ...x, warmup: !x.warmup });
+    upd((s) => ({
+      ...s,
+      exercises: s.exercises.map((e, i) => i !== ei ? e : { ...e, sets: updatedSets }),
+    }));
+    syncSetChangeToRoutine(ei, updatedSets);
+  };
 
   /* Gestione esercizi in sessione: aggiungi / elimina / sostituisci */
   const makeEx = (name, group) => group === "Cardio"
@@ -132,16 +177,24 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
 
   const upd = (fn) => setSession((s) => fn(s));
 
-  const updateSet = (ei, si, field, val) => upd((s) => ({
-    ...s,
-    exercises: s.exercises.map((e, i) => i !== ei ? e : {
-      ...e, sets: e.sets.map((st, j) => j !== si ? st : { ...st, [field]: field === "r" ? repVal(val) : (val === "" ? "" : Number(val)) }),
-    }),
-  }));
+  const updateSet = (ei, si, field, val) => {
+    const newVal = field === "r" ? repVal(val) : (val === "" ? "" : Number(val));
+    const ex = session.exercises[ei];
+    if (!ex) return;
+    const updatedSets = ex.sets.map((st, j) => j !== si ? st : { ...st, [field]: newVal });
+    upd((s) => ({
+      ...s,
+      exercises: s.exercises.map((e, i) => i !== ei ? e : { ...e, sets: updatedSets }),
+    }));
+    syncSetChangeToRoutine(ei, updatedSets);
+  };
 
-  const updateNote = (ei, val) => upd((s) => ({
-    ...s, exercises: s.exercises.map((e, i) => i !== ei ? e : { ...e, note: val }),
-  }));
+  const updateNote = (ei, val) => {
+    upd((s) => ({
+      ...s, exercises: s.exercises.map((e, i) => i !== ei ? e : { ...e, note: val }),
+    }));
+    syncSetChangeToRoutine(ei, undefined, val);
+  };
 
   const toggleSet = (ei, si) => {
     const ex = session.exercises[ei];
@@ -167,26 +220,34 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
     }
   };
 
-  const addSet = (ei) => upd((s) => ({
-    ...s,
-    exercises: s.exercises.map((e, i) => i !== ei ? e : {
-      ...e,
-      sets: [...e.sets, exMode(e) === "time"
-        ? { sec: 600, dist: "", elapsed: 0, done: false }
-        : exMode(e) === "hold"
-          ? { sec: e.sets[e.sets.length - 1]?.sec || 60, elapsed: 0, done: false }
-          : { ...e.sets[e.sets.length - 1], done: false }],
-    }),
-  }));
+  const addSet = (ei) => {
+    const ex = session.exercises[ei];
+    if (!ex) return;
+    const newSet = exMode(ex) === "time"
+      ? { sec: 600, dist: "", elapsed: 0, done: false }
+      : exMode(ex) === "hold"
+        ? { sec: ex.sets[ex.sets.length - 1]?.sec || 60, elapsed: 0, done: false }
+        : { ...ex.sets[ex.sets.length - 1], done: false };
+    const updatedSets = [...ex.sets, newSet];
+    upd((s) => ({
+      ...s,
+      exercises: s.exercises.map((e, i) => i !== ei ? e : { ...e, sets: updatedSets }),
+    }));
+    syncSetChangeToRoutine(ei, updatedSets);
+  };
 
   const removeSet = (ei, si) => {
     if (runKey === `${ei}-${si}`) setRunKey(null);
+    const ex = session.exercises[ei];
+    if (!ex) return;
+    const updatedSets = ex.sets.filter((_, j) => j !== si);
     upd((s) => ({
       ...s,
       exercises: s.exercises.map((e, i) => i !== ei ? e : {
-        ...e, sets: e.sets.filter((_, j) => j !== si),
+        ...e, sets: updatedSets,
       }).filter((e) => e.sets.length > 0),
     }));
+    syncSetChangeToRoutine(ei, updatedSets);
   };
 
   /* Riordino trascinando: mette in pausa l'eventuale cronometro attivo */
@@ -202,16 +263,16 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
 
   const moveSet = (ei, from, to) => {
     if (runKey) setRunKey(null);
+    const ex = session.exercises[ei];
+    if (!ex) return;
+    const updatedSets = [...ex.sets];
+    const [m] = updatedSets.splice(from, 1);
+    updatedSets.splice(to, 0, m);
     upd((s) => ({
       ...s,
-      exercises: s.exercises.map((e, i) => {
-        if (i !== ei) return e;
-        const sets = [...e.sets];
-        const [m] = sets.splice(from, 1);
-        sets.splice(to, 0, m);
-        return { ...e, sets };
-      }),
+      exercises: s.exercises.map((e, i) => i !== ei ? e : { ...e, sets: updatedSets }),
     }));
+    syncSetChangeToRoutine(ei, updatedSets);
   };
 
   const fmt = (sec) => `${Math.floor((sec || 0) / 60)}:${String((sec || 0) % 60).padStart(2, "0")}`;
@@ -467,6 +528,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
               <span className="t-faint">REC</span>
               <input type="number" inputMode="numeric" readOnly={locked}
+                autoComplete="off" data-lpignore="true" data-form-type="other"
                 value={ex.rest ?? 90}
                 onChange={(e) => upd((s) => ({
                   ...s,
@@ -478,6 +540,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             </span>
           </div>
           <input className="hud-input cham-s" value={ex.note || ""} readOnly={locked} onChange={(e) => updateNote(ei, e.target.value)}
+            autoComplete="off" data-lpignore="true" data-form-type="other"
             placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", marginBottom: 10, color: "#8fb2c9", opacity: locked ? .6 : 1 }} />
 
           {exMode(ex) === "time" || exMode(ex) === "hold" ? (
@@ -507,11 +570,11 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                     </span>
                   </div>
                   {exMode(ex) === "time" ? (
-                    <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.dist} readOnly={locked}
+                    <input className="hud-input cham-s" type="number" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.dist} readOnly={locked}
                       placeholder="—" onChange={(e) => updateSet(ei, si, "dist", e.target.value)}
                       style={{ textAlign: "center", padding: "8px 4px" }} />
                   ) : (
-                    <input className="hud-input cham-s" type="number" inputMode="numeric" value={s.sec || ""} readOnly={locked}
+                    <input className="hud-input cham-s" type="number" inputMode="numeric" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.sec || ""} readOnly={locked}
                       placeholder="60" title={tr("Obiettivo secondi")}
                       onChange={(e) => updateSet(ei, si, "sec", e.target.value)}
                       style={{ textAlign: "center", padding: "8px 4px" }} />
@@ -542,9 +605,9 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                     onClick={(e) => { if (locked) return; e.stopPropagation(); setSetMenu({ ei, si, x: e.clientX, y: e.clientY }); }}>
                     {s.warmup ? "W" : ex.sets.slice(0, si + 1).filter((x) => !x.warmup).length}
                   </button>
-                  <input className="hud-input cham-s" type="number" inputMode="decimal" value={s.w} readOnly={locked}
+                  <input className="hud-input cham-s" type="number" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.w} readOnly={locked}
                     onChange={(e) => updateSet(ei, si, "w", e.target.value)} style={{ textAlign: "center", padding: "8px 4px", opacity: locked ? .6 : 1 }} />
-                  <input className="hud-input cham-s" type="text" inputMode="decimal" value={s.r} readOnly={locked}
+                  <input className="hud-input cham-s" type="text" inputMode="decimal" autoComplete="off" data-lpignore="true" data-form-type="other" value={s.r} readOnly={locked}
                     title={tr("Puoi usare un intervallo, es. 8-10")}
                     onChange={(e) => updateSet(ei, si, "r", e.target.value)} style={{ textAlign: "center", padding: "8px 4px", opacity: locked ? .6 : 1 }} />
                   <button onClick={() => toggleSet(ei, si)} className={`check-btn cham-s tap ${s.done ? "check-on" : ""}`}>

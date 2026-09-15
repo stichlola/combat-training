@@ -1559,6 +1559,16 @@ function ProgressionEditModal({ routines, onSave, onClose }) {
     onClose();
   };
 
+  const resetAllToFirstWeek = () => {
+    setWeeksMap((prev) => {
+      const map = { ...prev };
+      activeRoutines.forEach((r) => {
+        map[r.id] = 1;
+      });
+      return map;
+    });
+  };
+
   return (
     <Overlay>
       <div className="modal-back" onClick={onClose}>
@@ -1575,7 +1585,7 @@ function ProgressionEditModal({ routines, onSave, onClose }) {
             {tr("Seleziona la settimana attiva per ciascuna delle tue schede in progressione. Le modifiche verranno applicate subito.")}
           </div>
 
-          <div className="col" style={{ gap: 12, maxHeight: "55vh", overflowY: "auto", paddingRight: 4, marginBottom: 18 }}>
+          <div className="col" style={{ gap: 12, maxHeight: "50vh", overflowY: "auto", paddingRight: 4, marginBottom: 14 }}>
             {activeRoutines.map((r) => {
               const total = progTotal(r);
               const currentWk = weeksMap[r.id];
@@ -1619,6 +1629,31 @@ function ProgressionEditModal({ routines, onSave, onClose }) {
               );
             })}
           </div>
+
+          {activeRoutines.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={resetAllToFirstWeek}
+                className="tap cham-s"
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: "rgba(255, 215, 106, 0.08)",
+                  color: "#ffd76a",
+                  border: "1px solid rgba(255, 215, 106, 0.3)",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em"
+                }}
+              >
+                {tr("Resetta tutti gli allenamenti alla prima settimana")}
+              </button>
+            </div>
+          )}
 
           <div className="row g8">
             <Btn small onClick={onClose} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
