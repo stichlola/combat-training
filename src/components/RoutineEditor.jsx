@@ -618,9 +618,6 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                 </div>
               </>
             )}
-            <div className="micro t-faint" style={{ marginTop: 10, lineHeight: 1.5 }}>
-              {tr("I carichi delle settimane si compilano esercizio per esercizio dall'icona 📈: la scheda userà i valori della settimana corrente.")}
-            </div>
           </>
         ) : (
           <>
