@@ -1552,8 +1552,8 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
   const [report, setReport] = useState(null);
   const [summaryId, setSummaryId] = useState(null);
 
-  /* Avanzamento settimane: la settimana sale solo se la scheda è stata
-     completata E la settimana di calendario è cambiata */
+  /* Avanzamento settimane: la settimana viene incrementata immediatamente alla fine
+     dell'allenamento (syncProgression funge da fallback per schede legacy con doneKey) */
   useEffect(() => {
     setRoutines((rs) => {
       let changed = false;

@@ -235,8 +235,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
         })),
       }));
     }
-    /* progressione: segna la settimana corrente della scheda come completata
-       (l'avanzamento avviene poi al cambio di settimana di calendario) */
+    /* progressione: avanza immediatamente alla settimana successiva */
     setRoutines((rs) => rs.map((r) => (r.id === session.routineId ? (markProgDone(r) || r) : r)));
     setHistory((h) => [{
       date: new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }),

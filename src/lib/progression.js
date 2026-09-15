@@ -4,8 +4,7 @@
                              week: number (1-based), doneKey: timestamp del lunedì in cui
                              la settimana corrente è stata completata }
    - a livello di ESERCIZIO: ex.progression = { weeks: [ { sets: [...] } ] }
-   La settimana NON avanza col semplice passare dei giorni: sale di 1 solo quando la
-   scheda è stata completata E la settimana di calendario è cambiata. */
+   La settimana avanza di 1 non appena l'allenamento viene completato. */
 
 /* chiave settimana: timestamp del lunedì 00:00 della settimana corrente */
 export const weekKey = (d = new Date()) => {
@@ -59,11 +58,14 @@ export function syncProgression(r) {
   return { ...r, progression: { ...p, week: wk + 1, doneKey: null } };
 }
 
-/* chiamata al completamento di una sessione: segna la settimana come completata */
+/* chiamata al completamento di una sessione: avanza immediatamente alla settimana successiva */
 export function markProgDone(r) {
   const p = r.progression;
   if (!p || !p.enabled) return null;
-  return { ...r, progression: { ...p, week: p.week || 1, doneKey: weekKey() } };
+  const total = progTotal(r);
+  const wk = p.week || 1;
+  const nextWk = wk >= total ? total : wk + 1;
+  return { ...r, progression: { ...p, week: nextWk, doneKey: null } };
 }
 
 export const todayISO = () => {
