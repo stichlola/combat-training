@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Check, Info, Search } from "lucide-react";
+import { Check, Info, Search, ChevronRight } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { EXERCISE_DB } from "../lib/exercises";
 import { tr } from "../lib/i18n";
@@ -61,11 +61,28 @@ export function ExercisePickerModal({ activeNames = [], mode = "add", replacing 
 
           <div className="picker-list stack-s">
             {Object.entries(filtered).map(([g, list]) => (
-              <div key={g}>
-                <button onClick={() => setOpen(open === g ? null : g)} className="tap cham-s row between"
-                  style={{ width: "100%", padding: "8px 10px", cursor: "pointer", border: "1px solid var(--soft)", background: "var(--card2)" }}>
-                  <span className="f-hud t-cyan" style={{ fontSize: 11, letterSpacing: ".2em" }}>{tr(g).toUpperCase()}</span>
-                  <span className="tiny t-faint">{list.length} ▾</span>
+              <div key={g} style={{ marginBottom: 6 }}>
+                <button onClick={() => setOpen(open === g ? null : g)} className="tap row between"
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    cursor: "pointer",
+                    border: "1px solid var(--soft)",
+                    background: "var(--card2)",
+                    borderRadius: "10px",
+                    transition: "background 0.2s ease, border-color 0.2s ease",
+                    display: "flex",
+                    alignItems: "center"
+                  }}>
+                  <span className="f-hud t-cyan" style={{ fontSize: 10, letterSpacing: ".15em", fontWeight: 600 }}>{tr(g).toUpperCase()}</span>
+                  <span className="row g6" style={{ alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: "var(--dim)", fontWeight: 500 }}>{list.length}</span>
+                    <ChevronRight size={13} style={{
+                      color: "var(--faint)",
+                      transform: open === g ? "rotate(90deg)" : "rotate(0deg)",
+                      transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+                    }} />
+                  </span>
                 </button>
                 {(open === g || q) && (
                   <div className="fade-in" style={{ paddingLeft: 4, paddingTop: 2 }}>

@@ -60,7 +60,6 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
   const applyProg = (fn) => {
     const nd = fn(draft);
     upd(() => nd);
-    if (onQuickSave) onQuickSave(nd);
   };
   const activateProg = () => {
     const n = clampW(progWeeksN);
@@ -493,13 +492,21 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
       {progIdx != null && draft.exercises[progIdx] && (
         <ProgressionModal ex={draft.exercises[progIdx]} routineProg={draft.progression}
           onSave={(p) => {
-            /* salva SUBITO tutta la scheda, non solo la bozza aperta: lato utente
-               aggiorna lo stato (autosave cloud), lato PT fonde il piano sul DB
-               del cliente — non serve più premere anche il "Salva" dell'editor */
-            const newDraft = { ...draft, exercises: draft.exercises.map((e, i) => i !== progIdx ? e : { ...e, progression: p }) };
+            /* Aggiorna la bozza locale inserendo la progressione e sincronizzando le serie
+               dell'esercizio con la settimana 1 della progressione. Non esegue il salvataggio immediato (onQuickSave)
+               in modo che premendo "Annulla" nell'editor si possano scartare tutte le modifiche. */
+            const firstWeekSets = p.weeks?.[0]?.sets || [];
+            const updatedSets = firstWeekSets.map((s) => ({ ...s, done: false, elapsed: 0 }));
+            const newDraft = {
+              ...draft,
+              exercises: draft.exercises.map((e, i) => i !== progIdx ? e : {
+                ...e,
+                sets: updatedSets,
+                progression: p
+              })
+            };
             setDraft(newDraft);
             setProgIdx(null);
-            if (onQuickSave) onQuickSave(newDraft);
           }}
           onClose={() => setProgIdx(null)} />
       )}

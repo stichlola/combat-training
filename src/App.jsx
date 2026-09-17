@@ -518,25 +518,7 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
           </Panel>
         )}
 
-        {usage && (
-          <div className="cham-s micro" style={{ margin: "12px 0", padding: "8px 10px", background: "var(--card)", border: "1px solid var(--soft)", lineHeight: 1.8 }}>
-            {premium.is ? (
-              <>
-                <span className="t-amber" style={{ fontWeight: 700 }}>{tr("PREMIUM ATTIVO — GENERAZIONI AI SBLOCCATE")} ∞</span>
-                <br /><span className="t-faint">({tr("soft cap anti-abuso gestito automaticamente dietro le quinte")})</span>
-              </>
-            ) : (
-              <>
-                {tr("QUESTA SETTIMANA")} — {tr("SCHEDA AI")}: {usage.used.workout}/{usage.limits.workout}
-                {" · "}{tr("IMPORT PT")}: {usage.used.import}/{usage.limits.import}
-                {" · "}{tr("NUTRIZIONE")}: {usage.used.nutrition}/{usage.limits.nutrition}
-                {" · "}{tr("SCAN")}: {usage.used.scan}/{usage.limits.scan}
-              </>
-            )}
-            <br />{tr("CREDITI EXTRA:")} <span className="t-amber">{usage.credits}</span>
-            <span className="t-faint"> ({tr("1 credito = 1 generazione")})</span>
-          </div>
-        )}
+
 
         {/* Selettore sezioni: una alla volta, così lo store resta compatto */}
         <div className="row g8" style={{ margin: "14px 0 12px" }}>
@@ -719,7 +701,35 @@ export default function App() {
   const [softGate, setSoftGate] = useState(false); // paywall soft post-allenamento (max 1 volta/giorno)
   const GUEST_KEY = "gq_guest_v1";
   const isGuest = !!(user && user.guest);
-  const isPT = !!(user && user.role === "pt");
+  const isAdmin = isAdminUser(user);
+
+  // State for admin role override: "pt" | "premium" | "free"
+  const [adminOverride, setAdminOverride] = useState(() => {
+    try {
+      return localStorage.getItem("gq_admin_override") || null;
+    } catch {
+      return null;
+    }
+  });
+
+  const setAndPersistAdminOverride = (val) => {
+    setAdminOverride(val);
+    try {
+      if (val) localStorage.setItem("gq_admin_override", val);
+      else localStorage.removeItem("gq_admin_override");
+    } catch {}
+    
+    // Reset PT mode and tab if switching to a non-PT role
+    if (val && val !== "pt") {
+      setPtMode(false);
+      setTab("profile");
+    }
+  };
+
+  const isPT = isAdmin && adminOverride
+    ? adminOverride === "pt"
+    : !!(user && user.role === "pt");
+
   /* PT e admin possono passare dall'area PT (clienti) all'app normale:
      ptMode = true → vista PT · false → vista utente standard */
   const [ptMode, setPtMode] = useState(false);
@@ -739,7 +749,11 @@ export default function App() {
   const [premiumUntil, setPremiumUntil] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
   const [stripeCode, setStripeCode] = useState(null); // codice di riscatto emesso al rientro da Stripe (ospite)
-  const isPremium = isPT || (!!premiumUntil && new Date(premiumUntil) > new Date()); // il PT ha sempre premium
+  
+  const isPremium = isPT || (isAdmin && adminOverride
+    ? adminOverride === "premium"
+    : (!!premiumUntil && new Date(premiumUntil) > new Date()));
+
   const premium = { is: isPremium, until: premiumUntil, guest: isGuest,
     open: () => setGateOpen(true),
     needAccount: () => { setGateOpen(true); } };
@@ -1165,7 +1179,7 @@ export default function App() {
   }, [standard, body.uiMode]);
   /* PT e admin vedono entrambe le facce dell'app: l'ultimo pulsante del menu
      (sempre in fondo) commuta tra area PT (clienti) e area utente normale */
-  const canPt = isPT || isAdminUser(user);
+  const canPt = isPT;
   const switchPt = () => {
     const toPt = !ptMode;
     setPtMode(toPt);
@@ -1390,7 +1404,7 @@ export default function App() {
 
         <main className="main-area">
           {tab === "clients" && canPt && ptMode && <TrainerView user={user} fireToast={fireToast} />}
-          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} onSessionClosed={maybeSoftGate} premium={premium} body={body} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
+          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} premium={premium} body={body} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
@@ -1406,6 +1420,28 @@ export default function App() {
             <>
               {isAdminUser(user) && (
                 <div className="stack" style={{ marginBottom: 16 }}>
+                  <Panel style={{ border: "1px solid #ffd76a", background: "rgba(255, 215, 106, 0.05)", padding: 12 }}>
+                    <div className="f-hud t-amber" style={{ fontWeight: 700, letterSpacing: ".15em", fontSize: 12, marginBottom: 8 }}>
+                      🛠️ MENU DI OVERRIDE ADMIN
+                    </div>
+                    <div className="tiny t-faint" style={{ marginBottom: 10, lineHeight: 1.4 }}>
+                      Seleziona il ruolo fittizio con cui visualizzare ed utilizzare l'applicazione:
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                      <Btn small primary={!adminOverride || adminOverride === "pt"}
+                        onClick={() => { setAndPersistAdminOverride("pt"); fireToast({ title: "Ruolo: PT", sub: "Caratteristiche da trainer attive" }); }}>
+                        PT
+                      </Btn>
+                      <Btn small primary={adminOverride === "premium"}
+                        onClick={() => { setAndPersistAdminOverride("premium"); fireToast({ title: "Ruolo: Premium", sub: "Utente normale con abbonamento" }); }}>
+                        Premium
+                      </Btn>
+                      <Btn small primary={adminOverride === "free"}
+                        onClick={() => { setAndPersistAdminOverride("free"); fireToast({ title: "Ruolo: Free", sub: "Utente normale senza abbonamento" }); }}>
+                        Free
+                      </Btn>
+                    </div>
+                  </Panel>
                   <PtRequestsAdmin fireToast={fireToast} />
                   <AdminCredits fireToast={fireToast} />
                 </div>
@@ -1855,7 +1891,20 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
      sovrascrivere quelle esistenti. Se l'id arrivasse a collidere con una
      scheda già presente, se ne forza uno fresco prima del salvataggio. */
   if (view === "ai") return <AIWorkout premium={premium} onClose={() => setView("home")}
-    onSave={(r) => saveRoutine({ ...r, id: routines.some((x) => x.id === r.id) ? Date.now() : r.id }, "◈ SCHEDA AI GENERATA")} />;
+    onSave={(list) => {
+      const arr = Array.isArray(list) ? list : [list];
+      setRoutines((rs) => {
+        const out = [...rs];
+        arr.forEach((r, i) =>
+          out.push({ ...r, id: out.some((x) => x.id === r.id) ? Date.now() + i + 1 : r.id }));
+        return out;
+      });
+      setView("home"); setEditId(null);
+      fireToast({
+        title: arr.length > 1 ? tr("◈ SCHEDE AI GENERATE") : tr("◈ SCHEDA AI GENERATA"),
+        sub: arr.length > 1 ? `${arr.length} ${tr("schede aggiunte")}` : arr[0].name
+      });
+    }} />;
   /* nota: la conversione della scheda PT (import) resta gratuita per scelta */
   if (view === "import") return <DocImport premium={premium} onClose={() => setView("home")}
     onSave={(list) => {
@@ -2212,11 +2261,28 @@ function ExerciseLibrary() {
       </div>
       <div className="scroll-y stack-s">
         {Object.entries(filtered).map(([g, list]) => (
-          <div key={g}>
-            <button onClick={() => setOpen(open === g ? null : g)} className="tap cham-s row between"
-              style={{ width: "100%", padding: "8px 10px", cursor: "pointer", border: "1px solid var(--soft)", background: "var(--card2)" }}>
-              <span className="f-hud t-cyan" style={{ fontSize: 11, letterSpacing: ".2em" }}>{tr(g).toUpperCase()}</span>
-              <span className="tiny t-faint">{list.length} ▾</span>
+          <div key={g} style={{ marginBottom: 6 }}>
+            <button onClick={() => setOpen(open === g ? null : g)} className="tap row between"
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                cursor: "pointer",
+                border: "1px solid var(--soft)",
+                background: "var(--card2)",
+                borderRadius: "10px",
+                transition: "background 0.2s ease, border-color 0.2s ease",
+                display: "flex",
+                alignItems: "center"
+              }}>
+              <span className="f-hud t-cyan" style={{ fontSize: 10, letterSpacing: ".15em", fontWeight: 600 }}>{tr(g).toUpperCase()}</span>
+              <span className="row g6" style={{ alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: "var(--dim)", fontWeight: 500 }}>{list.length}</span>
+                <ChevronRight size={13} style={{
+                  color: "var(--faint)",
+                  transform: open === g ? "rotate(90deg)" : "rotate(0deg)",
+                  transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+                }} />
+              </span>
             </button>
             {(open === g || q) && (
               <div className="fade-in" style={{ paddingLeft: 12, paddingTop: 4 }}>
@@ -2271,67 +2337,87 @@ function AIWorkout({ premium, onClose, onSave }) {
   const filter = (list) => equip === "Palestra completa" ? list : list.filter((e) => (equip === "Manubri" ? db : bw).includes(e));
   const plan = daySplits.map((g, i) => `Giorno ${i + 1}: ${g.join(" + ")}`);
 
-  /* generatore locale: esercizi del giorno 1 presi dal database; quanti per
-     gruppo dipende dalla divisione (un solo gruppo → giornata dedicata) */
-  const perGroup = daySplits[0].length === 1 ? 5 : daySplits[0].length === 2 ? 3 : 2;
-  const localResult = () => ({
-    id: Date.now(),
-    name: `AI ${goal.toUpperCase()} D1`,
-    exercises: daySplits[0].flatMap((g) => filter(EXERCISE_DB[g]).slice(0, perGroup).map((name) => ({
-      name, group: g,
-      sets: Array.from({ length: scheme.s }, () => ({ w: equip === "Corpo libero" ? 0 : goal === "Forza" ? 60 : 30, r: scheme.r, done: false })),
-    }))),
-    plan,
-  });
+  /* generatore locale: genera un array di schede coprendo tutti i giorni della divisione */
+  const localResult = () => {
+    return daySplits.map((groups, i) => {
+      const perGroup = groups.length === 1 ? 5 : groups.length === 2 ? 3 : 2;
+      return {
+        id: Date.now() + i,
+        name: `AI ${goal.toUpperCase()} G${i + 1}`,
+        exercises: groups.flatMap((g) => filter(EXERCISE_DB[g] || []).slice(0, perGroup).map((name) => ({
+          name, group: g,
+          sets: Array.from({ length: scheme.s }, () => ({ w: equip === "Corpo libero" ? 0 : goal === "Forza" ? 60 : 30, r: scheme.r, done: false })),
+        }))),
+        plan,
+      };
+    });
+  };
 
   /* Con le preferenze scritte la scheda la compone davvero l'AI: sceglie dal
      catalogo (già filtrato per attrezzatura) e adatta scelta, serie e note
-     alle richieste. Restituisce "LIMIT" al limite settimanale, lancia errore
-     negli altri casi (e il chiamante ripiega sul generatore locale). */
+     alle richieste. Restituisce un array di schede (una per ogni giorno del piano). */
   const generateWithAI = async (text) => {
-    const catalog = daySplits[0].map((g) => `${g}: ${filter(EXERCISE_DB[g]).join(" | ")}`).join("\n");
+    const catalog = Object.entries(EXERCISE_DB)
+      .map(([g, list]) => `${g}: ${filter(list).join(" | ")}`)
+      .join("\n");
+      
     const data = await aiCall({
-      model: "claude-haiku-4-5-20251001", max_tokens: 2000,
-      messages: [{ role: "user", content: `Sei un personal trainer esperto. Componi il GIORNO 1 di una scheda di allenamento.
-OBIETTIVO: ${goal}. ATTREZZATURA: ${equip}. GIORNI/SETTIMANA: ${days} (divisione completa: ${plan.join(" · ")}).
-ESERCIZI DISPONIBILI PER IL GIORNO 1 (usa SOLO questi nomi, circa ${perGroup} esercizi per gruppo — min 4 max 10 in totale — coprendo TUTTI i gruppi):
+      model: "claude-haiku-4-5-20251001", max_tokens: 4000,
+      messages: [{ role: "user", content: `Sei un personal trainer esperto. Componi un programma di allenamento completo diviso su più giorni per coprire tutti i gruppi muscolari.
+OBIETTIVO: ${goal}. ATTREZZATURA: ${equip}. GIORNI/SETTIMANA: ${days}.
+DIVISIONE COMPLETA: ${plan.join(" · ")}
+
+CATALOGO ESERCIZI DISPONIBILI PER CASCUN GRUPPO (usa SOLO questi nomi nel database):
 ${catalog}
+
 SCHEMA BASE: ${scheme.s} serie × ${scheme.r} ripetizioni.
-PREFERENZE DELL'UTENTE (priorità massima: adatta scelta degli esercizi, serie, ripetizioni e note): "${text}"
+PREFERENZE DELL'UTENTE (priorità massima: adatta la scelta di esercizi, le serie, le ripetizioni e le note alle richieste dell'utente): "${text}"
+
 Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra.
-Schema: {"exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sopra), "sets": number (serie), "reps": number (ripetizioni), "note": string (adattamento legato alle preferenze, "" se nessuno)}]}` }],
+Schema: {"routines": [{"day": number (1, 2, ...), "name": string (es. "GIORNO 1 — PETTO E SPALLE"), "exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sopra), "sets": number (serie), "reps": number (ripetizioni), "note": string (adattamento legato alle preferenze, "" se nessuno)}]}]}` }],
     }, "workout");
+    
     if (data && data.error === "limit_reached") return "LIMIT";
     if (data && data.error) throw new Error("API");
     const raw = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
     const parsed = parseLoose(raw);
-    const seen = new Set();
-    const exercises = (parsed.exercises || []).map((e) => {
-      let name = e.name, note = e.note || "";
-      if (!ALL_EXERCISES.includes(name)) {
-        const m = matchToDb(name);
-        if (ALL_EXERCISES.includes(m.name)) { name = m.name; note = [m.note, note].filter(Boolean).join(" · "); }
-        else return null;  // fuori catalogo: si scarta, non si inventano esercizi
-      }
-      /* il filtro attrezzatura vale comunque: esercizio non ammesso →
-         si sostituisce con il primo dello stesso gruppo consentito */
-      const g = findGroup(name);
-      const allowed = filter(EXERCISE_DB[g] || []);
-      if (!allowed.includes(name)) {
-        if (!allowed.length) return null;
-        name = allowed[0];
-      }
-      if (seen.has(name)) return null;
-      seen.add(name);
-      const nSets = Math.min(6, Math.max(2, Number(e.sets) || scheme.s));
-      const reps = Math.min(30, Math.max(3, Number(e.reps) || scheme.r));
+    
+    const routinesList = (parsed.routines || []).map((r, ri) => {
+      const seen = new Set();
+      const exercises = (r.exercises || []).map((e) => {
+        let name = e.name, note = e.note || "";
+        if (!ALL_EXERCISES.includes(name)) {
+          const m = matchToDb(name);
+          if (ALL_EXERCISES.includes(m.name)) { name = m.name; note = [m.note, note].filter(Boolean).join(" · "); }
+          else return null;  // fuori catalogo
+        }
+        const g = findGroup(name);
+        const allowed = filter(EXERCISE_DB[g] || []);
+        if (!allowed.includes(name)) {
+          if (!allowed.length) return null;
+          name = allowed[0];
+        }
+        if (seen.has(name)) return null;
+        seen.add(name);
+        const nSets = Math.min(6, Math.max(2, Number(e.sets) || scheme.s));
+        const reps = Math.min(30, Math.max(3, Number(e.reps) || scheme.r));
+        return {
+          name, group: g, ...(note ? { note } : {}),
+          sets: Array.from({ length: nSets }, () => ({ w: equip === "Corpo libero" ? 0 : goal === "Forza" ? 60 : 30, r: reps, done: false })),
+        };
+      }).filter(Boolean);
+      
+      if (exercises.length < 2) return null;
       return {
-        name, group: g, ...(note ? { note } : {}),
-        sets: Array.from({ length: nSets }, () => ({ w: equip === "Corpo libero" ? 0 : goal === "Forza" ? 60 : 30, r: reps, done: false })),
+        id: Date.now() + ri,
+        name: r.name || `AI ${goal.toUpperCase()} G${r.day || ri + 1}`,
+        exercises,
+        plan
       };
     }).filter(Boolean);
-    if (exercises.length < 3) throw new Error("empty");
-    return { id: Date.now(), name: `AI ${goal.toUpperCase()} D1`, exercises, plan };
+    
+    if (!routinesList.length) throw new Error("empty");
+    return routinesList;
   };
 
   /* La generazione passa dal server per applicare il limite settimanale;
@@ -2409,6 +2495,9 @@ Schema: {"exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sop
               placeholder={tr("Es. niente squat per il ginocchio, più enfasi sui dorsali, solo macchine guidate, circuito a tempo...")}
               style={{ resize: "none", fontSize: 13 }} />
             <div className="micro t-faint" style={{ marginTop: 6 }}>{tr("SE COMPILATE, LA SCHEDA VIENE COMPOSTA DALL'AI SEGUENDO LE TUE RICHIESTE")}</div>
+            <div className="micro t-cyan" style={{ marginTop: 8, fontWeight: 500 }}>
+              {tr("ℹ Nota: La nuova scheda verrà aggiunta in fondo alla tua libreria, senza sovrascrivere o cancellare i tuoi allenamenti attuali.")}
+            </div>
           </div>
           {error && <div className="tiny t-red">⚠ {error}</div>}
           <Btn ai full disabled={loading} onClick={generate}>
@@ -2418,21 +2507,30 @@ Schema: {"exercises": [{"name": string (ESATTAMENTE uno dei nomi disponibili sop
       ) : (
         <>
           {error && <div className="tiny t-red">⚠ {error}</div>}
-          <Panel accent>
-            <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", marginBottom: 4 }}>{result.name}</div>
-            {result.plan.map((p) => <div key={p} className="tiny t-dim">{p}</div>)}
-            <div style={{ marginTop: 12 }}>
-              {result.exercises.map((e) => (
-                <div key={tr(e.name)} className="divider-row">
-                  <span className="t-bright" style={{ fontSize: 14 }}>{tr(e.name)}</span>
-                  <span className="tiny t-dim">{e.sets.length} × {e.sets[0].r}{e.sets[0].w ? ` @ ${e.sets[0].w}kg` : ""}</span>
-                </div>
-              ))}
+          <div style={{ marginBottom: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="micro t-cyan" style={{ letterSpacing: ".12em" }}>
+              {tr("PROGRAMMA COMPLETO GENERATO:")} {result.length} {tr("schede")}
             </div>
-          </Panel>
+            {result.map((routine, ri) => (
+              <Panel accent key={ri}>
+                <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", marginBottom: 4 }}>{routine.name}</div>
+                {routine.plan && routine.plan.map((p) => <div key={p} className="tiny t-dim" style={{ marginBottom: 2 }}>{p}</div>)}
+                <div style={{ marginTop: 12 }}>
+                  {routine.exercises.map((e) => (
+                    <div key={tr(e.name)} className="divider-row">
+                      <span className="t-bright" style={{ fontSize: 14 }}>{tr(e.name)}</span>
+                      <span className="tiny t-dim">{e.sets.length} × {e.sets[0].r}{e.sets[0].w ? ` @ ${e.sets[0].w}kg` : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            ))}
+          </div>
           <div className="row g8">
             <Btn ai onClick={() => setResult(null)} style={{ flex: 1 }}>{tr("↻ Rigenera")}</Btn>
-            <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>{tr("Salva ✓")}</Btn>
+            <Btn primary onClick={() => onSave(result)} style={{ flex: 1 }}>
+              {result.length > 1 ? `${tr("Salva")} ${result.length} ${tr("schede")} ✓` : tr("Salva scheda ✓")}
+            </Btn>
           </div>
         </>
       )}
@@ -2762,31 +2860,41 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
         <Panel>
           <div className="row between" style={{ marginBottom: 10 }}>
             <div className="hud-label">{tr("▸ Generazioni AI — questa settimana")}</div>
-            {usage && <span className="f-hud t-amber" style={{ fontSize: 11, fontWeight: 700 }}>CREDITI: {usage.credits}</span>}
+            <span className="f-hud t-amber" style={{ fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+              CREDITI: {usage ? usage.credits : <Loader2 size={11} className="spin" />}
+            </span>
           </div>
-          {!usage && !usageErr && <div className="tiny t-faint">{tr("Caricamento utilizzo…")}</div>}
-          {usageErr && <div className="tiny t-red">⚠ Impossibile caricare l'utilizzo: {usageErr}</div>}
-          {usage && [
+          
+          {usageErr && <div className="tiny t-red" style={{ marginBottom: 10 }}>⚠ Impossibile caricare l'utilizzo: {usageErr}</div>}
+          
+          {[
             [tr("Generazione scheda AI"), "workout"],
             [tr("Import scheda PT"), "import"],
             [tr("Piano nutrizionale"), "nutrition"],
             [tr("Scan macchinari"), "scan"],
             [tr("Suggerimenti esercizi"), "suggest"],
           ].map(([label, k]) => {
-            const lim = usage.limits[k] || 0, used = usage.used[k] || 0;
-            const unlocked = premium && premium.is; // premium: limite "sbloccato" a vista, soft cap dietro le quinte
+            const unlocked = premium && premium.is;
+            // Se usage sta caricando, mostriamo i limiti base e 0 come utilizzati con un piccolo spinner
+            const defaultLimit = unlocked ? [20, 25, 25, 40, 30][["import", "nutrition", "workout", "scan", "suggest"].indexOf(k)] || 10 : 1;
+            const lim = usage ? (usage.limits[k] || 0) : defaultLimit;
+            const used = usage ? (usage.used[k] || 0) : 0;
+            const loading = !usage && !usageErr;
+            
             return (
-              <div key={k} style={{ marginBottom: 10 }}>
+              <div key={k} style={{ marginBottom: 10, opacity: loading ? 0.65 : 1, transition: "opacity 0.25s ease" }}>
                 <div className="row between tiny" style={{ marginBottom: 4 }}>
                   <span className="t-dim">{label}</span>
-                  <span className={unlocked ? "t-amber" : used >= lim && lim > 0 ? "t-amber" : "t-bright"}>
+                  <span className={unlocked ? "t-amber" : used >= lim && lim > 0 ? "t-amber" : "t-bright"} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     {unlocked ? tr("∞ SBLOCCATO") : `${used} / ${lim}`}
+                    {loading && <Loader2 size={9} className="spin" />}
                   </span>
                 </div>
                 <div className="cham-s" style={{ height: 6, background: "var(--soft)", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: unlocked ? "100%" : `${lim ? Math.min(100, (used / lim) * 100) : 0}%`,
                     background: unlocked ? "linear-gradient(90deg,#8b5cf6,#a78bfa)"
-                      : used >= lim && lim > 0 ? "linear-gradient(90deg,#ffd76a,#ffb84d)" : "linear-gradient(90deg,var(--cyan),var(--cyan-hi))" }} />
+                      : used >= lim && lim > 0 ? "linear-gradient(90deg,#ffd76a,#ffb84d)" : "linear-gradient(90deg,var(--cyan),var(--cyan-hi))",
+                    transition: "width 0.4s ease" }} />
                 </div>
               </div>
             );

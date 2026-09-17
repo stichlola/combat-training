@@ -132,9 +132,13 @@ export async function syncMyUsername(userId, username) {
 
 /* ── Richieste PT + admin ─────────────────────────────────── */
 
-// L'admin (tu) sei riconosciuto via email dell'account.
-export const ADMIN_EMAIL = "candotto.d@gmail.com";
-export const isAdminUser = (u) => !!u && u.email === ADMIN_EMAIL;
+// L'admin è riconosciuto tramite le email caricate dinamicamente dall'ambiente
+export const isAdminUser = (u) => {
+  if (!u || !u.email) return false;
+  const adminEmailsStr = import.meta.env.VITE_ADMIN_EMAILS || "super.pippo.candy@gmail.com";
+  const list = adminEmailsStr.split(",").map((e) => e.trim().toLowerCase());
+  return list.includes(u.email.toLowerCase());
+};
 
 // L'utente invia la richiesta di diventare PT (con motivazione).
 // Ritorna true, oppure una stringa di errore da mostrare nel modale.

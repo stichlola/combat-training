@@ -164,6 +164,9 @@ PROGRESSIONE SETTIMANALE: se uno stesso allenamento è programmato su più setti
             <textarea className="hud-input cham-s" value={pasted} onChange={(e) => setPasted(e.target.value)} rows={4}
               placeholder={"Incolla qui il testo della scheda...\nes. Panca piana 4x8 80kg\nRematore 3x10 60kg"}
               style={{ resize: "none" }} />
+            <div className="micro t-cyan" style={{ marginTop: 8, textAlign: "center", fontWeight: 500 }}>
+              {tr("ℹ Nota: Le schede importate verranno aggiunte in fondo, senza cancellare o sovrascrivere i tuoi allenamenti attuali.")}
+            </div>
           </Panel>
 
           {error && (
