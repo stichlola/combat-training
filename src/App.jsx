@@ -1965,10 +1965,7 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
           </Panel>
         )}
 
-        <div className="row between">
-          <h2 className="hud-title">{tr("▸ Schede attive")}</h2>
-          <Btn small onClick={() => setView("builder")}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
-        </div>
+        <h2 className="hud-title" style={{ marginBottom: 12 }}>{tr("▸ Schede attive")}</h2>
 
         {/* stessa grafica dei pulsanti nutrizione: AI a sinistra, import a destra (arancione) */}
         <div className="row g8">
@@ -2046,6 +2043,11 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
           </Panel>
         ))}
         </div>
+
+        <button onClick={() => setView("builder")}
+          className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em", marginTop: 10 }}>
+          <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova scheda")}
+        </button>
 
       </div>
 

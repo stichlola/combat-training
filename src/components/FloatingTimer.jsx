@@ -21,7 +21,7 @@ export const FloatingTimer = forwardRef(function FloatingTimer({ inline }, ref) 
     const n = !autoOn;
     setAutoOn(n);
     autoRef.current = n;
-    setOpen(n);            // feedback immediato: attivando si vede il pannello, disattivando sparisce
+    setOpen(n && running); // feedback immediato: attivando si vede il pannello solo se c'è un timer in corso, disattivando sparisce
     if (!n) { setRunning(false); endAtRef.current = null; }
   };
 

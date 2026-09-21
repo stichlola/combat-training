@@ -4,7 +4,6 @@ import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
 import { FloatingTimer } from "./FloatingTimer";
-import { MachineScan } from "./MachineScan";
 import { ResultsScreen } from "./ResultsScreen";
 import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
@@ -344,11 +343,6 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       )}
       {results && <ResultsScreen standard={standard} results={results} onClose={() => { if (onResultsClose) onResultsClose(); else { setSession(null); exitToHome(); } }} />}
       <FloatingTimer ref={timerRef} />
-      {!locked && (
-        <MachineScan premium={premium} variant="float" fireToast={fireToast}
-          currentNames={session.exercises.map((e) => e.name)}
-          onAdd={(name, group) => upd((s) => ({ ...s, exercises: [...s.exercises, makeEx(name, group)] }))} />
-      )}
 
 
       {/* Conferma eliminazione esercizio */}

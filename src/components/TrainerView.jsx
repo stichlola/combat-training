@@ -373,7 +373,6 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
           <div className="hud-label row g6" style={{ marginBottom: 0 }}>
             <Dumbbell size={13} color="var(--pt)" /> {tr("Schede del cliente")}
           </div>
-          <Btn small onClick={() => setEditIdx(-1)}><Plus size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova")}</Btn>
         </div>
         <Btn small onClick={openImport} style={{ width: "100%", marginBottom: 4, opacity: importsLeft <= 0 ? .4 : .85 }}
           title={tr("Fotografa la tua tabella (Excel, PDF, testo): l'AI la converte in scheda, progressioni settimanali incluse")}>
@@ -428,6 +427,10 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
             </div>
           </div>
         ))}
+        <button onClick={() => setEditIdx(-1)}
+          className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em", marginBottom: 12 }}>
+          <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Nuova scheda")}
+        </button>
         <div className="micro t-faint" style={{ marginTop: 4, lineHeight: 1.6 }}>
           {tr("Le modifiche salvate qui sovrascrivono le schede del cliente: lui le vedrà aggiornate al prossimo caricamento dell'app.")}
         </div>

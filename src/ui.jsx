@@ -90,11 +90,11 @@ button.btn{text-align:center}
 /* --- modali e overlay --- */
 .modal-back{position:fixed;inset:0;background:rgba(2,6,10,.82);backdrop-filter:blur(3px);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-box{width:100%;max-width:430px;background:var(--modal);border:1px solid var(--cyan);box-shadow:0 0 30px rgba(87,200,242,.22);padding:20px;max-height:85vh;overflow-y:auto;color:var(--text)}
-.float-cam-btn{position:fixed;right:16px;bottom:142px;z-index:95;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:linear-gradient(180deg,#8b5cf6,#6d28d9);border:1px solid #a78bfa;cursor:pointer;box-shadow:0 0 14px rgba(139,92,246,.45)}
+.float-cam-btn{position:fixed;right:16px;bottom:121px;z-index:95;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:linear-gradient(180deg,#8b5cf6,#6d28d9);border:1px solid #a78bfa;cursor:pointer;box-shadow:0 0 14px rgba(139,92,246,.45)}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.float-timer-btn{position:fixed;right:16px;bottom:86px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
-.float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:86px;z-index:96;background:var(--modal);border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:10px 14px;max-width:340px;box-sizing:border-box}
+.float-timer-btn{position:fixed;right:16px;bottom:65px;z-index:95;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--active);border:1px solid var(--cyan);cursor:pointer;box-shadow:0 0 14px rgba(87,200,242,.35)}
+.float-timer{position:fixed;left:12px;right:12px;margin:0 auto;bottom:65px;z-index:96;background:var(--modal);border:1px solid var(--amber);box-shadow:0 0 24px rgba(255,215,106,.22);padding:10px 14px;max-width:340px;box-sizing:border-box}
 /* timer in linea (sessione): bottone normale, pannello a comparsa sotto */
 .timer-inline{position:relative;display:inline-block}
 .timer-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:60;background:var(--modal);

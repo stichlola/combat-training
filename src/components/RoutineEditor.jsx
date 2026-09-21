@@ -670,6 +670,18 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         )}
       </div>
 
+      <div className="row g8" style={{ marginBottom: 14 }}>
+        <Btn small ai onClick={() => { setSuggestOpen(true); setSugList(null); setSugErr(null); }} style={{ flex: 1 }}
+          title={tr("L'AI propone esercizi da aggiungere in base alla scheda")}>
+          <Sparkles size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Suggerisci con AI")}
+        </Btn>
+        {showScan && (
+          <MachineScan premium={premium} variant="small" fireToast={fireToast}
+            currentNames={draft.exercises.map((e) => e.name)}
+            onAdd={(name, group) => pickEx(name, group)} />
+        )}
+      </div>
+
       {/* Esercizi nel modello: card e serie trascinabili per riordinare, pulsante INFO visibile */}
       <div data-dl className="stack" style={{ marginTop: 0 }}>
       {draft.exercises.map((ex, ei) => {
@@ -870,11 +882,6 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
         <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}
       </button>
-      <Btn ai full onClick={() => { setSuggestOpen(true); setSugList(null); setSugErr(null); }}
-        title={tr("L'AI propone esercizi da aggiungere in base alla scheda")}
-        style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
-        <Sparkles size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Suggerisci esercizi AI")}
-      </Btn>
       {/* input fotocamera nascosto per l'analisi AI delle note PT */}
       <input ref={ptCamRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
         onChange={(e) => {
@@ -892,17 +899,12 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
           onAdd={addExercises}
           onClose={() => { setShowPicker(false); setReplaceIdx(null); }} />
       )}
-      {showScan && (
-        <MachineScan premium={premium} variant="float" fabBottom={88} fireToast={fireToast}
-          currentNames={draft.exercises.map((e) => e.name)}
-          onAdd={(name, group) => pickEx(name, group)} />
-      )}
 
       {/* completa anche da fondo pagina: niente scroll fino in cima per salvare */}
       <Btn primary full disabled={!draft.name || !draft.exercises.length}
         onClick={() => onSave({ ...draft, name: draft.name.toUpperCase() })}
         style={{ padding: 14, marginTop: 6 }}>
-        {tr("Completa e salva ✓")}
+        {tr("Salva")}
       </Btn>
     </div>
   );
