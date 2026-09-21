@@ -351,6 +351,24 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       )}
 
 
+      {/* Conferma eliminazione esercizio */}
+      {confirmExDel !== null && session.exercises[confirmExDel] && (
+        <Overlay>
+        <div className="modal-back" onClick={() => setConfirmExDel(null)}>
+          <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="f-hud t-red" style={{ fontWeight: 700, letterSpacing: ".15em", marginBottom: 8 }}>{tr("ELIMINA ESERCIZIO")}</div>
+            <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 16 }}>
+              {tr("Sei sicuro di voler eliminare l'esercizio")} <b>{tr(session.exercises[confirmExDel]?.name)}</b>? {tr("Questa azione non può essere annullata.")}
+            </div>
+            <div className="row g8">
+              <Btn onClick={() => setConfirmExDel(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+              <Btn primary onClick={() => { removeExercise(confirmExDel); setConfirmExDel(null); }} style={{ flex: 1, backgroundColor: "var(--red)" }}>{tr("Elimina")}</Btn>
+            </div>
+          </div>
+        </div>
+        </Overlay>
+      )}
+
       {/* Conferma uscita: la sessione resta attiva */}
       {confirmExit && (
         <Overlay>
@@ -470,32 +488,26 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
             <div className="grow" style={{ marginRight: 14, minWidth: 0 }}>
               <span className="t-bright" style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>{tr(ex.name)}</span>
             </div>
-            {confirmExDel === ei ? (
-              <button onClick={() => { removeExercise(ei); setConfirmExDel(null); }}
-                className="info-btn cham-s tap" style={{ color: "var(--cyan)", borderColor: "var(--cyan)", flexShrink: 0, marginTop: 2, marginLeft: "auto" }}>
-                {tr("Conferma eliminazione")}</button>
-            ) : (
-              <div className="row" style={{ gap: 14, flexShrink: 0, paddingTop: 4, marginLeft: "auto" }}>
-                {/* 📈 piano settimanale di QUESTO esercizio: in alto a destra,
-                    accanto a cambio/elimina; accessibile anche a modifiche bloccate */}
-                {ex.progression?.weeks?.length > 0 && (
-                  <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
-                    title={tr("Vedi e modifica la progressione di questo esercizio")}
-                    style={{ cursor: "pointer", color: "#ffd76a" }}>
-                    <TrendingUp size={16} /></span>
-                )}
-                {!locked && (
-                  <>
-                    <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }}
-                      className="tap icon-tap" title={tr("Sostituisci esercizio")}
-                      style={{ cursor: "pointer", color: "var(--dim)" }}>
-                      <ArrowLeftRight size={16} /></span>
-                    <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
-                      style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={16} /></span>
-                  </>
-                )}
-              </div>
-            )}
+            <div className="row" style={{ gap: 14, flexShrink: 0, paddingTop: 4, marginLeft: "auto" }}>
+              {/* 📈 piano settimanale di QUESTO esercizio: in alto a destra,
+                  accanto a cambio/elimina; accessibile anche a modifiche bloccate */}
+              {ex.progression?.weeks?.length > 0 && (
+                <span onClick={() => setProgIdx(ei)} className="tap icon-tap"
+                  title={tr("Vedi e modifica la progressione di questo esercizio")}
+                  style={{ cursor: "pointer", color: "#ffd76a" }}>
+                  <TrendingUp size={16} /></span>
+              )}
+              {!locked && (
+                <>
+                  <span onClick={() => { setReplaceIdx(ei); setShowPicker(true); }}
+                    className="tap icon-tap" title={tr("Sostituisci esercizio")}
+                    style={{ cursor: "pointer", color: "var(--dim)" }}>
+                    <ArrowLeftRight size={16} /></span>
+                  <span onClick={() => setConfirmExDel(ei)} className="tap icon-tap" title={tr("Elimina esercizio")}
+                    style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={16} /></span>
+                </>
+              )}
+            </div>
           </div>
           {/* seconda riga a tutta larghezza: non viene più schiacciata dalle icone azione;
               se proprio non ci sta scorre in orizzontale invece di tagliarsi */}
@@ -507,12 +519,6 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               title={(ex.ptNote || ex.ptVideo) ? tr("Note e video del tuo PT") : undefined}>
               <Info size={11} /> INFO
             </button>
-            {ex.progWeek && (
-              <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a" }}
-                title={`${tr("SETTIMANA")} ${ex.progWeek}${ex.progTotal ? `/${ex.progTotal}` : ""} — ${tr("Progressione settimanale attiva")}`}>
-                SETT. {ex.progWeek}{ex.progTotal ? `/${ex.progTotal}` : ""}
-              </span>
-            )}
             {/* recupero: sempre ancorato a destra nella riga */}
             <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
               <span className="t-faint">REC</span>

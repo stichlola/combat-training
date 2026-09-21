@@ -969,28 +969,6 @@ export default function App() {
       }
       setHydrated(true);
     };
-    /* ospite: nessun account, dati solo su questo dispositivo */
-    const hydrateGuest = () => {
-      try {
-        const raw = localStorage.getItem(GUEST_KEY);
-        if (raw) {
-          const d = JSON.parse(raw);
-          if (d.body) setBody(d.body);
-          if (d.nutrition) setNutri(d.nutrition);
-          if (d.routines) setRoutines(d.routines);
-          if (d.prs) setPrs(d.prs);
-          if (d.session) setSession(d.session);
-          if (d.history) setHistory(d.history);
-          if (d.quests) setQuests(rolledQuests(d.quests));
-          if (d.stats) setStats({ ...EMPTY_STATS, ...d.stats });
-          if (d.xp != null) setXp(d.xp);
-          if (d.level != null) setLevel(d.level);
-        }
-      } catch {}
-      setUser({ guest: true, username: "Ospite" });
-      setHydrated(true);
-    };
-    window.__gqHydrateGuest = hydrateGuest;
 
     captureInviteHash(); // link invito PT (#pt=...): parcheggia l'id per dopo il login
     captureRefHash();    // link referral (#ref=...): bonus crediti riscattato dopo il login
@@ -998,15 +976,12 @@ export default function App() {
     (async () => {
       supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session) await hydrate(session.user);
-        /* ospite: MAI ripristinato automaticamente — a ogni refresh si riparte
-           dalla login; chi vuole rientra con "Continua senza account" e
-           ritrova i suoi dati (restano salvati su questo dispositivo) */
         authDone.current = true; // splash: può chiudersi (utente ripristinato o assente)
       }).catch(() => { authDone.current = true; });
     })();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) hydrate(session.user);
-      else if (!window.__gqKeepGuest) { setUser(null); setHydrated(false); }
+      else { setUser(null); setHydrated(false); }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -1214,7 +1189,7 @@ export default function App() {
       <div className={"hud-root" + (standard ? " standard" : "")}>
         <style>{CSS}</style>
         <HudToast toast={toast} />
-        <AuthScreen fireToast={fireToast} combat={brandCombat} onGuest={() => { window.__gqKeepGuest = true; window.__gqHydrateGuest && window.__gqHydrateGuest(); }} />
+        <AuthScreen fireToast={fireToast} combat={brandCombat} />
       </div>
     );
   }
@@ -1234,20 +1209,6 @@ export default function App() {
       <style>{CSS}</style>
       <HudToast toast={toast} />
 
-      {isGuest && (
-        <div className="cham-s guest-banner" style={{ margin: "0 14px 10px", padding: "8px 12px",
-          background: "#0c2233", border: "1px solid #2f6786" }}>
-          <div className="row between g8" style={{ alignItems: "center" }}>
-            <div className="grow">
-              <div className="f-hud t-cyan" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".18em" }}>{tr("MODALITÀ OSPITE")}</div>
-              <div className="micro t-faint" style={{ marginTop: 2 }}>{tr("Dati solo su questo dispositivo · funzioni AI disattivate")}</div>
-            </div>
-            <Btn small primary onClick={exitGuest}>
-              {tr("Crea account")}
-            </Btn>
-          </div>
-        </div>
-      )}
       <InstallBanner ip={ip} combat={brandCombat} />
 
       {/* CAMBIO PT: l'unico caso in cui serve conferma — il collegamento
@@ -2546,7 +2507,7 @@ const AuthField = ({ icon: Icon, ...props }) => (
   </div>
 );
 
-function AuthScreen({ fireToast, onGuest, combat }) {
+function AuthScreen({ fireToast, combat }) {
   /* invito PT in sospeso (link #pt=... aperto da sloggati): va detto subito
      che serve un account per accettare, e si parte dalla registrazione */
   const invitePending = !!pendingInvite();
@@ -2697,22 +2658,13 @@ function AuthScreen({ fireToast, onGuest, combat }) {
             </>
           )}
         </div>
-        <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--soft)" }}>
-          {/* con un invito PT in sospeso l'account è obbligatorio: l'ingresso
-              ospite non potrebbe mai accettarlo e creerebbe solo confusione */}
-          {invitePending ? (
+        {invitePending && (
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--soft)" }}>
             <div className="micro t-faint" style={{ textAlign: "center", lineHeight: 1.6 }}>
               {tr("PER ACCETTARE L'INVITO SERVE UN ACCOUNT — I TUOI DATI RESTANO SINCRONIZZATI SU OGNI DISPOSITIVO")}
             </div>
-          ) : (
-            <>
-              <Btn full onClick={onGuest}>{tr("Continua senza account ›")}</Btn>
-              <div className="micro t-faint" style={{ textAlign: "center", marginTop: 8, lineHeight: 1.6 }}>
-                {tr("PROVA SUBITO · I DATI RESTANO SU QUESTO DISPOSITIVO")}
-              </div>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
