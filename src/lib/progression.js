@@ -30,7 +30,7 @@ export function weekIndex(startDate, totalWeeks) {
 }
 
 /* se la progressione di scheda è attiva e l'esercizio ha settimane programmate,
-   restituisce { sets, week } per la settimana corrente */
+   restituisce { sets, week, note } per la settimana corrente */
 export function applyProgression(ex, routineProg) {
   if (!routineProg || !routineProg.enabled) return null;
   const weeks = ex.progression?.weeks;
@@ -38,7 +38,7 @@ export function applyProgression(ex, routineProg) {
   const wi = (currentWeek(routineProg, weeks.length) || 1) - 1;
   const wk = weeks[wi];
   if (!wk || !wk.sets || !wk.sets.length) return null;
-  return { sets: wk.sets.map((s) => ({ ...s, done: false, elapsed: 0 })), week: wi + 1, total: weeks.length };
+  return { sets: wk.sets.map((s) => ({ ...s, done: false, elapsed: 0 })), week: wi + 1, total: weeks.length, note: wk.note };
 }
 
 /* numero di settimane programmate nella scheda (max tra gli esercizi) */

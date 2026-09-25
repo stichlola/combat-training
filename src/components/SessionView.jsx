@@ -327,6 +327,8 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
           if (!doneEx) return origEx; // Preserva gli esercizi che non facevano parte di questa specifica settimana
           return {
             ...origEx,
+            note: doneEx.note !== undefined ? doneEx.note : origEx.note,
+            rest: doneEx.rest !== undefined ? doneEx.rest : origEx.rest,
             sets: doneEx.sets.map((s) => ({ ...s, done: false, elapsed: 0 })),
             ...(doneEx.progression ? { progression: doneEx.progression } : {}),
           };

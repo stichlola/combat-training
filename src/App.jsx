@@ -1770,6 +1770,7 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
         const prog = applyProgression(e, r.progression);
         return {
           ...e,
+          note: (prog && prog.note) || e.note || "",
           sets: (prog ? prog.sets : e.sets.map((s) => ({ ...s }))).map((s) => ({ ...s, done: false, elapsed: 0 })),
           progWeek: prog ? prog.week : undefined,
           progTotal: prog ? prog.total : undefined,

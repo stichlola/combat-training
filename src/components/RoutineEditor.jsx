@@ -893,7 +893,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         .map(({ ex, ei }) => {
           const isProgActive = draft.progression?.enabled && ex.progression?.weeks?.[activeSelectedWeek - 1];
           const displaySets = (isProgActive ? ex.progression.weeks[activeSelectedWeek - 1]?.sets : ex.sets) || [];
-          const displayNote = isProgActive ? (ex.progression.weeks[activeSelectedWeek - 1]?.note ?? "") : (ex.note || "");
+          const displayNote = isProgActive ? (ex.progression.weeks[activeSelectedWeek - 1]?.note || ex.note || "") : (ex.note || "");
           return (
             <Panel key={tr(ex.name) + "_" + ei} accent style={{ padding: 12 }}>
             {/* gruppo sopra il titolo, allineato come in allenamento */}
@@ -943,7 +943,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                             if (wi !== activeSelectedWeek - 1) return wk;
                             return { ...wk, note: val };
                           });
-                          const baseNote = activeSelectedWeek === 1 ? val : x.note;
+                          const baseNote = activeSelectedWeek === 1 ? val : (x.note || val);
                           return {
                             ...x,
                             note: baseNote,
