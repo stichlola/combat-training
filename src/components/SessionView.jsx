@@ -8,7 +8,7 @@ import { ResultsScreen } from "./ResultsScreen";
 import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
 import { exMode, holdSets, isDumbbell, isHold } from "../lib/exercises";
-import { markProgDone, repVal, repsNum } from "../lib/progression";
+import { markProgDone, repVal, repsNum, progTotal } from "../lib/progression";
 import { supabase } from "../lib/supabase";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
@@ -58,11 +58,41 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   };
 
   /* Gestione esercizi in sessione: aggiungi / elimina / sostituisci */
-  const makeEx = (name, group) => group === "Cardio"
-    ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
+  const makeEmptySets = (name, group) => group === "Cardio"
+    ? [{ sec: "", dist: "", elapsed: 0, done: false }]
     : isHold(name)
-      ? { name, group, mode: "hold", note: "", sets: holdSets() }
-      : { name, group, note: "", rest: 90, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] };
+      ? [{ sec: "", elapsed: 0, done: false }, { sec: "", elapsed: 0, done: false }, { sec: "", elapsed: 0, done: false }]
+      : [{ w: "", r: "", done: false }, { w: "", r: "", done: false }, { w: "", r: "", done: false }];
+
+  const makeEx = (name, group) => {
+    const isTime = group === "Cardio";
+    const isHolding = isHold(name);
+    const mode = isTime ? "time" : isHolding ? "hold" : undefined;
+
+    const curProg = session.exercises.find((e) => e.progWeek);
+    const r = (routines || []).find((x) => x.id === session.routineId);
+    const hasProg = !!(curProg || r?.progression?.enabled);
+    const totalWeeks = curProg?.progTotal || (r ? progTotal(r) : 0);
+    const curWk = curProg?.progWeek || (r?.progression?.week || 1);
+
+    return {
+      name,
+      group,
+      ...(mode ? { mode } : {}),
+      note: "",
+      ...(!isTime && !isHolding ? { rest: 90 } : {}),
+      sets: makeEmptySets(name, group),
+      ...(hasProg && totalWeeks > 0 ? {
+        progWeek: curWk,
+        progTotal: Math.max(totalWeeks, 2),
+        progression: {
+          weeks: Array.from({ length: Math.max(totalWeeks, 2) }, () => ({
+            sets: makeEmptySets(name, group),
+          })),
+        },
+      } : {}),
+    };
+  };
 
   /* Aggiunta multipla dal popup: una toast sola alla fine, niente duplicati */
   const addExercises = (list) => {
@@ -88,14 +118,31 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       exercises: s.exercises.map((e, i) => {
         if (i !== ei) return e;
         const prevTimed = ["time", "hold"].includes(exMode(e));
-        const sets = target === "time"
-          ? e.sets.map(() => ({ sec: 600, dist: "", elapsed: 0, done: false }))
+        const convertSets = (setsList) => target === "time"
+          ? (setsList || []).map(() => ({ sec: "", dist: "", elapsed: 0, done: false }))
           : target === "hold"
-            ? e.sets.map(() => ({ sec: 60, elapsed: 0, done: false }))
+            ? (setsList || []).map(() => ({ sec: "", elapsed: 0, done: false }))
             : prevTimed
-              ? e.sets.map(() => ({ w: 20, r: 10, done: false }))
-              : e.sets;
-        return { ...e, name, group, mode: target, sets };
+              ? (setsList || []).map(() => ({ w: "", r: "", done: false }))
+              : setsList;
+        const sets = convertSets(e.sets);
+        const progression = e.progression?.weeks ? {
+          ...e.progression,
+          weeks: e.progression.weeks.map((wk) => ({
+            ...wk,
+            sets: prevTimed !== (target != null) || (prevTimed && target !== exMode(e))
+              ? convertSets(wk.sets)
+              : wk.sets,
+          })),
+        } : e.progression;
+        return {
+          ...e,
+          name,
+          group,
+          mode: target,
+          sets,
+          ...(progression ? { progression } : {}),
+        };
       }),
     }));
     setReplaceIdx(null);
@@ -204,11 +251,12 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const addSet = (ei) => {
     const ex = session.exercises[ei];
     if (!ex) return;
+    const lastSet = ex.sets[ex.sets.length - 1];
     const newSet = exMode(ex) === "time"
-      ? { sec: 600, dist: "", elapsed: 0, done: false }
+      ? { sec: lastSet?.sec !== undefined ? lastSet.sec : "", dist: lastSet?.dist || "", elapsed: 0, done: false }
       : exMode(ex) === "hold"
-        ? { sec: ex.sets[ex.sets.length - 1]?.sec || 60, elapsed: 0, done: false }
-        : { ...ex.sets[ex.sets.length - 1], done: false };
+        ? { sec: lastSet?.sec !== undefined ? lastSet.sec : "", elapsed: 0, done: false }
+        : (lastSet ? { ...lastSet, done: false } : { w: "", r: "", done: false });
     const updatedSets = [...ex.sets, newSet];
     updateExerciseSetsAndProg(ei, updatedSets);
   };

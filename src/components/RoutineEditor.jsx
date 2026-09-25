@@ -327,16 +327,45 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
     };
   });
 
-  const toggleEx = (name, group) => upd((d) => hasEx(name)
-    ? { ...d, exercises: d.exercises.filter((e) => e.name !== name) }
-    : {
-      ...d,
-      exercises: [...d.exercises, group === "Cardio"
-        ? { name, group, mode: "time", note: "", sets: [{ sec: 600, dist: "", elapsed: 0, done: false }] }
-        : isHold(name)
-          ? { name, group, mode: "hold", note: "", sets: holdSets() }
-          : { name, group, note: "", rest: 90, sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }] }],
-    });
+  const makeEmptySets = (name, group) => group === "Cardio"
+    ? [{ sec: "", dist: "", elapsed: 0, done: false }]
+    : isHold(name)
+      ? [{ sec: "", elapsed: 0, done: false }, { sec: "", elapsed: 0, done: false }, { sec: "", elapsed: 0, done: false }]
+      : [{ w: "", r: "", done: false }, { w: "", r: "", done: false }, { w: "", r: "", done: false }];
+
+  const buildNewExercise = (name, group, d) => {
+    const isProg = !!d.progression?.enabled;
+    const currentTotalWeeks = isProg
+      ? Math.max(progWeeksN || 0, progTotal(d), d.progression?.week || 1, 2)
+      : (progTotal(d) > 1 ? progTotal(d) : 0);
+
+    const isCardio = group === "Cardio";
+    const isHolding = isHold(name);
+    const mode = isCardio ? "time" : isHolding ? "hold" : undefined;
+
+    return {
+      name,
+      group,
+      ...(mode ? { mode } : {}),
+      note: "",
+      ...(!isCardio && !isHolding ? { rest: 90 } : {}),
+      sets: makeEmptySets(name, group),
+      ...(currentTotalWeeks > 0 ? {
+        progression: {
+          weeks: Array.from({ length: currentTotalWeeks }, () => ({
+            sets: makeEmptySets(name, group),
+          })),
+        },
+      } : {}),
+    };
+  };
+
+  const toggleEx = (name, group) => upd((d) => {
+    if (d.exercises.some((e) => e.name === name)) {
+      return { ...d, exercises: d.exercises.filter((e) => e.name !== name) };
+    }
+    return { ...d, exercises: [...d.exercises, buildNewExercise(name, group, d)] };
+  });
 
   /* Sostituisce l'esercizio ei con uno nuovo: conserva le serie se resta
      forza→forza, le converte se cambia modalità (forza↔cardio) */
@@ -347,14 +376,32 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
       exercises: d.exercises.map((e, i) => {
         if (i !== ei) return e;
         const prevTimed = ["time", "hold"].includes(exMode(e));
-        const sets = target === "time"
-          ? e.sets.map(() => ({ sec: 600, dist: "", elapsed: 0, done: false }))
+        const convertSets = (setsList) => target === "time"
+          ? (setsList || []).map(() => ({ sec: "", dist: "", elapsed: 0, done: false }))
           : target === "hold"
-            ? e.sets.map(() => ({ sec: 60, elapsed: 0, done: false }))
+            ? (setsList || []).map(() => ({ sec: "", elapsed: 0, done: false }))
             : prevTimed
-              ? e.sets.map(() => ({ w: 20, r: 10, done: false }))
-              : e.sets;
-        return { ...e, name, group, mode: target, sets };
+              ? (setsList || []).map(() => ({ w: "", r: "", done: false }))
+              : setsList;
+        const sets = convertSets(e.sets);
+        const progression = e.progression?.weeks ? {
+          ...e.progression,
+          weeks: e.progression.weeks.map((wk) => ({
+            ...wk,
+            sets: prevTimed !== (target != null) || (prevTimed && target !== exMode(e))
+              ? convertSets(wk.sets)
+              : wk.sets,
+          })),
+        } : e.progression;
+        return {
+          ...e,
+          name,
+          group,
+          mode: target,
+          ...(target ? {} : (e.rest ? {} : { rest: 90 })),
+          sets,
+          ...(progression ? { progression } : {}),
+        };
       }),
     }));
     setReplaceIdx(null);
@@ -370,7 +417,18 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
   /* Scelta dal popup: sostituzione singola oppure aggiunta multipla con conferma */
   const pickReplace = (name, group) => { if (replaceIdx != null) replaceExercise(replaceIdx, name, group); };
   const addExercises = (list) => {
-    list.forEach(({ name, group }) => { if (!hasEx(name)) toggleEx(name, group); });
+    upd((d) => {
+      const existingNames = new Set(d.exercises.map((e) => e.name));
+      const toAdd = list.filter(({ name }) => !existingNames.has(name));
+      if (!toAdd.length) return d;
+      let currD = d;
+      const newExs = toAdd.map(({ name, group }) => {
+        const ex = buildNewExercise(name, group, currD);
+        currD = { ...currD, exercises: [...currD.exercises, ex] };
+        return ex;
+      });
+      return { ...d, exercises: [...d.exercises, ...newExs] };
+    });
     setShowPicker(false);
     if (list.length) fireToast({ title: tr("◈ ESERCIZI AGGIUNTI"), sub: list.map((f) => tr(f.name)).join(", ") });
   };
@@ -452,17 +510,23 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
       ...d,
       exercises: d.exercises.map((e, i) => {
         if (i !== ei) return e;
-        const newSet = exMode(e) === "time" ? { sec: 600, dist: "", elapsed: 0, done: false }
-          : exMode(e) === "hold" ? { sec: e.sets[e.sets.length - 1]?.sec || 60, elapsed: 0, done: false }
-          : { ...e.sets[e.sets.length - 1], done: false };
+        const lastBase = e.sets[e.sets.length - 1];
+        const newSet = exMode(e) === "time"
+          ? { sec: lastBase?.sec !== undefined ? lastBase.sec : "", dist: lastBase?.dist || "", elapsed: 0, done: false }
+          : exMode(e) === "hold"
+            ? { sec: lastBase?.sec !== undefined ? lastBase.sec : "", elapsed: 0, done: false }
+            : (lastBase ? { ...lastBase, done: false } : { w: "", r: "", done: false });
 
         if (isProg && e.progression?.weeks?.[activeSelectedWeek - 1]) {
           const updatedWeeks = e.progression.weeks.map((wk, wi) => {
             if (wi !== activeSelectedWeek - 1) return wk;
             const weekSets = wk.sets;
-            const weekNewSet = exMode(e) === "time" ? { sec: 600, dist: "", elapsed: 0, done: false }
-              : exMode(e) === "hold" ? { sec: weekSets[weekSets.length - 1]?.sec || 60, elapsed: 0, done: false }
-              : { ...weekSets[weekSets.length - 1], done: false };
+            const weekLast = weekSets[weekSets.length - 1];
+            const weekNewSet = exMode(e) === "time"
+              ? { sec: weekLast?.sec !== undefined ? weekLast.sec : "", dist: weekLast?.dist || "", elapsed: 0, done: false }
+              : exMode(e) === "hold"
+                ? { sec: weekLast?.sec !== undefined ? weekLast.sec : "", elapsed: 0, done: false }
+                : (weekLast ? { ...weekLast, done: false } : { w: "", r: "", done: false });
             return {
               ...wk,
               sets: [...weekSets, weekNewSet]
