@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen, TrendingUp } from "lucide-react";
+import { Plus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen, TrendingUp, AlertTriangle } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
@@ -9,14 +9,17 @@ import { SetMenu } from "./SetMenu";
 import { dlStart } from "../lib/dnd";
 import { exMode, holdSets, isDumbbell, isHold } from "../lib/exercises";
 import { markProgDone, repVal, repsNum } from "../lib/progression";
+import { supabase } from "../lib/supabase";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay, Panel } from "../ui";
 
 /* ---------------- Sessione di allenamento attiva ---------------- */
-export function SessionView({ standard, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome, onResultsClose }) {
+export function SessionView({ standard, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome, onResultsClose, onCompleteResults, user }) {
   const [info, setInfo] = useState(null);
   const [confirmExit, setConfirmExit] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [ptModifiedWhileTraining, setPtModifiedWhileTraining] = useState(false);
+  const [confirmPtOverwrite, setConfirmPtOverwrite] = useState(false);
   const [sessionPrCount, setSessionPrCount] = useState(0);
   const [results, setResults] = useState(null); // rapporto missione animato
   const [runKey, setRunKey] = useState(null); // cronometro attivo per esercizi a tempo: "ei-si"
@@ -249,19 +252,104 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const doneSets = session.exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).length, 0);
   const durMin = Math.max(1, Math.round((Date.now() - session.startedAt) / 60000));
 
+  /* Rileva se la scheda è stata modificata dal Personal Trainer mentre l'utente si stava allenando */
+  const checkPtModified = async () => {
+    const startTs = session?.startedAt || 0;
+    const initialPtMod = session?.routinePtModifiedAt || 0;
+
+    // 1. Controllo nello stato locale delle schede
+    const localR = (routines || []).find((r) => r.id === session?.routineId);
+    if (localR && localR.ptModifiedAt && (localR.ptModifiedAt > startTs || localR.ptModifiedAt > initialPtMod)) {
+      setPtModifiedWhileTraining(true);
+      return true;
+    }
+
+    // 2. Controllo remoto su Supabase se l'utente è autenticato
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      const uid = authData?.session?.user?.id;
+      if (uid) {
+        const { data, error } = await supabase
+          .from("user_data")
+          .select("routines")
+          .eq("user_id", uid)
+          .maybeSingle();
+        if (!error && Array.isArray(data?.routines)) {
+          const srvR = data.routines.find((r) => r.id === session?.routineId);
+          if (srvR && srvR.ptModifiedAt && (srvR.ptModifiedAt > startTs || srvR.ptModifiedAt > initialPtMod)) {
+            setPtModifiedWhileTraining(true);
+            if (setRoutines) setRoutines(data.routines);
+            return true;
+          }
+        }
+      }
+    } catch {}
+    return false;
+  };
+
+  useEffect(() => {
+    const localR = (routines || []).find((r) => r.id === session?.routineId);
+    const startTs = session?.startedAt || 0;
+    const initialPtMod = session?.routinePtModifiedAt || 0;
+    if (localR && localR.ptModifiedAt && (localR.ptModifiedAt > startTs || localR.ptModifiedAt > initialPtMod)) {
+      setPtModifiedWhileTraining(true);
+    }
+  }, [routines, session?.routineId, session?.startedAt, session?.routinePtModifiedAt]);
+
+  useEffect(() => {
+    if (finishing) {
+      checkPtModified();
+    }
+  }, [finishing]);
+
+  const onTerminaClick = () => {
+    checkPtModified();
+    setFinishing(true);
+  };
+
+  const handleUpdateModelClick = async () => {
+    const isModified = ptModifiedWhileTraining || await checkPtModified();
+    if (isModified) {
+      setConfirmPtOverwrite(true);
+    } else {
+      complete(true);
+    }
+  };
+
   /* Fine allenamento: record + eventuale aggiornamento del modello base */
   const complete = (alsoTemplate) => {
     if (alsoTemplate) {
-      setRoutines((rs) => rs.map((r) => r.id !== session.routineId ? r : {
-        ...r,
-        name: session.name,
-        exercises: session.exercises.map((e) => ({
-          ...e, sets: e.sets.map((s) => ({ ...s, done: false, elapsed: 0 })),
-        })),
+      setRoutines((rs) => rs.map((r) => {
+        if (r.id !== session.routineId) return r;
+        const origList = r.exercises || [];
+        const mergedExs = origList.map((origEx) => {
+          const doneEx = session.exercises.find((se) => se.name === origEx.name);
+          if (!doneEx) return origEx; // Preserva gli esercizi che non facevano parte di questa specifica settimana
+          return {
+            ...origEx,
+            sets: doneEx.sets.map((s) => ({ ...s, done: false, elapsed: 0 })),
+            ...(doneEx.progression ? { progression: doneEx.progression } : {}),
+          };
+        });
+        session.exercises.forEach((se) => {
+          if (!origList.some((oe) => oe.name === se.name)) {
+            mergedExs.push({
+              ...se,
+              sets: se.sets.map((s) => ({ ...s, done: false, elapsed: 0 })),
+            });
+          }
+        });
+        return {
+          ...r,
+          name: session.name,
+          exercises: mergedExs,
+        };
       }));
     }
-    /* progressione: avanza immediatamente alla settimana successiva */
-    setRoutines((rs) => rs.map((r) => (r.id === session.routineId ? (markProgDone(r) || r) : r)));
+    /* progressione: avanza alla settimana successiva solo se non abbiamo deciso di preservare le modifiche del PT senza toccare la scheda */
+    if (alsoTemplate || !ptModifiedWhileTraining) {
+      setRoutines((rs) => rs.map((r) => (r.id === session.routineId ? (markProgDone(r) || r) : r)));
+    }
     setHistory((h) => [{
       date: new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }),
       ts: Date.now(),
@@ -281,13 +369,38 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       workouts: 1, sets: doneSets, volume, cardio: Math.round(cardioSec / 60), pr: sessionPrCount,
     }) : { quests: [], questXp: 0 };
     setFinishing(false);
-    setResults({
+    setConfirmPtOverwrite(false);
+
+    // Cancella IMMEDIATAMENTE la sessione attiva su Supabase e localStorage
+    if (user && !user.guest) {
+      supabase.from("user_data").update({
+        session: null,
+        updated_at: new Date().toISOString(),
+      }).eq("user_id", user.id).then(({ error }) => error && console.error("Error clearing session:", error));
+    } else {
+      try {
+        const g = JSON.parse(localStorage.getItem("gq_guest_v1") || "{}");
+        g.session = null;
+        localStorage.setItem("gq_guest_v1", JSON.stringify(g));
+      } catch {}
+    }
+
+    const res = {
       name: session.name,
       quests: qr.quests,
       xpGain: bonusXp + qr.questXp,
       xpBefore: window.__gqXpSnap ? window.__gqXpSnap.xp : 0,
       levelBefore: window.__gqXpSnap ? window.__gqXpSnap.level : 1,
-    });
+      ptModifiedWhileTraining,
+    };
+
+    if (onCompleteResults) {
+      onCompleteResults(res);
+      setSession(null);
+    } else {
+      setResults(res);
+      setSession(null);
+    }
   };
 
   return (
@@ -299,6 +412,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       {progIdx != null && session.exercises[progIdx] && (
         <ProgressionModal ex={session.exercises[progIdx]}
           routineProg={(routines || []).find((r) => r.id === session.routineId)?.progression}
+          fireToast={fireToast}
           onClose={() => setProgIdx(null)}
           onSave={(p) => {
             const exName = session.exercises[progIdx].name;
@@ -382,6 +496,40 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
         </Overlay>
       )}
 
+      {/* Alert conferma sovrascrittura se il PT ha modificato la scheda nel mentre */}
+      {confirmPtOverwrite && (
+        <Overlay>
+        <div className="modal-back" style={{ zIndex: 130 }} onClick={() => setConfirmPtOverwrite(false)}>
+          <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440, border: "1px solid var(--pt)" }}>
+            <div className="row g8" style={{ alignItems: "center", marginBottom: 10 }}>
+              <AlertTriangle size={22} style={{ color: "var(--pt)", flexShrink: 0 }} />
+              <div className="f-hud" style={{ color: "var(--pt)", fontWeight: 700, letterSpacing: ".12em", fontSize: 13 }}>
+                {tr("ATTENZIONE: SCHEDA MODIFICATA DAL PT")}
+              </div>
+            </div>
+            <div className="tiny" style={{ lineHeight: 1.6, marginBottom: 12 }}>
+              {tr("Questa scheda è stata modificata dal tuo personal trainer mentre ti stavi allenando. Se aggiorni il modello con i dati di questa sessione, le modifiche apportate dal PT verranno sovrascritte.")}
+            </div>
+            <div className="tiny t-faint" style={{ marginBottom: 16 }}>
+              {tr("Vuoi procedere comunque con la sovrascrizione o salvare solo il record dell'allenamento?")}
+            </div>
+            <div className="stack-s">
+              <Btn primary full onClick={() => { setConfirmPtOverwrite(false); complete(true); }}
+                style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", borderColor: "#f87171", color: "#fff" }}>
+                {tr("Sovrascrivi comunque")}
+              </Btn>
+              <Btn full onClick={() => { setConfirmPtOverwrite(false); complete(false); }}>
+                {tr("No, salva solo il record (consigliato)")}
+              </Btn>
+              <button onClick={() => setConfirmPtOverwrite(false)} className="tap micro t-faint" style={{ cursor: "pointer", padding: 6, textAlign: "center" }}>
+                {tr("‹ Torna indietro")}
+              </button>
+            </div>
+          </div>
+        </div>
+        </Overlay>
+      )}
+
       {/* Riepilogo finale + salvataggio nel modello */}
       {finishing && (
         <Overlay>
@@ -404,11 +552,32 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                 </div>
               ))}
             </div>
+
+            {/* Avviso se la scheda è stata modificata dal PT durante l'allenamento */}
+            {ptModifiedWhileTraining && (
+              <div className="cham-s" style={{
+                padding: "10px 12px",
+                marginBottom: 14,
+                background: "rgba(245,158,11,.12)",
+                border: "1px solid var(--pt)",
+              }}>
+                <div className="row g6" style={{ alignItems: "center", marginBottom: 4 }}>
+                  <AlertTriangle size={15} style={{ color: "var(--pt)", flexShrink: 0 }} />
+                  <span className="f-hud" style={{ color: "var(--pt)", fontWeight: 700, fontSize: 12, letterSpacing: ".1em" }}>
+                    {tr("SCHEDA MODIFICATA DAL PERSONAL TRAINER")}
+                  </span>
+                </div>
+                <div className="tiny" style={{ lineHeight: 1.5, opacity: 0.95 }}>
+                  {tr("Il tuo personal trainer ha modificato questa scheda mentre ti stavi allenando.")}
+                </div>
+              </div>
+            )}
+
             <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 12 }}>
               Vuoi salvare le modifiche fatte in sessione (pesi, serie, nome, note) anche nel <span className="t-cyan">{tr("modello base")}</span> della scheda?
             </div>
             <div className="stack-s">
-              <Btn primary full onClick={() => complete(true)}>{tr("Sì, aggiorna il modello ✓")}</Btn>
+              <Btn primary full onClick={handleUpdateModelClick}>{tr("Sì, aggiorna il modello ✓")}</Btn>
               <Btn full onClick={() => complete(false)}>{tr("No, salva solo il record")}</Btn>
               <button onClick={() => setFinishing(false)} className="tap micro t-faint" style={{ cursor: "pointer", padding: 6 }}>{tr("‹ torna alla sessione")}</button>
             </div>
@@ -428,7 +597,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
           style={{ padding: "7px 9px", ...(locked ? { color: "#ffd76a", borderColor: "#ffd76a" } : {}) }}>
           {locked ? <Lock size={12} /> : <LockOpen size={12} />}
         </button>
-        <Btn small primary onClick={() => setFinishing(true)}>{tr("Termina ✓")}</Btn>
+        <Btn small primary onClick={onTerminaClick}>{tr("Termina ✓")}</Btn>
       </div>
       {locked && (
         <div className="micro" style={{ textAlign: "center", color: "#b8860b", letterSpacing: ".14em", marginTop: 6 }}>
@@ -630,7 +799,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
       )}
 
       {/* Termina anche in fondo: niente scroll fino in cima a fine allenamento */}
-      <Btn primary full onClick={() => setFinishing(true)} style={{ padding: 14 }}>{tr("Termina ✓")}</Btn>
+      <Btn primary full onClick={onTerminaClick} style={{ padding: 14 }}>{tr("Termina ✓")}</Btn>
     </div>
   );
 }

@@ -112,8 +112,13 @@ export async function getClientRoutines(clientId) {
    il resto dei dati del cliente resta intatto). Richiede le policy trainer
    di UPDATE/INSERT su user_data. */
 export async function saveClientRoutines(clientId, routines) {
+  const now = Date.now();
+  const stamped = (routines || []).map((r) => ({
+    ...r,
+    ptModifiedAt: r.ptModifiedAt || now,
+  }));
   const { error } = await supabase.from("user_data")
-    .upsert({ user_id: clientId, routines }, { onConflict: "user_id" });
+    .upsert({ user_id: clientId, routines: stamped }, { onConflict: "user_id" });
   return !error;
 }
 

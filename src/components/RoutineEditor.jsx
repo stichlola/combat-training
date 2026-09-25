@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Plus, Minus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check, Camera } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Plus, Minus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check, Camera, Copy } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
@@ -28,12 +28,76 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
   const [suggestOpen, setSuggestOpen] = useState(false); // popup suggerimenti AI
   const [sugPrefs, setSugPrefs] = useState("");   // preferenze opzionali per l'AI
   const [sugBusy, setSugBusy] = useState(false);
+  const [progBusy, setProgBusy] = useState(false); // IA progressione al lavoro
   const [sugList, setSugList] = useState(null);   // [{ name, group, why, on }]
   const [sugErr, setSugErr] = useState(null);
   const [ptBusy, setPtBusy] = useState(false);    // salvataggio immediato delle note PT in corso
   const [ptScanBusy, setPtScanBusy] = useState(null); // indice esercizio in analisi AI (foto)
   const [ptScanIdx, setPtScanIdx] = useState(null);   // esercizio a cui si riferisce la foto
   const ptCamRef = useRef(null);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const ptSaveDebounceRef = useRef(null);
+  const [ptSaveStatus, setPtSaveStatus] = useState({}); // { [ei]: "saving" | "saved" | "error" | "idle" }
+
+  const triggerSavePtNotes = async (draftToSave, ei, showToast = false) => {
+    if (!onSavePt) return;
+    setPtSaveStatus((s) => ({ ...s, [ei]: "saving" }));
+    setPtBusy(true);
+    try {
+      const ok = await onSavePt(draftToSave);
+      setPtBusy(false);
+      if (ok) {
+        setPtSaveStatus((s) => ({ ...s, [ei]: "saved" }));
+        if (showToast) {
+          fireToast({ title: tr("◈ NOTE PT SALVATE"), sub: tr("Il cliente le vede subito nella sua scheda") });
+        }
+        setTimeout(() => {
+          setPtSaveStatus((s) => (s[ei] === "saved" ? { ...s, [ei]: "idle" } : s));
+        }, 3000);
+      } else {
+        setPtSaveStatus((s) => ({ ...s, [ei]: "error" }));
+        if (showToast) {
+          fireToast({ title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") });
+        }
+      }
+    } catch {
+      setPtBusy(false);
+      setPtSaveStatus((s) => ({ ...s, [ei]: "error" }));
+    }
+  };
+
+  const handlePtChange = (ei, field, val) => {
+    const updated = {
+      ...draftRef.current,
+      exercises: draftRef.current.exercises.map((x, i) => i !== ei ? x : { ...x, [field]: val }),
+    };
+    draftRef.current = updated;
+    upd(() => updated);
+    if (!onSavePt) return;
+    setPtSaveStatus((s) => ({ ...s, [ei]: "saving" }));
+    if (ptSaveDebounceRef.current) clearTimeout(ptSaveDebounceRef.current);
+    ptSaveDebounceRef.current = setTimeout(async () => {
+      await triggerSavePtNotes(draftRef.current, ei);
+    }, 700);
+  };
+
+  const flushPtSave = async (ei, showToast = false) => {
+    if (!onSavePt) return;
+    if (ptSaveDebounceRef.current) clearTimeout(ptSaveDebounceRef.current);
+    await triggerSavePtNotes(draftRef.current, ei, showToast);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (ptSaveDebounceRef.current) {
+        clearTimeout(ptSaveDebounceRef.current);
+        if (onSavePt && draftRef.current) {
+          onSavePt(draftRef.current);
+        }
+      }
+    };
+  }, []);
 
   const upd = (fn) => setDraft((d) => fn(d));
 
@@ -44,7 +108,6 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
   const [progWeeksN, setProgWeeksN] = useState(() =>
     Math.max(2, Math.min(8, initial?.progression?.enabled ? progTotal(initial) : 4)));
   const [selectedWeek, setSelectedWeek] = useState(() => initial?.progression?.week || 1);
-  const [progBusy, setProgBusy] = useState(false);   // AI al lavoro
   const [confirmProgOff, setConfirmProgOff] = useState(false);
   const clampW = (n) => Math.max(2, Math.min(8, n));
   const emptySetsFor = (ex) => {
@@ -56,7 +119,8 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
       return { ...base, w: "", r: "" };
     });
   };
-  const activeSelectedWeek = draft.progression?.enabled ? Math.max(1, Math.min(selectedWeek, progWeeksN)) : 1;
+  const maxProgWeeks = Math.max(progWeeksN, progTotal(draft));
+  const activeSelectedWeek = draft.progression?.enabled ? Math.max(1, Math.min(selectedWeek, maxProgWeeks)) : 1;
   const applyProg = (fn) => {
     const nd = fn(draft);
     upd(() => nd);
@@ -66,7 +130,32 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
     applyProg((d) => ({
       ...d,
       progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
-      exercises: d.exercises.map((e) => ({ ...e, progression: { weeks: Array.from({ length: n }, () => ({ sets: emptySetsFor(e) })) } })),
+      exercises: d.exercises.map((e) => {
+        const prev = e.progression?.weeks;
+        if (prev && prev.length) {
+          // Conserva TUTTI i valori già presenti nelle settimane dell'esercizio
+          const weeks = Array.from({ length: Math.max(n, prev.length) }, (_, i) => {
+            if (i < prev.length && prev[i]) {
+              return {
+                ...prev[i],
+                sets: (prev[i].sets || []).map((st) => ({ ...st, done: false, elapsed: 0 })),
+              };
+            }
+            return { sets: emptySetsFor(e) };
+          });
+          return { ...e, progression: { ...(e.progression || {}), weeks } };
+        }
+        // Se non c'erano settimane create, la settimana 1 eredita i valori/carichi già inseriti nell'esercizio
+        const baseWeek1 = {
+          sets: (e.sets || []).map((s) => ({ ...s, done: false, elapsed: 0 })),
+          note: e.note || "",
+        };
+        const weeks = [
+          baseWeek1,
+          ...Array.from({ length: Math.max(0, n - 1) }, () => ({ sets: emptySetsFor(e) })),
+        ];
+        return { ...e, progression: { weeks } };
+      }),
     }));
     fireToast({ title: tr("◈ PROGRESSIONE ATTIVA"), sub: `${tr("SETTIMANA")} 1/${n}` });
   };
@@ -75,43 +164,89 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
     setConfirmProgOff(false);
     fireToast({ title: tr("◈ PROGRESSIONE DISATTIVATA"), sub: draft.name });
   };
-  /* cambio numero settimane (pulsante Salva): allungando o rifacendo il ciclo
-     senza AI si riparte da zero con le settimane VUOTE; accorciando si
-     conservano le prime n */
+  /* cambio numero settimane (pulsante Salva): allungando o accorciando si conservano
+     SEMPRE i dati e le settimane già impostati in precedenza */
   const resizeProg = () => {
     const nn = clampW(progWeeksN);
     applyProg((d) => {
-      const restart = nn >= progTotal(d);
+      const curW = Math.min(d.progression?.week || 1, nn);
       return {
         ...d,
-        progression: { ...d.progression, week: restart ? 1 : Math.min(d.progression?.week || 1, nn) },
+        progression: { ...d.progression, week: curW },
         exercises: d.exercises.map((e) => {
-          const prev = e.progression?.weeks;
-          if (!prev?.length) return e;
-          const weeks = restart
-            ? Array.from({ length: nn }, () => ({ sets: emptySetsFor(e) }))
-            : prev.slice(0, nn).map((w) => ({ sets: w.sets.map((st) => ({ ...st, done: false, elapsed: 0 })) }));
-          return { ...e, progression: { ...e.progression, weeks } };
+          const prev = e.progression?.weeks || [];
+          const weeks = Array.from({ length: nn }, (_, i) => {
+            if (i < prev.length && prev[i]) {
+              // Conserva i valori precedentemente inseriti per questa settimana
+              return {
+                ...prev[i],
+                sets: (prev[i].sets || []).map((st) => ({ ...st, done: false, elapsed: 0 })),
+              };
+            }
+            // Nuova settimana aggiunta oltre quelle esistenti: parte vuota
+            return { sets: emptySetsFor(e) };
+          });
+          return { ...e, progression: { ...(e.progression || {}), weeks } };
         }),
       };
     });
-    fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: `${tr("SETTIMANA")} 1/${nn}` });
+    setSelectedWeek((w) => Math.min(w, nn));
+    fireToast({ title: tr("◈ PROGRESSIONE SALVATA"), sub: `${tr("Settimane totali")}: ${nn}` });
   };
-  /* AI: decide da sola settimane e carichi (Premium o 1 credito). La chiamata,
+
+  const [copySourceWeek, setCopySourceWeek] = useState(null);
+  const currentDefaultSource = activeSelectedWeek > 1 ? activeSelectedWeek - 1 : (maxProgWeeks > 1 ? 2 : 1);
+  const effectiveSourceWeek = copySourceWeek && copySourceWeek !== activeSelectedWeek && copySourceWeek <= maxProgWeeks ? copySourceWeek : currentDefaultSource;
+
+  /* Copia i dati (serie, carichi, ripetizioni/tempi e note) da una settimana sorgente selezionata
+     per tutti gli esercizi della scheda che contengono la settimana target */
+  const copyFromWeekGlobal = (srcWeek) => {
+    if (!srcWeek || srcWeek === activeSelectedWeek) return;
+    const srcIdx = srcWeek - 1;
+    const targetIdx = activeSelectedWeek - 1;
+    applyProg((d) => ({
+      ...d,
+      exercises: d.exercises.map((e) => {
+        let weeks = e.progression?.weeks;
+        if (!weeks || weeks.length <= targetIdx || weeks.length <= srcIdx) return e;
+        const srcWk = weeks[srcIdx];
+        if (!srcWk) return e;
+        const updatedWeeks = weeks.map((wk, wi) => {
+          if (wi !== targetIdx) return wk;
+          return {
+            ...wk,
+            sets: srcWk.sets.map((s) => ({ ...s, done: false, elapsed: 0 })),
+            note: srcWk.note !== undefined ? srcWk.note : wk.note,
+          };
+        });
+        return {
+          ...e,
+          progression: { ...(e.progression || {}), weeks: updatedWeeks },
+        };
+      }),
+    }));
+    fireToast({
+      title: tr("◈ DATI COPIATI"),
+      sub: `${tr("Settimana")} ${srcWeek} → ${tr("Settimana")} ${activeSelectedWeek}`,
+    });
+  };
+
+  /* IA: decide da sola settimane e carichi (Premium o 1 credito). La chiamata,
      i gate e i toast sono nel chiamante (App); qui si applica il risultato */
   const runProgAI = async () => {
     if (!onAIProgression || progBusy) return;
     setProgBusy(true);
     const res = await onAIProgression(draft);
     setProgBusy(false);
-    if (!res || !res.exWeeks) return; // ospite/crediti: toast già mostrato
+    if (!res || !res.exWeeks) return;
     applyProg((d) => ({
       ...d,
       progression: { enabled: true, startDate: todayISO(), week: 1, doneKey: null },
       exercises: d.exercises.map((e, i) => ({ ...e, progression: { weeks: res.exWeeks[i] || [] } })),
     }));
-    fireToast({ title: res.aiDone ? tr("◈ PROGRESSIONE AI GENERATA") : tr("◈ PROGRESSIONE ATTIVA"), sub: `${tr("SETTIMANA")} 1/${res.total}` });
+    fireToast({ title: res.aiDone ? tr("◈ PROGRESSIONE IA GENERATA") : tr("◈ PROGRESSIONE ATTIVA"), sub: `${tr("SETTIMANA")} 1/${res.total}` });
   };
+
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
 
   /* Fotocamera AI nelle note PT (tutti i PT: lato server i trainer hanno le
@@ -143,8 +278,16 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
         fireToast({ title: tr("Foto non utilizzabile"), sub: tr("Inquadra il cliente mentre esegue l'esercizio") });
         return;
       }
-      upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptNote: x.ptNote ? `${x.ptNote}\n${text}` : text }) }));
-      fireToast({ title: tr("◈ NOTA AI INSERITA"), sub: tr("Rileggila e premi «Salva note»") });
+      const newDraft = {
+        ...draftRef.current,
+        exercises: draftRef.current.exercises.map((x, i) => i !== ei ? x : { ...x, ptNote: x.ptNote ? `${x.ptNote}\n${text}` : text }),
+      };
+      draftRef.current = newDraft;
+      upd(() => newDraft);
+      if (onSavePt) {
+        triggerSavePtNotes(newDraft, ei);
+      }
+      fireToast({ title: tr("◈ NOTA AI INSERITA E SALVATA"), sub: tr("Il cliente la vede subito nella sua scheda") });
     } catch (e) {
       fireToast({ title: tr("Analisi non riuscita"), sub: tr("Riprova con una foto più chiara") });
     }
@@ -343,9 +486,23 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
 
   /* Riordino: card esercizi e serie trascinabili su/giù dalle maniglie */
   const moveEx = (from, to) => upd((d) => {
+    const isProgFilter = d.progression?.enabled && activeSelectedWeek > 1;
+    if (!isProgFilter) {
+      const exs = [...d.exercises];
+      const [m] = exs.splice(from, 1);
+      exs.splice(to, 0, m);
+      return { ...d, exercises: exs };
+    }
+    const visibleIndices = d.exercises
+      .map((e, idx) => ({ e, idx }))
+      .filter(({ e }) => !!e.progression?.weeks?.[activeSelectedWeek - 1])
+      .map(({ idx }) => idx);
+    const realFrom = visibleIndices[from];
+    const realTo = visibleIndices[to];
+    if (realFrom === undefined || realTo === undefined) return d;
     const exs = [...d.exercises];
-    const [m] = exs.splice(from, 1);
-    exs.splice(to, 0, m);
+    const [m] = exs.splice(realFrom, 1);
+    exs.splice(realTo, 0, m);
     return { ...d, exercises: exs };
   });
 
@@ -491,6 +648,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
       {progIdx != null && draft.exercises[progIdx] && (
         <ProgressionModal ex={draft.exercises[progIdx]} routineProg={draft.progression}
+          fireToast={fireToast}
           onSave={(p) => {
             /* Aggiorna la bozza locale inserendo la progressione e sincronizzando le serie
                dell'esercizio con la settimana 1 della progressione. Non esegue il salvataggio immediato (onQuickSave)
@@ -506,6 +664,9 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
               })
             };
             setDraft(newDraft);
+            if (p.weeks?.length && p.weeks.length > progWeeksN) {
+              setProgWeeksN(p.weeks.length);
+            }
             setProgIdx(null);
           }}
           onClose={() => setProgIdx(null)} />
@@ -527,7 +688,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         onChange={(e) => upd((d) => ({ ...d, name: e.target.value }))} placeholder={tr("Nome scheda (es. LEG DAY)")} />
 
       {/* Progressione settimanale: gestione completa dentro la modifica scheda
-          (attivazione, numero settimane col Salva, AI, disattivazione). I valori
+          (attivazione, numero settimane col Salva, disattivazione). I valori
           delle settimane si compilano esercizio per esercizio dall'icona 📈 */}
       <div className="cham-s" style={{
         padding: "10px 12px", marginBottom: 14,
@@ -541,12 +702,12 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                 <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("▸ PROGRESSIONE ATTIVA")}
               </span>
               <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", flexShrink: 0 }}>
-                {tr("SETTIMANA")} {currentWeek(draft.progression, progTotal(draft))}/{progTotal(draft)}
+                {tr("SETTIMANA")} {currentWeek(draft.progression, maxProgWeeks)}/{maxProgWeeks}
               </span>
             </div>
             <div className="hud-label" style={{ margin: "12px 0 6px" }}>{tr("VISUALIZZA E MODIFICA SETTIMANA")}:</div>
-            <div className="row g4" style={{ marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
-              {Array.from({ length: progWeeksN }).map((_, i) => {
+            <div className="row g4" style={{ marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
+              {Array.from({ length: maxProgWeeks }).map((_, i) => {
                 const wNum = i + 1;
                 const isSel = activeSelectedWeek === wNum;
                 const isCurrentActive = draft.progression?.week === wNum;
@@ -575,6 +736,48 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                 );
               })}
             </div>
+            {maxProgWeeks > 1 && (
+              <div className="row g6" style={{ marginBottom: 12, alignItems: "center" }}>
+                <span className="micro t-dim" style={{ flexShrink: 0, fontWeight: 700 }}>
+                  <Copy size={12} style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />
+                  {tr("Copia da:")}
+                </span>
+                <select
+                  className="hud-input cham-s"
+                  value={effectiveSourceWeek}
+                  onChange={(e) => setCopySourceWeek(Number(e.target.value))}
+                  style={{
+                    padding: "5px 8px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: "var(--card)",
+                    color: "var(--text)",
+                    border: "1px solid var(--soft)",
+                    flex: 1,
+                    minWidth: 80,
+                  }}
+                >
+                  {Array.from({ length: maxProgWeeks }).map((_, i) => {
+                    const w = i + 1;
+                    if (w === activeSelectedWeek) return null;
+                    return (
+                      <option key={w} value={w}>
+                        {tr("Settimana")} {w} (W{w})
+                      </option>
+                    );
+                  })}
+                </select>
+                <Btn
+                  small
+                  onClick={() => copyFromWeekGlobal(effectiveSourceWeek)}
+                  disabled={effectiveSourceWeek === activeSelectedWeek}
+                  style={{ flexShrink: 0, padding: "5px 14px", fontWeight: 700, fontSize: 11 }}
+                  title={`${tr("Copia i dati dalla settimana")} ${effectiveSourceWeek} ${tr("alla settimana")} ${activeSelectedWeek}`}
+                >
+                  {tr("Copia")}
+                </Btn>
+              </div>
+            )}
             <div className="row g8" style={{ marginTop: 10, alignItems: "center" }}>
               <span className="micro" style={{ flexShrink: 0 }}>{tr("INIZIO SETTIMANA 1")}</span>
               <input type="date" className="hud-input cham-s" value={draft.progression.startDate || todayISO()}
@@ -583,20 +786,20 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
             </div>
             <div className="hud-label" style={{ margin: "12px 0 8px" }}>{tr("NUMERO DI SETTIMANE")}</div>
             <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
-              <Btn small disabled={progBusy || progWeeksN <= 2} style={{ padding: "8px 12px" }}
+              <Btn small disabled={progWeeksN <= 2} style={{ padding: "8px 12px" }}
                 onClick={() => setProgWeeksN((w) => clampW(w - 1))}>
                 <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
               </Btn>
               <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
                 {progWeeksN}
               </div>
-              <Btn small disabled={progBusy || progWeeksN >= 8} style={{ padding: "8px 12px" }}
+              <Btn small disabled={progWeeksN >= 8} style={{ padding: "8px 12px" }}
                 onClick={() => setProgWeeksN((w) => clampW(w + 1))}>
                 <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
               </Btn>
             </div>
             <div className="tiny t-faint" style={{ marginBottom: 10, lineHeight: 1.5 }}>
-              {tr("Cambia il numero e premi Salva: il ciclo riparte dalla settimana 1 con le settimane vuote, da compilare a mano o con l'AI.")}
+              {tr("Aggiungi o togli settimane e premi Salva: i carichi e le serie già impostati si conservano.")}
             </div>
             <div className="row g8" style={{ marginTop: 4 }}>
               {confirmProgOff ? (
@@ -618,10 +821,10 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                 <Btn ai full onClick={runProgAI} disabled={progBusy}>
                   {progBusy
                     ? <><Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Generazione...")}</>
-                    : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Ricalcola con l'AI")}</>}
+                    : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Ricalcola tutti gli esercizi con IA")}</>}
                 </Btn>
                 <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.5, textAlign: "center" }}>
-                  {tr("L'AI decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
+                  {tr("L'IA decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
                 </div>
               </>
             )}
@@ -633,18 +836,18 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
             </div>
             <div className="hud-label" style={{ marginBottom: 8 }}>{tr("NUMERO DI SETTIMANE")}</div>
             <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
-              <Btn small onClick={() => setProgWeeksN((w) => clampW(w - 1))} disabled={progWeeksN <= 2} style={{ padding: "8px 12px" }}>
+              <Btn small onClick={() => setProgWeeksN((w) => clampW(w - 1))} disabled={progBusy || progWeeksN <= 2} style={{ padding: "8px 12px" }}>
                 <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
               </Btn>
               <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
                 {progWeeksN}
               </div>
-              <Btn small onClick={() => setProgWeeksN((w) => clampW(w + 1))} disabled={progWeeksN >= 8} style={{ padding: "8px 12px" }}>
+              <Btn small onClick={() => setProgWeeksN((w) => clampW(w + 1))} disabled={progBusy || progWeeksN >= 8} style={{ padding: "8px 12px" }}>
                 <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
               </Btn>
             </div>
             <div className="tiny t-faint" style={{ marginBottom: 14, lineHeight: 1.5 }}>
-              {tr("Le settimane partono vuote: poi tu o il PT inserite pesi e ripetizioni esercizio per esercizio (modifica scheda → 📈). Con l'AI i valori si compilano da soli.")}
+              {tr("Le settimane partono vuote: poi tu o il PT inserite pesi e ripetizioni esercizio per esercizio (modifica scheda → 📈). Con l'IA i valori si compilano da soli.")}
             </div>
             <Btn primary full disabled={progBusy || !draft.exercises.length} onClick={activateProg}>
               {tr("Attiva progressione")}
@@ -659,10 +862,10 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                 <Btn ai full onClick={runProgAI} disabled={progBusy || !draft.exercises.length}>
                   {progBusy
                     ? <><Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Generazione...")}</>
-                    : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Calcola tutto con l'AI")}</>}
+                    : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Calcola tutti gli esercizi con IA")}</>}
                 </Btn>
                 <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.5, textAlign: "center" }}>
-                  {tr("L'AI decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
+                  {tr("L'IA decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
                 </div>
               </>
             )}
@@ -672,8 +875,8 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
 
       <div className="row g8" style={{ marginBottom: 14 }}>
         <Btn small ai onClick={() => { setSuggestOpen(true); setSugList(null); setSugErr(null); }} style={{ flex: 1 }}
-          title={tr("L'AI propone esercizi da aggiungere in base alla scheda")}>
-          <Sparkles size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Suggerisci con AI")}
+          title={tr("L'IA propone esercizi da aggiungere in base alla scheda")}>
+          <Sparkles size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Suggerisci con IA")}
         </Btn>
         {showScan && (
           <MachineScan premium={premium} variant="small" fireToast={fireToast}
@@ -684,12 +887,15 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
 
       {/* Esercizi nel modello: card e serie trascinabili per riordinare, pulsante INFO visibile */}
       <div data-dl className="stack" style={{ marginTop: 0 }}>
-      {draft.exercises.map((ex, ei) => {
-        const isProgActive = draft.progression?.enabled && ex.progression?.weeks?.[activeSelectedWeek - 1];
-        const displaySets = isProgActive ? ex.progression.weeks[activeSelectedWeek - 1].sets : ex.sets;
-        const displayNote = isProgActive ? (ex.progression.weeks[activeSelectedWeek - 1].note ?? "") : (ex.note || "");
-        return (
-          <Panel key={tr(ex.name)} accent style={{ padding: 12 }}>
+      {draft.exercises
+        .map((ex, ei) => ({ ex, ei }))
+        .filter(({ ex }) => !draft.progression?.enabled || activeSelectedWeek === 1 || !!ex.progression?.weeks?.[activeSelectedWeek - 1])
+        .map(({ ex, ei }) => {
+          const isProgActive = draft.progression?.enabled && ex.progression?.weeks?.[activeSelectedWeek - 1];
+          const displaySets = (isProgActive ? ex.progression.weeks[activeSelectedWeek - 1]?.sets : ex.sets) || [];
+          const displayNote = isProgActive ? (ex.progression.weeks[activeSelectedWeek - 1]?.note ?? "") : (ex.note || "");
+          return (
+            <Panel key={tr(ex.name) + "_" + ei} accent style={{ padding: 12 }}>
             {/* gruppo sopra il titolo, allineato come in allenamento */}
             <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 27 }}>{tr(ex.group || "").toUpperCase()}</div>
             <div className="row between g8" style={{ marginBottom: 4, alignItems: "flex-start" }}>
@@ -782,42 +988,48 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                       {tr("Note per il cliente — dove sbaglia, come migliorare, a cosa prestare attenzione")}
                     </div>
                     <textarea className="hud-input cham-s" rows={3} value={ex.ptNote || ""} autoComplete="off" data-lpignore="true" data-form-type="other"
-                      onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptNote: e.target.value }) }))}
+                      onChange={(e) => handlePtChange(ei, "ptNote", e.target.value)}
+                      onBlur={() => flushPtSave(ei)}
                       placeholder={tr("Es. tieni i gomiti a 45°, non rimbalzare il bilanciere, scendi lento 3s...")}
                       style={{ resize: "vertical", fontSize: 12, lineHeight: 1.6, marginBottom: 8 }} />
                     <div className="hud-label" style={{ marginBottom: 4, fontSize: 8, color: "var(--pt)" }}>
                       {tr("Video esecuzione personalizzato (link YouTube, Vimeo o mp4) — opzionale")}
                     </div>
                     <input className="hud-input cham-s" value={ex.ptVideo || ""} autoComplete="off" data-lpignore="true" data-form-type="other"
-                      onChange={(e) => upd((d) => ({ ...d, exercises: d.exercises.map((x, i) => i !== ei ? x : { ...x, ptVideo: e.target.value }) }))}
+                      onChange={(e) => handlePtChange(ei, "ptVideo", e.target.value)}
+                      onBlur={() => flushPtSave(ei)}
                       placeholder="https://youtube.com/watch?v=..." style={{ fontSize: 12, padding: "6px 8px" }} />
-                    <div className="row g8" style={{ marginTop: 10 }}>
-                      {/* fotocamera AI: foto del cliente che esegue → nota tecnica bozza */}
-                      <Btn small ai disabled={ptScanBusy === ei} style={{ flex: 1 }}
-                        title={tr("Fotografa il cliente mentre esegue: l'AI scrive la nota tecnica")}
-                        onClick={() => { setPtScanIdx(ei); ptCamRef.current && ptCamRef.current.click(); }}>
-                        {ptScanBusy === ei
-                          ? <Loader2 size={12} className="spin" />
-                          : <Camera size={12} style={{ display: "inline", verticalAlign: -2 }} />} {ptScanBusy === ei ? tr("Analisi...") : tr("Foto AI")}
-                      </Btn>
-                      {/* Salva SUBITO solo note/video PT: niente "Salva" della scheda né
-                          conferma di sovrascrittura — fonde i campi PT sulla copia fresca del cliente */}
-                      {onSavePt && (
-                        <Btn small pt disabled={ptBusy} style={{ flex: 1 }}
-                          title={tr("Salva subito note e video sul profilo del cliente, senza chiudere la scheda")}
-                          onClick={async () => {
-                            setPtBusy(true);
-                            const ok = await onSavePt(draft);
-                            setPtBusy(false);
-                            fireToast(ok
-                              ? { title: tr("◈ NOTE PT SALVATE"), sub: tr("Il cliente le vede subito nella sua scheda") }
-                              : { title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") });
-                          }}>
-                          {ptBusy
+                    <div className="row between" style={{ marginTop: 10, alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                      <div className="micro" style={{ color: ptSaveStatus[ei] === "saving" ? "var(--cyan)" : ptSaveStatus[ei] === "saved" ? "var(--green)" : ptSaveStatus[ei] === "error" ? "var(--red)" : "var(--faint)" }}>
+                        {ptSaveStatus[ei] === "saving" ? (
+                          <><Loader2 size={11} className="spin" style={{ display: "inline", verticalAlign: -1, marginRight: 4 }} />{tr("Salvataggio...")}</>
+                        ) : ptSaveStatus[ei] === "saved" ? (
+                          <><Check size={11} style={{ display: "inline", verticalAlign: -1, marginRight: 4 }} />{tr("Salvato subito ✓")}</>
+                        ) : ptSaveStatus[ei] === "error" ? (
+                          tr("Errore salvataggio")
+                        ) : (
+                          tr("Salvataggio immediato attivo")
+                        )}
+                      </div>
+                      <div className="row g8">
+                        {/* fotocamera IA: foto del cliente che esegue → nota tecnica bozza */}
+                        <Btn small ai disabled={ptScanBusy === ei}
+                          title={tr("Fotografa il cliente mentre esegue: l'IA scrive la nota tecnica")}
+                          onClick={() => { setPtScanIdx(ei); ptCamRef.current && ptCamRef.current.click(); }}>
+                          {ptScanBusy === ei
                             ? <Loader2 size={12} className="spin" />
-                            : <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} />} {ptBusy ? tr("Salvataggio...") : tr("Salva note")}
+                            : <Camera size={12} style={{ display: "inline", verticalAlign: -2 }} />} {ptScanBusy === ei ? tr("Analisi...") : tr("Foto IA")}
                         </Btn>
-                      )}
+                        {onSavePt && (
+                          <Btn small pt disabled={ptSaveStatus[ei] === "saving"}
+                            title={tr("Salva subito note e video sul profilo del cliente, senza chiudere la scheda")}
+                            onClick={() => flushPtSave(ei, true)}>
+                            {ptSaveStatus[ei] === "saving"
+                              ? <Loader2 size={12} className="spin" />
+                              : <StickyNote size={11} style={{ display: "inline", verticalAlign: -1 }} />} {tr("Salva subito")}
+                          </Btn>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -875,6 +1087,12 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         );
       })}
       </div>
+
+      {draft.progression?.enabled && activeSelectedWeek > 1 && draft.exercises.some((e) => !e.progression?.weeks?.[activeSelectedWeek - 1]) && (
+        <div className="tiny t-faint" style={{ marginTop: 4, marginBottom: 8, textAlign: "center", lineHeight: 1.5 }}>
+          {tr("Solo gli esercizi con la Settimana")} {activeSelectedWeek} {tr("programmata compaiono in questa vista.")}
+        </div>
+      )}
 
       {/* L'elenco esercizi si apre in un popup: aggiunta multipla con conferma,
           sostituzione con un tap (il popup si apre da sé cliccando l'icona) */}

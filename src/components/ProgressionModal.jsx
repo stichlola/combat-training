@@ -1,17 +1,16 @@
 import React, { useState } from "react";
-import { Plus, Trash2, TrendingUp } from "lucide-react";
+import { Plus, Trash2, TrendingUp, Copy } from "lucide-react";
 import { exMode } from "../lib/exercises";
 import { tr } from "../lib/i18n";
-import { currentWeek, parseReps, repVal } from "../lib/progression";
+import { currentWeek, repVal } from "../lib/progression";
 import { Btn, Overlay } from "../ui";
 
-/* ---------------- Modale settimane di un esercizio (solo editor scheda) ----------------
-   Gestisce SOLO la tabella delle settimane (carichi/ripetizioni crescenti).
-   Interruttore generale e data di inizio stanno a livello di scheda, nell'editor. */
-export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
+/* ---------------- Modale settimane di un esercizio ----------------
+   Gestisce la tabella delle settimane (carichi/ripetizioni per settimana).
+   Usato sia nell'editor scheda che durante l'allenamento in corso. */
+export function ProgressionModal({ ex, routineProg, onSave, onClose, fireToast }) {
   const mode = exMode(ex); // undefined = forza · "hold" = tenuta · "time" = cardio
-  /* la prima settimana parte VUOTA: i carichi li inserisce a mano l'utente/PT,
-     oppure li compila l'AI dal modale impostazioni della scheda */
+  /* la prima settimana parte VUOTA: i carichi li inserisce a mano l'utente/PT */
   const baseSets = () => ex.sets.map((s) => {
     const base = { ...s, done: false, elapsed: 0 };
     if (mode === "time") return { ...base, sec: "", dist: "" };
@@ -24,14 +23,15 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
     return w && w.length ? JSON.parse(JSON.stringify(w)) : [{ sets: baseSets() }];
   });
 
-  const curWeek = routineProg?.enabled ? Math.min(routineProg.week || 1, weeks.length) : null;
+  const curWeek = ex?.progWeek || (routineProg?.enabled ? Math.min(routineProg.week || 1, weeks.length) : null);
 
   const updateSet = (wi, si, field, val) => setWeeks((ws) =>
     ws.map((w, i) => i !== wi ? w : { sets: w.sets.map((s, j) => j !== si ? s : { ...s, [field]: field === "r" ? repVal(val) : (val === "" ? "" : Number(val)) }) }));
-  /* la settimana aggiunta parte VUOTA: i valori li inserisce a mano
-     l'utente/PT oppure li compila l'AI, mai copiati */
+
+  /* la settimana aggiunta parte VUOTA: i valori li inserisce a mano l'utente/PT */
   const addWeek = () => setWeeks((ws) => [...ws, { sets: baseSets() }]);
   const removeWeek = (wi) => setWeeks((ws) => ws.length <= 1 ? ws : ws.filter((_, i) => i !== wi));
+
   /* singola serie dentro la settimana: si aggiunge clonando l'ultima,
      si può togliere finché ne resta almeno una */
   const addSet = (wi) => setWeeks((ws) => ws.map((w, i) => i !== wi ? w : {
@@ -40,28 +40,34 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
   const removeSet = (wi, si) => setWeeks((ws) => ws.map((w, i) =>
     i !== wi || w.sets.length <= 1 ? w : { sets: w.sets.filter((_, j) => j !== si) }));
 
-  /* Incremento lineare automatico: prende la settimana 1 e genera le successive
-     con +kg o +reps/+sec a ogni settimana (stile schede PT) */
-  const [inc, setInc] = useState(""); // nessun default: lo decide l'utente
-  const autoField = mode === undefined ? "w" : "sec"; // forza→kg, hold/time→sec (reps via pulsante dedicato)
-  const autoFill = (field) => setWeeks((ws) => {
-    const first = ws[0].sets;
-    const step = Number(inc) || 0;
-    /* ogni settimana mantiene il proprio numero di serie: come base si usa la
-       stessa serie della settimana 1 quando esiste, altrimenti il valore proprio.
-       Ripetizioni a intervallo ("8-10"): si alzano entrambi gli estremi */
-    return ws.map((w, i) => ({
-      sets: w.sets.map((s, j) => {
-        const cur = (first[j] || s)[field];
-        if (field === "r") {
-          const p = parseReps(cur);
-          if (p && p.lo !== p.hi) return { ...s, r: `${Math.max(1, p.lo + step * i)}-${Math.max(1, p.hi + step * i)}` };
-          return { ...s, r: (p ? p.lo : 0) + step * i };
-        }
-        return { ...s, [field]: (Number(cur) || 0) + step * i };
-      }),
-    }));
-  });
+  const [copySourceMap, setCopySourceMap] = useState({});
+
+  /* Copia i dati (serie, carichi, ripetizioni/tempi e note) da una settimana sorgente selezionata */
+  const copyFromWeek = (targetWi, sourceWi) => {
+    if (!weeks[sourceWi] || targetWi === sourceWi) return;
+    const prevSets = weeks[sourceWi].sets;
+    setWeeks((ws) =>
+      ws.map((w, i) =>
+        i !== targetWi
+          ? w
+          : {
+              ...w,
+              sets: prevSets.map((s) => ({
+                ...s,
+                done: false,
+                elapsed: 0,
+              })),
+              ...(ws[sourceWi].note !== undefined ? { note: ws[sourceWi].note } : {}),
+            }
+      )
+    );
+    if (fireToast) {
+      fireToast({
+        title: tr("◈ DATI COPIATI"),
+        sub: `${tr("Settimana")} ${sourceWi + 1} → ${tr("Settimana")} ${targetWi + 1}`,
+      });
+    }
+  };
 
   return (
     <Overlay>
@@ -88,14 +94,67 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
         <div className="stack" style={{ maxHeight: "42vh", overflowY: "auto", paddingRight: 4 }}>
           {weeks.map((wk, wi) => (
             <div key={wi} className="cham-s" style={{ padding: "10px 12px", background: wi + 1 === curWeek ? "rgba(255,215,106,.06)" : "var(--card)", border: `1px solid ${wi + 1 === curWeek ? "#ffd76a" : "var(--soft)"}` }}>
-              <div className="row between" style={{ marginBottom: 8 }}>
+              <div className="row between" style={{ marginBottom: 8, alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                 <span className={`f-hud ${wi + 1 === curWeek ? "t-amber" : "t-cyan"}`} style={{ fontWeight: 700, fontSize: 12, letterSpacing: ".12em" }}>
                   {tr("SETTIMANA")} {wi + 1}{wi + 1 === curWeek ? " ●" : ""}
                 </span>
-                {wi > 0 && (
-                  <span onClick={() => removeWeek(wi)} className="tap icon-tap" title={tr("Elimina settimana")}
-                    style={{ cursor: "pointer", color: "var(--faint)" }}><Trash2 size={13} /></span>
-                )}
+                <div className="row g6" style={{ alignItems: "center", marginLeft: "auto" }}>
+                  {weeks.length > 1 && (
+                    <div className="row g4" style={{ alignItems: "center" }}>
+                      <span className="micro t-dim" style={{ fontSize: 9, fontWeight: 700, whiteSpace: "nowrap" }}>
+                        {tr("Copia da:")}
+                      </span>
+                      <select
+                        className="hud-input cham-s"
+                        value={copySourceMap[wi] ?? (wi > 0 ? wi : (weeks.length > 1 ? 2 : 1))}
+                        onChange={(e) => setCopySourceMap((m) => ({ ...m, [wi]: Number(e.target.value) }))}
+                        style={{
+                          padding: "2px 4px",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          height: 24,
+                          background: "var(--card)",
+                          color: "var(--text)",
+                          border: "1px solid var(--soft)",
+                          borderRadius: 3,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {weeks.map((_, srcIdx) => {
+                          if (srcIdx === wi) return null;
+                          return (
+                            <option key={srcIdx} value={srcIdx + 1}>
+                              W{srcIdx + 1}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <Btn
+                        small
+                        onClick={() => {
+                          const srcWeekNum = copySourceMap[wi] ?? (wi > 0 ? wi : (weeks.length > 1 ? 2 : 1));
+                          copyFromWeek(wi, srcWeekNum - 1);
+                        }}
+                        style={{
+                          padding: "3px 7px",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          height: 24,
+                          display: "inline-flex",
+                          alignItems: "center",
+                        }}
+                        title={`${tr("Copia serie e carichi da W")}${copySourceMap[wi] ?? (wi > 0 ? wi : 2)}`}
+                      >
+                        <Copy size={10} style={{ display: "inline", verticalAlign: -1, marginRight: 3 }} />
+                        {tr("Copia")}
+                      </Btn>
+                    </div>
+                  )}
+                  {wi > 0 && (
+                    <span onClick={() => removeWeek(wi)} className="tap icon-tap" title={tr("Elimina settimana")}
+                      style={{ cursor: "pointer", color: "var(--faint)", marginLeft: 2 }}><Trash2 size={13} /></span>
+                  )}
+                </div>
               </div>
               {wk.sets.map((s, si) => (
                 <div key={si} className="row g8" style={{ marginBottom: 5, alignItems: "center" }}>
@@ -145,28 +204,15 @@ export function ProgressionModal({ ex, routineProg, onSave, onClose }) {
           ))}
         </div>
 
-        <Btn small onClick={addWeek} style={{ width: "100%", marginTop: 10 }}
-          title={tr("Aggiunge una settimana identica all'ultima: poi modifichi solo carichi o ripetizioni")}>
-          <Plus size={11} style={{ display: "inline", verticalAlign: -1 }} /> {tr("SETTIMANA")}
-        </Btn>
-
-        {/* Generatore lineare: +kg / +reps / +sec a settimana partendo dalla settimana 1 */}
-        {weeks.length > 1 && (
-          <div className="row g8" style={{ marginTop: 8, alignItems: "center" }}>
-            <span className="micro t-faint" style={{ flexShrink: 0 }}>{tr("AUTO +")}</span>
-            <input className="hud-input cham-s" type="number" inputMode="decimal" value={inc}
-              onChange={(e) => setInc(e.target.value)}
-              style={{ textAlign: "center", padding: "6px 4px", width: 64 }} />
-            {mode === undefined ? (
-              <>
-                <Btn small onClick={() => autoFill("w")} disabled={!Number(inc)} style={{ flex: 1 }}>{tr("KG/SETT")}</Btn>
-                <Btn small onClick={() => autoFill("r")} disabled={!Number(inc)} style={{ flex: 1 }}>{tr("REPS/SETT")}</Btn>
-              </>
-            ) : (
-              <Btn small onClick={() => autoFill(autoField)} disabled={!Number(inc)} style={{ flex: 1 }}>{mode === "hold" ? tr("SEC/SETT") : tr("MIN/SETT")}</Btn>
-            )}
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={addWeek}
+          className="dash-btn cham-s tap"
+          style={{ width: "100%", marginTop: 10, padding: 12, fontWeight: 700, letterSpacing: ".15em" }}
+          title={tr("Aggiunge una nuova settimana")}
+        >
+          <Plus size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} /> {tr("Aggiungi settimana")}
+        </button>
 
         <div className="row g8" style={{ marginTop: 14 }}>
           <Btn onClick={onClose} style={{ flex: 1 }}>{tr("Annulla")}</Btn>

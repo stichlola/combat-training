@@ -202,10 +202,16 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
   /* persistenza effettiva dopo la conferma di sovrascrittura */
   const commit = async () => {
     setBusy(true);
-    const ok = await saveClientRoutines(client.client_id, pending);
+    const now = Date.now();
+    const stamped = pending.map((r) => ({
+      ...r,
+      ptModifiedAt: now,
+      ptModifiedBy: user.full_name || user.username || "Personal Trainer",
+    }));
+    const ok = await saveClientRoutines(client.client_id, stamped);
     setBusy(false);
     if (!ok) { setPending(null); return fireToast({ title: tr("Salvataggio non riuscito"), sub: tr("Riprova tra poco") }); }
-    setRoutines(pending);
+    setRoutines(stamped);
     setPending(null);
     fireToast({ title: tr("◈ SCHEDE AGGIORNATE"), sub: tr("Il cliente le vedrà al prossimo caricamento") });
   };
@@ -218,10 +224,13 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
     const fresh = (await getClientRoutines(client.client_id)) || [];
     const idx = fresh.findIndex((r) => r.id === draft.id);
     let next;
+    const now = Date.now();
     if (idx >= 0) {
       const src = fresh[idx];
       const merged = {
         ...src,
+        ptModifiedAt: now,
+        ptModifiedBy: user.full_name || user.username || "Personal Trainer",
         exercises: (src.exercises || []).map((x, i) => {
           const p = draft.exercises.find((e) => e.name === x.name) || draft.exercises[i];
           return p ? { ...x, ptNote: p.ptNote || "", ptVideo: p.ptVideo || "" } : x;
@@ -231,7 +240,7 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
     } else {
       /* scheda nuova non ancora sul server: la crea direttamente dalla bozza */
       if (!draft.name || !draft.exercises.length) return false;
-      next = [...fresh, { ...draft, name: draft.name.toUpperCase() }];
+      next = [...fresh, { ...draft, name: draft.name.toUpperCase(), ptModifiedAt: now, ptModifiedBy: user.full_name || user.username || "Personal Trainer" }];
     }
     const ok = await saveClientRoutines(client.client_id, next);
     if (ok) setRoutines(next);
@@ -247,8 +256,11 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
     const idx = fresh.findIndex((r) => r.id === draft.id);
     if (idx < 0) return false; // scheda nuova: serve il Salva normale
     const src = fresh[idx];
+    const now = Date.now();
     const merged = {
       ...src,
+      ptModifiedAt: now,
+      ptModifiedBy: user.full_name || user.username || "Personal Trainer",
       progression: draft.progression || src.progression,
       exercises: (src.exercises || []).map((x, i) => {
         const p = draft.exercises.find((e) => e.name === x.name) || draft.exercises[i];
@@ -359,7 +371,7 @@ function ClientDetail({ user, client, fireToast, onBack, onRemoved }) {
         <div className="hud-label row g6" style={{ marginBottom: 6 }}>
           <StickyNote size={13} color="var(--pt)" /> {tr("Note private (solo tu le vedi)")}
         </div>
-        <textarea className="hud-input cham-s" value={note} onChange={(e) => setNote(e.target.value)} rows={4}
+        <textarea className="hud-input cham-s" value={note} onChange={(e) => setNote(e.target.value)} onBlur={() => { if (dirty) save(); }} rows={4}
           placeholder={tr("Es. obiettivi, infortuni, preferenze, progressi osservati...")}
           style={{ resize: "vertical", fontSize: 13, lineHeight: 1.6 }} />
         {dirty && (

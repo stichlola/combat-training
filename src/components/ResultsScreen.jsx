@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { AlertTriangle } from "lucide-react";
 import { xpForLevel } from "../lib/game";
 import { tr } from "../lib/i18n";
 import { Btn, Overlay, QBar } from "../ui";
@@ -32,7 +33,23 @@ export function ResultsScreen({ results, onClose, standard }) {
       <div className="modal-box cham fade-in" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
         <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".25em", fontSize: 15, textAlign: "center" }}>{tr("◈ RAPPORTO MISSIONE")}</div>
-        <div className="micro t-faint" style={{ textAlign: "center", marginBottom: 18 }}>{results.name}</div>
+        <div className="micro t-faint" style={{ textAlign: "center", marginBottom: results.ptModifiedWhileTraining ? 10 : 18 }}>{results.name}</div>
+
+        {results.ptModifiedWhileTraining && (
+          <div className="cham-s" style={{
+            padding: "8px 12px",
+            marginBottom: 16,
+            background: "rgba(245,158,11,.12)",
+            border: "1px solid var(--pt)",
+          }}>
+            <div className="row g6" style={{ alignItems: "center" }}>
+              <AlertTriangle size={14} style={{ color: "var(--pt)", flexShrink: 0 }} />
+              <span className="micro" style={{ color: "var(--pt)", fontWeight: 700, letterSpacing: ".08em" }}>
+                {tr("Scheda modificata dal Personal Trainer durante l'allenamento")}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* XP animato */}
         {!standard && (

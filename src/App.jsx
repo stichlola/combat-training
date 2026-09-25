@@ -889,7 +889,25 @@ export default function App() {
         if (data.nutrition) setNutri(data.nutrition);
         if (data.routines) setRoutines(data.routines);
         if (data.prs) setPrs(data.prs);
-        if (data.session) setSession(data.session);
+
+        // Controllo sessioni fantasma: se la sessione salvata corrisponde a un allenamento
+        // già registrato nello storico (completato), non deve MAI essere ripristinata come "in corso".
+        const s = data.session;
+        const h = Array.isArray(data.history) ? data.history : [];
+        const isGhostSession = s && h.some((item) =>
+          (item.routineId === s.routineId || item.name === s.name) &&
+          (item.ts >= (s.startedAt - 120000) || s.completed)
+        );
+
+        if (s && !isGhostSession && !s.completed) {
+          setSession(s);
+        } else {
+          setSession(null);
+          if (s && (isGhostSession || s.completed)) {
+            supabase.from("user_data").update({ session: null }).eq("user_id", authUser.id);
+          }
+        }
+
         if (data.history) setHistory(data.history);
         if (data.quests) setQuests(rolledQuests(data.quests));
         if (data.stats) setStats({ ...EMPTY_STATS, ...data.stats });
@@ -1017,11 +1035,21 @@ export default function App() {
       return;
     }
     saveRef2.current = setTimeout(() => {
-      supabase.from("user_data").upsert({
-        user_id: user.id, body, nutrition: nutri, routines, prs,
-        session, history, quests, stats,
-        xp, level, streak, updated_at: new Date().toISOString(),
-      }).then(({ error }) => error && console.error("Save error:", error.message));
+      // Se c'è una sessione in corso, non sovrascrivere 'routines' su Supabase:
+      // potrebbe essere stata modificata dal PT nel frattempo.
+      if (session) {
+        supabase.from("user_data").update({
+          body, nutrition: nutri, prs,
+          session, history, quests, stats,
+          xp, level, streak, updated_at: new Date().toISOString(),
+        }).eq("user_id", user.id).then(({ error }) => error && console.error("Save error:", error.message));
+      } else {
+        supabase.from("user_data").upsert({
+          user_id: user.id, body, nutrition: nutri, routines, prs,
+          session, history, quests, stats,
+          xp, level, streak, updated_at: new Date().toISOString(),
+        }).then(({ error }) => error && console.error("Save error:", error.message));
+      }
     }, 800);
   }, [user, hydrated, body, nutri, routines, prs, session, history, quests, stats, xp, level]);
 
@@ -1365,7 +1393,7 @@ export default function App() {
 
         <main className="main-area">
           {tab === "clients" && canPt && ptMode && <TrainerView user={user} fireToast={fireToast} />}
-          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} premium={premium} body={body} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} />}
+          {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} premium={premium} body={body} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} user={user} />}
           {tab === "nutrition" && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
@@ -1662,7 +1690,7 @@ function ProgressionEditModal({ routines, onSave, onClose }) {
   );
 }
 
-function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory }) {
+function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, addXp, fireToast, routines, setRoutines, prs, setPrs, session, setSession, history, setHistory, user }) {
   const [view, setView] = useState("home");
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
@@ -1670,6 +1698,22 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
   const [report, setReport] = useState(null);
   const [summaryId, setSummaryId] = useState(null);
   const [editProgressionOpen, setEditProgressionOpen] = useState(false);
+  const [results, setResults] = useState(null);
+
+  /* Se la sessione attiva corrisponde a un allenamento già presente nello storico recente,
+     significa che è già stata completata: forziamo la chiusura */
+  useEffect(() => {
+    if (session && Array.isArray(history) && history.length > 0) {
+      const latest = history[0];
+      if ((latest.routineId === session.routineId || latest.name === session.name) &&
+          (latest.ts >= (session.startedAt - 120000) || session.completed)) {
+        setSession(null);
+        if (user && !user.guest) {
+          supabase.from("user_data").update({ session: null }).eq("user_id", user.id);
+        }
+      }
+    }
+  }, [session, history, user]);
 
   /* Avanzamento settimane: la settimana viene incrementata immediatamente alla fine
      dell'allenamento (syncProgression funge da fallback per schede legacy con doneKey) */
@@ -1706,13 +1750,23 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
 
   /* Inizia Allenamento: crea una sessione attiva e persistente (copia del modello).
      Se un esercizio ha la progressione settimanale attiva, usa le serie della
-     settimana corrente al posto di quelle base della scheda. */
+     settimana corrente. Se una settimana successiva è programmata solo per alcuni
+     esercizi, la sessione include solo gli esercizi che contengono quella settimana. */
   const startSession = (r) => {
+    const curWk = r.progression?.enabled ? (r.progression.week || 1) : 1;
+    const isProg = !!r.progression?.enabled;
+    const targetExercises = isProg && curWk > 1
+      ? r.exercises.filter((e) => (e.progression?.weeks?.length || 0) >= curWk)
+      : r.exercises;
+    const exercisesToUse = targetExercises.length ? targetExercises : r.exercises;
+
     setSession({
       routineId: r.id,
       name: r.name,
       startedAt: Date.now(),
-      exercises: r.exercises.map((e) => {
+      routinePtModifiedAt: r.ptModifiedAt || 0,
+      routineSnapshot: JSON.parse(JSON.stringify(r)),
+      exercises: exercisesToUse.map((e) => {
         const prog = applyProgression(e, r.progression);
         return {
           ...e,
@@ -1725,12 +1779,8 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
     setView("session");
   };
 
-  /* ─── Progressione settimanale (manuale): N settimane che partono TUTTE
-         VUOTE — pesi e ripetizioni li inserisce a mano l'utente o il PT dalla
-         modifica scheda (icona 📈); i valori li compila solo l'AI.
-         Riattivando o ridimensionando una scheda che aveva già delle settimane,
-         i valori impostati a mano si conservano: il numero viene solo accorciato
-         o esteso copiando l'ultima settimana ─── */
+  /* settimane SEMPRE vuote: i valori li inserisce a mano l'utente/PT oppure
+     li compila l'IA — mai copiati dalle settimane precedenti */
   const emptySets = (ex) => {
     const mode = exMode(ex);
     return ex.sets.map((st) => {
@@ -1740,13 +1790,7 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
       return { ...base, w: "", r: "" };
     });
   };
-  /* settimane SEMPRE vuote: i valori li inserisce a mano l'utente/PT oppure
-     li compila l'AI — mai copiati dalle settimane precedenti */
   const flatWeeks = (ex, n) => Array.from({ length: n }, () => ({ sets: emptySets(ex) }));
-  /* ─── Progressione AI su richiesta dell'editor (pannello progressione dentro
-     la modifica scheda): ritorna { exWeeks, total, aiDone } — è il chiamante ad
-     applicarla alla bozza. null se ospite/crediti insufficienti (toast già
-     mostrato). Se l'AI non risponde: progressione base con settimane VUOTE ─── */
   const askAIProgression = async (r) => {
     if (premium && premium.guest) {
       return premium.needAccount ? premium.needAccount() : premium.open();
@@ -1773,7 +1817,7 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
       }, "progression");
       if (data && (data.error === "limit_reached" || data.error === "premium_required")) {
         if (premium) premium.open();
-        fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento AI") });
+        fireToast({ title: tr("Crediti insufficienti"), sub: tr("Servono Premium o 1 credito per il completamento con IA") });
         return null;
       }
       if (data && data.error) throw new Error("API");
@@ -1781,8 +1825,6 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
       const parsed = parseLoose(raw);
       const weeksArr = (parsed.weeks || []).slice(0, 8);
       if (weeksArr.length < 2) throw new Error("bad");
-      /* validazione: per ogni esercizio si prendono le settimane AI (match per
-         nome, altrimenti per posizione) con valori clampati a range sensati */
       exWeeks = r.exercises.map((ex, ei) => {
         const mode = exMode(ex);
         return weeksArr.map((wk) => {
@@ -1792,7 +1834,6 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
             const st = src[Math.min(si, src.length - 1)] || {};
             if (mode === "hold") return { sec: Math.max(5, Math.min(600, Number(st.sec ?? base.sec) || 60)), elapsed: 0, done: false };
             if (mode === "time") return { sec: Math.max(60, Number(st.sec ?? base.sec) || 600), dist: String(st.dist ?? base.dist ?? ""), elapsed: 0, done: false };
-            /* ripetizioni: numero singolo oppure intervallo "8-10" (doppia progressione) */
             const rm = REP_RANGE.exec(String(st.r ?? ""));
             return {
               w: Math.max(0, Number(st.w ?? base.w) || 0),
@@ -1805,25 +1846,40 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
         });
       });
     } catch (e) {
-      /* AI non raggiungibile: si attiva comunque la progressione base, con le
-         settimane VUOTE da compilare a mano (i valori li mette solo l'AI) */
-      fireToast({ title: tr("AI non disponibile: progressione base attivata"), sub: tr("Settimane vuote: compilale tu o il PT") });
+      fireToast({ title: tr("IA non disponibile: progressione base attivata"), sub: tr("Settimane vuote: compilale tu o il PT") });
       return { exWeeks: r.exercises.map((ex) => flatWeeks(ex, 4)), total: 4, aiDone: false };
     }
     return { exWeeks, total: exWeeks[0]?.length || 4, aiDone: true };
   };
 
   const abandonSession = () => {
-    setSession(null); setConfirmAbandon(false);
+    setSession(null);
+    setConfirmAbandon(false);
+    if (user && !user.guest) {
+      supabase.from("user_data").update({ session: null, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id).then(({ error }) => error && console.error("Error clearing session on abandon:", error));
+    } else {
+      try {
+        const g = JSON.parse(localStorage.getItem(GUEST_KEY) || "{}");
+        g.session = null;
+        localStorage.setItem(GUEST_KEY, JSON.stringify(g));
+      } catch {}
+    }
     fireToast({ title: tr("◈ SESSIONE ABBANDONATA"), sub: tr("Nessun record salvato") });
   };
 
+  if (results) {
+    return <ResultsScreen standard={standard} results={results}
+      onClose={() => { setResults(null); setView("home"); onSessionClosed && onSessionClosed(); }} />;
+  }
   if (view === "session" && session) {
     return <SessionView standard={standard} onWorkoutDone={onWorkoutDone} premium={premium} session={session} setSession={setSession} prs={prs} setPrs={setPrs}
       addXp={addXp} fireToast={fireToast}
       routines={routines} setRoutines={setRoutines} setHistory={setHistory}
       exitToHome={() => setView("home")}
-      onResultsClose={() => { setSession(null); setView("home"); onSessionClosed && onSessionClosed(); }} />;
+      onCompleteResults={(r) => setResults(r)}
+      onResultsClose={() => { setSession(null); setView("home"); onSessionClosed && onSessionClosed(); }}
+      user={user} />;
   }
   if (view === "builder") {
     const initial = editId != null ? routines.find((r) => r.id === editId) : null;
