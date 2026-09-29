@@ -109,6 +109,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
     Math.max(2, Math.min(8, initial?.progression?.enabled ? progTotal(initial) : 4)));
   const [selectedWeek, setSelectedWeek] = useState(() => initial?.progression?.week || 1);
   const [confirmProgOff, setConfirmProgOff] = useState(false);
+  const [confirmProgAI, setConfirmProgAI] = useState(false); // conferma prima del ricalcolo IA
   const clampW = (n) => Math.max(2, Math.min(8, n));
   const emptySetsFor = (ex) => {
     const mode = exMode(ex);
@@ -120,6 +121,8 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
     });
   };
   const maxProgWeeks = Math.max(progWeeksN, progTotal(draft));
+  const savedProgWeeks = progTotal(draft); // settimane effettivamente salvate nella scheda
+  const curProgWeek = currentWeek(draft.progression, savedProgWeeks || maxProgWeeks);
   const activeSelectedWeek = draft.progression?.enabled ? Math.max(1, Math.min(selectedWeek, maxProgWeeks)) : 1;
   const applyProg = (fn) => {
     const nd = fn(draft);
@@ -761,177 +764,214 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
       }}>
         {draft.progression?.enabled ? (
           <>
-            <div className="row between" style={{ alignItems: "center" }}>
-              <span className="f-hud t-amber" style={{ fontWeight: 700, fontSize: 12, letterSpacing: ".12em" }}>
-                <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("▸ PROGRESSIONE ATTIVA")}
-              </span>
-              <span className="chip cham-s" style={{ borderColor: "#ffd76a", color: "#ffd76a", flexShrink: 0 }}>
-                {tr("SETTIMANA")} {currentWeek(draft.progression, maxProgWeeks)}/{maxProgWeeks}
-              </span>
-            </div>
-            <div className="hud-label" style={{ margin: "12px 0 6px" }}>{tr("VISUALIZZA E MODIFICA SETTIMANA")}:</div>
-            <div className="row g4" style={{ marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
-              {Array.from({ length: maxProgWeeks }).map((_, i) => {
-                const wNum = i + 1;
-                const isSel = activeSelectedWeek === wNum;
-                const isCurrentActive = draft.progression?.week === wNum;
-                return (
-                  <button
-                    key={wNum}
-                    type="button"
-                    className={`tap cham-s ${isSel ? "active" : ""}`}
-                    onClick={() => setSelectedWeek(wNum)}
-                    style={{
-                      flex: 1,
-                      padding: "6px 8px",
-                      fontSize: 11,
-                      textAlign: "center",
-                      whiteSpace: "nowrap",
-                      background: isSel ? "#ffd76a" : "var(--card)",
-                      color: isSel ? "#000" : (isCurrentActive ? "#ffd76a" : "var(--dim)"),
-                      border: `1px solid ${isSel ? "#ffd76a" : (isCurrentActive ? "rgba(255, 215, 106, 0.4)" : "var(--soft)")}`,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      minWidth: 50,
-                    }}
-                  >
-                    W{wNum}
-                  </button>
-                );
-              })}
-            </div>
-            {maxProgWeeks > 1 && (
-              <div className="row g6" style={{ marginBottom: 12, alignItems: "center" }}>
-                <span className="micro t-dim" style={{ flexShrink: 0, fontWeight: 700 }}>
-                  <Copy size={12} style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />
-                  {tr("Copia da:")}
-                </span>
-                <select
-                  className="hud-input cham-s"
-                  value={effectiveSourceWeek}
-                  onChange={(e) => setCopySourceWeek(Number(e.target.value))}
-                  style={{
-                    padding: "5px 8px",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    background: "var(--card)",
-                    color: "var(--text)",
-                    border: "1px solid var(--soft)",
-                    flex: 1,
-                    minWidth: 80,
-                  }}
-                >
-                  {Array.from({ length: maxProgWeeks }).map((_, i) => {
-                    const w = i + 1;
-                    if (w === activeSelectedWeek) return null;
-                    return (
-                      <option key={w} value={w}>
-                        {tr("Settimana")} {w} (W{w})
-                      </option>
-                    );
-                  })}
-                </select>
-                <Btn
-                  small
-                  onClick={() => copyFromWeekGlobal(effectiveSourceWeek)}
-                  disabled={effectiveSourceWeek === activeSelectedWeek}
-                  style={{ flexShrink: 0, padding: "5px 14px", fontWeight: 700, fontSize: 11 }}
-                  title={`${tr("Copia i dati dalla settimana")} ${effectiveSourceWeek} ${tr("alla settimana")} ${activeSelectedWeek}`}
-                >
-                  {tr("Copia")}
-                </Btn>
-              </div>
-            )}
-            <div className="row g8" style={{ marginTop: 10, alignItems: "center" }}>
-              <span className="micro" style={{ flexShrink: 0 }}>{tr("INIZIO SETTIMANA 1")}</span>
-              <input type="date" className="hud-input cham-s" value={draft.progression.startDate || todayISO()}
-                onChange={(e) => applyProg((d) => ({ ...d, progression: { ...d.progression, startDate: e.target.value } }))}
-                style={{ padding: "6px 8px", fontSize: 12 }} />
-            </div>
-            <div className="hud-label" style={{ margin: "12px 0 8px" }}>{tr("NUMERO DI SETTIMANE")}</div>
-            <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
-              <Btn small disabled={progWeeksN <= 2} style={{ padding: "8px 12px" }}
-                onClick={() => setProgWeeksN((w) => clampW(w - 1))}>
-                <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
-              </Btn>
-              <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
-                {progWeeksN}
-              </div>
-              <Btn small disabled={progWeeksN >= 8} style={{ padding: "8px 12px" }}
-                onClick={() => setProgWeeksN((w) => clampW(w + 1))}>
-                <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
-              </Btn>
-            </div>
-            <div className="tiny t-faint" style={{ marginBottom: 10, lineHeight: 1.5 }}>
-              {tr("Aggiungi o togli settimane e premi Salva: i carichi e le serie già impostati si conservano.")}
-            </div>
-            <div className="row g8" style={{ marginTop: 4 }}>
-              {confirmProgOff ? (
-                <Btn small onClick={disableProg} style={{ flex: 1.2, borderColor: "var(--line2)", color: "var(--dim)" }}>
-                  {tr("Conferma: disattiva")}
-                </Btn>
-              ) : (
-                <Btn small onClick={() => setConfirmProgOff(true)} style={{ flex: 1.2 }}>{tr("Disattiva")}</Btn>
-              )}
-              <Btn small primary disabled={progBusy} onClick={resizeProg} style={{ flex: 2 }}>{tr("Salva")}</Btn>
-            </div>
-            {onAIProgression && (
-              <>
-                <div className="row" style={{ alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
-                  <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
-                  <span className="micro t-faint">{tr("OPPURE")}</span>
-                  <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+            {/* intestazione: stato della progressione */}
+            <div className="row between" style={{ alignItems: "center", gap: 8 }}>
+              <div>
+                <div className="f-hud" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".12em", color: "var(--bright)" }}>
+                  <TrendingUp size={14} style={{ display: "inline", verticalAlign: -2, marginRight: 6, color: "var(--amber)" }} />
+                  {tr("PROGRESSIONE ATTIVA")}
                 </div>
-                <Btn ai full onClick={runProgAI} disabled={progBusy}>
+                <div className="tiny t-faint" style={{ marginTop: 3 }}>
+                  {tr("Sei alla settimana")} <b style={{ color: "var(--amber)" }}>{curProgWeek}</b> {tr("di")} {maxProgWeeks}
+                </div>
+              </div>
+              <span className="chip cham-s" style={{ borderColor: "var(--amber)", color: "var(--amber)", fontWeight: 700, flexShrink: 0 }}>
+                W{curProgWeek}/{maxProgWeeks}
+              </span>
+            </div>
+
+            {/* 1 · scelta della settimana da vedere/modificare */}
+            <div className="prog-sec">
+              <div className="prog-sec-title"><span className="prog-num">1</span>{tr("Settimana da modificare")}</div>
+              <div className="row g6" style={{ overflowX: "auto", paddingBottom: 2 }}>
+                {Array.from({ length: maxProgWeeks }).map((_, i) => {
+                  const wNum = i + 1;
+                  const isSel = activeSelectedWeek === wNum;
+                  const isCur = curProgWeek === wNum;
+                  return (
+                    <button key={wNum} type="button" onClick={() => setSelectedWeek(wNum)}
+                      className={`tap prog-week${isSel ? " sel" : ""}${isCur ? " cur" : ""}`}>
+                      <span style={{ fontSize: 12, fontWeight: 700 }}>W{wNum}</span>
+                      <span className="prog-week-sub">{isCur ? tr("in corso") : wNum < curProgWeek ? tr("fatta") : " "}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {maxProgWeeks > 1 && (
+                <div className="row g6" style={{ marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <span className="micro t-dim" style={{ flexShrink: 0, fontWeight: 700 }}>
+                    <Copy size={12} style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />
+                    {tr("Copia i valori da")}
+                  </span>
+                  <select className="hud-input cham-s" value={effectiveSourceWeek}
+                    onChange={(e) => setCopySourceWeek(Number(e.target.value))}
+                    style={{ padding: "6px 8px", fontSize: 12, fontWeight: 700, flex: 1, minWidth: 90 }}>
+                    {Array.from({ length: maxProgWeeks }).map((_, i) => {
+                      const w = i + 1;
+                      if (w === activeSelectedWeek) return null;
+                      return <option key={w} value={w}>{tr("Settimana")} {w}</option>;
+                    })}
+                  </select>
+                  <Btn small onClick={() => copyFromWeekGlobal(effectiveSourceWeek)}
+                    disabled={effectiveSourceWeek === activeSelectedWeek}
+                    style={{ flexShrink: 0, padding: "6px 14px", fontWeight: 700, fontSize: 11 }}
+                    title={`${tr("Copia i dati dalla settimana")} ${effectiveSourceWeek} ${tr("alla settimana")} ${activeSelectedWeek}`}>
+                    {tr("Copia in")} W{activeSelectedWeek}
+                  </Btn>
+                </div>
+              )}
+            </div>
+
+            {/* 2 · impostazioni generali: data di inizio e durata */}
+            <div className="prog-sec">
+              <div className="prog-sec-title"><span className="prog-num">2</span>{tr("Durata e inizio")}</div>
+              <div className="prog-grid">
+                <div>
+                  <div className="micro t-dim" style={{ marginBottom: 5, fontWeight: 700 }}>{tr("Inizio settimana 1")}</div>
+                  <input type="date" className="hud-input cham-s" value={draft.progression.startDate || todayISO()}
+                    onChange={(e) => applyProg((d) => ({ ...d, progression: { ...d.progression, startDate: e.target.value } }))}
+                    style={{ padding: "7px 8px", fontSize: 12, width: "100%" }} />
+                </div>
+                <div>
+                  <div className="micro t-dim" style={{ marginBottom: 5, fontWeight: 700 }}>{tr("Numero di settimane")}</div>
+                  <div className="row g6" style={{ alignItems: "center" }}>
+                    <Btn small disabled={progWeeksN <= 2} style={{ padding: "7px 10px" }}
+                      onClick={() => setProgWeeksN((w) => clampW(w - 1))}>
+                      <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+                    </Btn>
+                    <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "6px 0", fontSize: 16, fontWeight: 700, background: "var(--input)", border: "1px solid var(--soft2)" }}>
+                      {progWeeksN}
+                    </div>
+                    <Btn small disabled={progWeeksN >= 8} style={{ padding: "7px 10px" }}
+                      onClick={() => setProgWeeksN((w) => clampW(w + 1))}>
+                      <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+                    </Btn>
+                  </div>
+                </div>
+              </div>
+              {progWeeksN !== savedProgWeeks && (
+                <div className="tiny" style={{ marginTop: 8, color: "var(--amber)", lineHeight: 1.5 }}>
+                  {tr("Da")} {savedProgWeeks} {tr("a")} {progWeeksN} {tr("settimane: premi Applica. I carichi già impostati si conservano.")}
+                </div>
+              )}
+              <Btn small primary full disabled={progBusy || progWeeksN === savedProgWeeks} onClick={resizeProg} style={{ marginTop: 10 }}>
+                {tr("Applica numero settimane")}
+              </Btn>
+            </div>
+
+            {/* 3 · rigenerazione completa con IA (chiede conferma: sovrascrive tutto) */}
+            {onAIProgression && (
+              <div className="prog-sec">
+                <div className="prog-sec-title"><span className="prog-num">3</span>{tr("Ricalcolo automatico")}</div>
+                <div className="tiny t-faint" style={{ marginBottom: 8, lineHeight: 1.5 }}>
+                  {tr("L'IA decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
+                </div>
+                <Btn ai full onClick={() => setConfirmProgAI(true)} disabled={progBusy}>
                   {progBusy
                     ? <><Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Generazione...")}</>
                     : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Ricalcola tutti gli esercizi con IA")}</>}
                 </Btn>
-                <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.5, textAlign: "center" }}>
-                  {tr("L'IA decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
+              </div>
+            )}
+
+            {/* disattivazione: azione secondaria, in fondo */}
+            <div style={{ textAlign: "center", marginTop: 12 }}>
+              {confirmProgOff ? (
+                <span className="row g8" style={{ justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
+                  <span className="tiny t-dim">{tr("Disattivare la progressione?")}</span>
+                  <Btn small onClick={disableProg} style={{ color: "var(--red)", borderColor: "var(--red)" }}>{tr("Sì, disattiva")}</Btn>
+                  <Btn small onClick={() => setConfirmProgOff(false)}>{tr("Annulla")}</Btn>
+                </span>
+              ) : (
+                <span className="link-btn" onClick={() => setConfirmProgOff(true)}>{tr("Disattiva progressione")}</span>
+              )}
+            </div>
+
+            {confirmProgAI && (
+              <Overlay>
+              <div className="modal-back" onClick={() => setConfirmProgAI(false)}>
+                <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+                  <div className="f-hud" style={{ fontWeight: 700, letterSpacing: ".12em", marginBottom: 10, color: "var(--bright)" }}>
+                    <Sparkles size={15} style={{ display: "inline", verticalAlign: -2, marginRight: 6, color: "#8b5cf6" }} />
+                    {tr("RICALCOLARE CON IA?")}
+                  </div>
+                  <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 10 }}>
+                    {tr("L'IA ricalcola la progressione di")} <b>{tr("tutti gli esercizi")}</b> {tr("della scheda.")}
+                  </div>
+                  <ul className="tiny t-dim" style={{ lineHeight: 1.6, margin: "0 0 16px", paddingLeft: 18 }}>
+                    <li>{tr("Carichi e serie di tutte le settimane verranno sostituiti")}</li>
+                    <li>{tr("La progressione ripartirà dalla settimana 1, da oggi")}</li>
+                    <li>{tr("Usa 1 credito se non hai Premium")}</li>
+                  </ul>
+                  <div className="row g8">
+                    <Btn small onClick={() => setConfirmProgAI(false)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+                    <Btn small ai onClick={() => { setConfirmProgAI(false); runProgAI(); }} style={{ flex: 2 }}>
+                      {tr("Sì, ricalcola")}
+                    </Btn>
+                  </div>
                 </div>
-              </>
+              </div>
+              </Overlay>
             )}
           </>
         ) : (
           <>
-            <div className="f-hud t-dim" style={{ fontWeight: 700, fontSize: 12, letterSpacing: ".12em", marginBottom: 10 }}>
-              <TrendingUp size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("PROGRESSIONE SETTIMANALE")}
-            </div>
-            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("NUMERO DI SETTIMANE")}</div>
-            <div className="row g8" style={{ alignItems: "center", marginBottom: 6 }}>
-              <Btn small onClick={() => setProgWeeksN((w) => clampW(w - 1))} disabled={progBusy || progWeeksN <= 2} style={{ padding: "8px 12px" }}>
-                <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
-              </Btn>
-              <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 18, fontWeight: 700, background: "var(--card)", border: "1px solid var(--soft)" }}>
-                {progWeeksN}
+            {/* intestazione: progressione non ancora attiva */}
+            <div className="row between" style={{ alignItems: "center", gap: 8 }}>
+              <div>
+                <div className="f-hud" style={{ fontWeight: 700, fontSize: 13, letterSpacing: ".12em", color: "var(--bright)" }}>
+                  <TrendingUp size={14} style={{ display: "inline", verticalAlign: -2, marginRight: 6, color: "var(--amber)" }} />
+                  {tr("PROGRESSIONE SETTIMANALE")}
+                </div>
+                <div className="tiny t-faint" style={{ marginTop: 3 }}>
+                  {tr("Aumenta carichi e ripetizioni settimana dopo settimana")}
+                </div>
               </div>
-              <Btn small onClick={() => setProgWeeksN((w) => clampW(w + 1))} disabled={progBusy || progWeeksN >= 8} style={{ padding: "8px 12px" }}>
-                <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+              <span className="chip cham-s" style={{ color: "var(--faint)", fontWeight: 700, flexShrink: 0 }}>{tr("NON ATTIVA")}</span>
+            </div>
+
+            {!draft.exercises.length && (
+              <div className="tiny" style={{ marginTop: 10, color: "var(--amber)", lineHeight: 1.5 }}>
+                {tr("Aggiungi almeno un esercizio alla scheda per attivare la progressione.")}
+              </div>
+            )}
+
+            {/* 1 · attivazione manuale: settimane vuote da compilare */}
+            <div className="prog-sec">
+              <div className="prog-sec-title"><span className="prog-num">1</span>{tr("Attiva e compila tu")}</div>
+              <div className="micro t-dim" style={{ marginBottom: 5, fontWeight: 700 }}>{tr("Numero di settimane")}</div>
+              <div className="row g6" style={{ alignItems: "center" }}>
+                <Btn small onClick={() => setProgWeeksN((w) => clampW(w - 1))} disabled={progBusy || progWeeksN <= 2} style={{ padding: "7px 10px" }}>
+                  <Minus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+                </Btn>
+                <div className="f-hud t-bright cham-s" style={{ flex: 1, textAlign: "center", padding: "6px 0", fontSize: 16, fontWeight: 700, background: "var(--input)", border: "1px solid var(--soft2)" }}>
+                  {progWeeksN}
+                </div>
+                <Btn small onClick={() => setProgWeeksN((w) => clampW(w + 1))} disabled={progBusy || progWeeksN >= 8} style={{ padding: "7px 10px" }}>
+                  <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} />
+                </Btn>
+              </div>
+              <div className="tiny t-faint" style={{ margin: "8px 0 10px", lineHeight: 1.5 }}>
+                {tr("Le settimane partono vuote: poi tu o il PT inserite pesi e ripetizioni esercizio per esercizio (modifica scheda → 📈).")}
+              </div>
+              <Btn small primary full disabled={progBusy || !draft.exercises.length} onClick={activateProg}>
+                {tr("Attiva progressione")}
               </Btn>
             </div>
-            <div className="tiny t-faint" style={{ marginBottom: 14, lineHeight: 1.5 }}>
-              {tr("Le settimane partono vuote: poi tu o il PT inserite pesi e ripetizioni esercizio per esercizio (modifica scheda → 📈). Con l'IA i valori si compilano da soli.")}
-            </div>
-            <Btn primary full disabled={progBusy || !draft.exercises.length} onClick={activateProg}>
-              {tr("Attiva progressione")}
-            </Btn>
+
+            {/* 2 · generazione completa con IA */}
             {onAIProgression && (
-              <>
-                <div className="row" style={{ alignItems: "center", gap: 10, margin: "14px 0 10px" }}>
-                  <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
-                  <span className="micro t-faint">{tr("OPPURE")}</span>
-                  <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+              <div className="prog-sec">
+                <div className="prog-sec-title"><span className="prog-num">2</span>{tr("Oppure lascia fare all'IA")}</div>
+                <div className="tiny t-faint" style={{ marginBottom: 8, lineHeight: 1.5 }}>
+                  {tr("L'IA decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
                 </div>
                 <Btn ai full onClick={runProgAI} disabled={progBusy || !draft.exercises.length}>
                   {progBusy
                     ? <><Loader2 size={13} className="spin" style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Generazione...")}</>
                     : <><Sparkles size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Calcola tutti gli esercizi con IA")}</>}
                 </Btn>
-                <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.5, textAlign: "center" }}>
-                  {tr("L'IA decide da sola settimane e carichi in base alla scheda e ai tuoi dati. Richiede Premium o 1 credito.")}
-                </div>
-              </>
+              </div>
             )}
           </>
         )}

@@ -367,7 +367,6 @@ export const EXERCISE_MEDIA = {
   "SkiErg": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Fast_Skipping/0.jpg",
   "Stairmaster": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Stairmaster/0.jpg",
 };
-export const GROUP_ICONS = { Petto: "▣", Dorso: "◈", Gambe: "▼", Spalle: "▲", Bicipiti: "◐", Tricipiti: "◑", Cardio: "♥", Core: "◆", Altro: "◇" };
 
 const HOLD_RE = /plank|hollow hold|wall sit/i;
 export const isHold = (name) => HOLD_RE.test(name || "");

@@ -103,6 +103,43 @@ button.btn{text-align:center}
 .set-grid-t{display:grid;grid-template-columns:auto 42px 1fr 64px 46px;gap:8px;align-items:center}
 .icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer;min-width:36px;min-height:36px}
 
+/* --- libreria esercizi: bottoni gruppo muscolare --- */
+.lib-group{width:100%;display:flex;align-items:center;gap:12px;padding:9px 12px 9px 9px;cursor:pointer;
+  background:var(--input);border:1px solid var(--soft2);border-radius:12px;text-align:left;
+  transition:border-color .2s ease,background .2s ease,box-shadow .2s ease,transform .15s ease}
+.lib-group:hover{border-color:var(--cyan);box-shadow:0 4px 14px -6px var(--cyan)}
+.lib-group:active{transform:scale(.99)}
+.lib-group.open{background:var(--active2);border-color:var(--cyan);border-bottom-left-radius:4px;border-bottom-right-radius:4px}
+.lib-badge{width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:9px;
+  background:var(--active);color:var(--cyan);font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:13px;
+  transition:background .2s ease,color .2s ease}
+.lib-group.open .lib-badge,.lib-group:hover .lib-badge{background:var(--cyan);color:var(--input)}
+.muscle-icon .mi-fill{fill:currentColor;fill-opacity:.45;stroke:none}
+.lib-name{flex:1;font-family:'Chakra Petch',sans-serif;font-size:11px;font-weight:700;letter-spacing:.16em;color:var(--bright)}
+.lib-count{font-size:10.5px;font-weight:600;color:var(--dim);background:var(--soft);padding:2px 8px;border-radius:999px;min-width:26px;text-align:center}
+.lib-group.open .lib-count{background:var(--input);color:var(--cyan)}
+.lib-chev{color:var(--faint);transition:transform .25s cubic-bezier(.4,0,.2,1),color .2s ease}
+.lib-group.open .lib-chev{transform:rotate(90deg);color:var(--cyan)}
+.lib-list{border:1px solid var(--cyan);border-top:none;border-radius:0 0 12px 12px;padding:4px 6px 6px;background:var(--input)}
+.lib-item{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13.5px;color:var(--text);
+  padding:6px 8px;border-radius:8px;transition:background .15s ease}
+.lib-item:hover{background:var(--active2)}
+
+/* --- progressione settimanale (editor scheda): sezioni numerate --- */
+.prog-sec{margin-top:12px;padding:12px;background:var(--input);border:1px solid var(--soft2);border-radius:12px}
+.prog-sec-title{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-family:'Chakra Petch',sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--bright)}
+.prog-num{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--amber);color:#fff;font-size:10px;letter-spacing:0}
+.prog-week{flex:1;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 6px 5px;cursor:pointer;
+  border-radius:10px;border:1px solid var(--soft2);background:var(--card);color:var(--dim);transition:all .15s ease}
+.prog-week:hover{border-color:var(--amber)}
+.prog-week.cur{border-color:var(--amber);color:var(--amber)}
+.prog-week.sel{background:#ffd76a;border-color:#f5b83d;color:#3a2a00;box-shadow:0 2px 8px -3px rgba(245,184,61,.8)}
+.prog-week-sub{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+.prog-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.prog-grid{grid-template-columns:1fr}}
+
 /* --- info esercizio: pulsante ben visibile --- */
 .info-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border:1px solid var(--line);
   background:var(--active2);color:var(--cyan-hi);font-family:'Chakra Petch',sans-serif;

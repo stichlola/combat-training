@@ -5,7 +5,8 @@ import { tr } from "../lib/i18n";
 import { Btn, Overlay, QBar } from "../ui";
 
 /* ---------------- Schermata risultati post-allenamento (stile Halo Reach) ---------------- */
-export function ResultsScreen({ results, onClose, standard }) {
+export function ResultsScreen({ results: raw, onClose, standard }) {
+  const results = { ...raw, quests: Array.isArray(raw.quests) ? raw.quests : [], xpGain: raw.xpGain || 0, xpBefore: raw.xpBefore || 0, levelBefore: raw.levelBefore || 1 };
   const [go, setGo] = useState(false);            // avvia le animazioni delle barre
   const [shownXp, setShownXp] = useState(results.xpBefore);
   const [shownLvl, setShownLvl] = useState(results.levelBefore);

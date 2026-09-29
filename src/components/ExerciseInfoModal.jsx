@@ -1,6 +1,7 @@
 import React from "react";
 import { StickyNote, PlayCircle, ExternalLink } from "lucide-react";
-import { EXERCISE_INFO, EXERCISE_MEDIA, GROUP_ICONS, INFO_FALLBACK } from "../lib/exercises";
+import { EXERCISE_INFO, EXERCISE_MEDIA, INFO_FALLBACK } from "../lib/exercises";
+import { MuscleIcon } from "./MuscleIcon";
 import { tr } from "../lib/i18n";
 import { Overlay } from "../ui";
 import { videoEmbed } from "./PtNoteModal";
@@ -29,7 +30,7 @@ export function ExerciseInfoModal({ name, group, ex, onClose }) {
           {media
             ? <img src={media} alt={name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", background: "#eef2f5" }} />
             : <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 44, color: "var(--soft2)", lineHeight: 1 }}>{GROUP_ICONS[group] || "◇"}</div>
+                <div style={{ color: "var(--soft2)", lineHeight: 1 }}><MuscleIcon group={group} size={56} strokeWidth={1.4} /></div>
                 <div className="micro" style={{ marginTop: 8 }}>{tr("ANTEPRIMA NON DISPONIBILE")}</div>
               </div>}
         </div>

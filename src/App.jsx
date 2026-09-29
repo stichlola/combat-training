@@ -11,6 +11,8 @@ import { DocImport } from "./components/DocImport";
 import { ExerciseInfoModal } from "./components/ExerciseInfoModal";
 import { RoutineEditor } from "./components/RoutineEditor";
 import { SessionView } from "./components/SessionView";
+import { MuscleIcon } from "./components/MuscleIcon";
+import { ResultsScreen } from "./components/ResultsScreen";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
 import { captureInviteHash, captureRefHash, clearInvite, clearRef, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, pendingInviteName, pendingRef, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
@@ -805,12 +807,12 @@ export default function App() {
 
   /* rollover: nuove quest a mezzanotte / cambio settimana */
   const rolledQuests = (q) => {
-    if (!q || q.dayKey !== dayKey() || q.weekKey !== weekKey()) {
+    if (!q || q.dayKey !== dayKey() || q.weekKey !== weekKey() || !Array.isArray(q.daily) || !Array.isArray(q.weekly)) {
       const f = freshQuests(QUEST_POOL_DAILY, QUEST_POOL_WEEKLY);
       return {
         dayKey: f.dayKey, weekKey: f.weekKey,
-        daily: q && q.dayKey === dayKey() ? q.daily : f.daily,
-        weekly: q && q.weekKey === weekKey() ? q.weekly : f.weekly,
+        daily: q && q.dayKey === dayKey() && Array.isArray(q.daily) ? q.daily : f.daily,
+        weekly: q && q.weekKey === weekKey() && Array.isArray(q.weekly) ? q.weekly : f.weekly,
       };
     }
     return q;
@@ -849,20 +851,21 @@ export default function App() {
 
   /* applica i risultati di un allenamento alle quest: ritorna il resoconto per l'animazione */
   const applyWorkoutToQuests = (delta) => {
+    /* calcolo SINCRONO sullo stato corrente: dentro l'updater di setQuests
+       React lo eseguirebbe più tardi (durante il render), lasciando il
+       resoconto vuoto e gli XP delle quest mai accreditati */
     let earned = 0, completed = 0;
     const out = [];
-    setQuests((prev) => {
-      const q = rolledQuests(prev);
-      const upd = (list) => list.map((it) => {
-        const before = it.prog;
-        const after = Math.min(it.target, before + (delta[it.metric] || 0));
-        const doneNow = !it.done && after >= it.target;
-        if (doneNow) { earned += it.xp; completed += 1; }
-        out.push({ ...it, before, after, done: it.done || doneNow, completedNow: doneNow });
-        return { ...it, prog: after, done: it.done || doneNow };
-      });
-      return { ...q, daily: upd(q.daily), weekly: upd(q.weekly) };
+    const q = rolledQuests(quests);
+    const upd = (list) => (Array.isArray(list) ? list : []).map((it) => {
+      const before = Number(it.prog) || 0;
+      const after = Math.min(it.target, before + (delta[it.metric] || 0));
+      const doneNow = !it.done && after >= it.target;
+      if (doneNow) { earned += it.xp; completed += 1; }
+      out.push({ ...it, before, after, done: it.done || doneNow, completedNow: doneNow });
+      return { ...it, prog: after, done: it.done || doneNow };
     });
+    setQuests({ ...q, daily: upd(q.daily), weekly: upd(q.weekly) });
     setStats((s) => ({
       workouts: s.workouts + (delta.workouts || 0),
       setsDone: s.setsDone + (delta.sets || 0),
@@ -896,7 +899,7 @@ export default function App() {
         const h = Array.isArray(data.history) ? data.history : [];
         const isGhostSession = s && h.some((item) =>
           (item.routineId === s.routineId || item.name === s.name) &&
-          (item.ts >= (s.startedAt - 120000) || s.completed)
+          (item.ts > s.startedAt || s.completed)
         );
 
         if (s && !isGhostSession && !s.completed) {
@@ -1706,7 +1709,7 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
     if (session && Array.isArray(history) && history.length > 0) {
       const latest = history[0];
       if ((latest.routineId === session.routineId || latest.name === session.name) &&
-          (latest.ts >= (session.startedAt - 120000) || session.completed)) {
+          (latest.ts > session.startedAt || session.completed)) {
         setSession(null);
         if (user && !user.guest) {
           supabase.from("user_data").update({ session: null }).eq("user_id", user.id);
@@ -2074,13 +2077,7 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
               </div>
             </div>
             <div className="row between" style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--soft)" }}>
-              {confirmDel === r.id ? (
-                <div className="row g8" style={{ width: "100%" }}>
-                  <Btn small onClick={() => deleteRoutine(r.id)} style={{ flex: 1, borderColor: "var(--line2)", color: "var(--dim)" }}>{tr("Elimina scheda")}</Btn>
-                  <Btn small onClick={() => setConfirmDel(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
-                </div>
-              ) : (
-                <>
+              <>
                   <div className="row" style={{ gap: 18 }}>
                     <span onClick={() => { setEditId(r.id); setView("builder"); }} className="tap icon-tap" title={tr("Modifica modello")}
                       style={{ color: "#5d87a3" }}><Pencil size={17} /></span>
@@ -2094,12 +2091,31 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
                     title={session ? "Chiudi prima la sessione attiva" : ""}>
                     <Play size={11} style={{ display: "inline", verticalAlign: -1 }} /> Inizia
                   </Btn>
-                </>
-              )}
+              </>
             </div>
           </Panel>
         ))}
         </div>
+
+        {/* Conferma eliminazione scheda */}
+        {confirmDel != null && routines.find((r) => r.id === confirmDel) && (
+          <Overlay>
+          <div className="modal-back" onClick={() => setConfirmDel(null)}>
+            <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
+              <div className="f-hud t-red" style={{ fontWeight: 700, letterSpacing: ".15em", marginBottom: 8 }}>{tr("ELIMINA SCHEDA")}</div>
+              <div className="tiny t-dim" style={{ lineHeight: 1.6, marginBottom: 16 }}>
+                {tr("Sei sicuro di voler eliminare la scheda")} <b>{routines.find((r) => r.id === confirmDel).name}</b>? {tr("Lo storico degli allenamenti resta salvato, ma la scheda e la sua progressione verranno eliminate.")}
+              </div>
+              <div className="row g8">
+                <Btn onClick={() => setConfirmDel(null)} style={{ flex: 1 }}>{tr("Annulla")}</Btn>
+                <Btn primary onClick={() => deleteRoutine(confirmDel)} style={{ flex: 1, background: "var(--red)", borderColor: "var(--red)" }}>
+                  <Trash2 size={13} style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />{tr("Elimina")}
+                </Btn>
+              </div>
+            </div>
+          </div>
+          </Overlay>
+        )}
 
         <button onClick={() => setView("builder")}
           className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em", marginTop: 10 }}>
@@ -2282,32 +2298,16 @@ function ExerciseLibrary() {
       <div className="scroll-y stack-s">
         {Object.entries(filtered).map(([g, list]) => (
           <div key={g} style={{ marginBottom: 6 }}>
-            <button onClick={() => setOpen(open === g ? null : g)} className="tap row between"
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                cursor: "pointer",
-                border: "1px solid var(--soft)",
-                background: "var(--card2)",
-                borderRadius: "10px",
-                transition: "background 0.2s ease, border-color 0.2s ease",
-                display: "flex",
-                alignItems: "center"
-              }}>
-              <span className="f-hud t-cyan" style={{ fontSize: 10, letterSpacing: ".15em", fontWeight: 600 }}>{tr(g).toUpperCase()}</span>
-              <span className="row g6" style={{ alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: "var(--dim)", fontWeight: 500 }}>{list.length}</span>
-                <ChevronRight size={13} style={{
-                  color: "var(--faint)",
-                  transform: open === g ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
-                }} />
-              </span>
+            <button onClick={() => setOpen(open === g ? null : g)} className={`tap lib-group${open === g || q ? " open" : ""}`}>
+              <span className="lib-badge"><MuscleIcon group={g} /></span>
+              <span className="lib-name">{tr(g).toUpperCase()}</span>
+              <span className="lib-count">{list.length}</span>
+              <ChevronRight size={14} className="lib-chev" />
             </button>
             {(open === g || q) && (
-              <div className="fade-in" style={{ paddingLeft: 12, paddingTop: 4 }}>
+              <div className="fade-in lib-list">
                 {list.map((e) => (
-                  <div key={e} className="row between" style={{ fontSize: 14, padding: "5px 0", borderBottom: "1px solid var(--hairline)" }}>
+                  <div key={e} className="lib-item">
                     <span>{tr(e)}</span>
                     <span onClick={() => setInfo({ name: e, group: g })} className="tap icon-tap" style={{ color: "var(--faint)" }}>
                       <Info size={13} />
