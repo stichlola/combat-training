@@ -18,6 +18,7 @@ export function AnatomyLibraryModal({ onClose, onAdd, activeNames = [] }) {
   const [q, setQ] = useState("");
   const [info, setInfo] = useState(null);
   const [added, setAdded] = useState([]);
+  const [modelKind, setModelKind] = useState(null); // "custom" | "atlas" | "basic"
 
   const groups = Object.keys(EXERCISE_DB);
   const list = useMemo(() => {
@@ -55,8 +56,13 @@ export function AnatomyLibraryModal({ onClose, onAdd, activeNames = [] }) {
             <div>
               <div className="anat-stage">
                 <Suspense fallback={<div className="anat-loading"><Loader2 size={22} className="spin" /></div>}>
-                  <Body3D selected={sel} onSelect={(g) => { setSel(g); setQ(""); }} />
+                  <Body3D selected={sel} onSelect={(g) => { setSel(g); setQ(""); }} onModel={setModelKind} />
                 </Suspense>
+                {/* crediti dell'atlante (licenza CC BY-SA 4.0): solo quando è in uso */}
+                {modelKind === "atlas" && <a className="anat-credits" href="/models/ANATOMY-ATTRIBUTION.txt" target="_blank" rel="noreferrer"
+                  title={tr("Modello 3D: Z-Anatomy / BodyParts3D, © The Database Center for Life Science · CC BY-SA 4.0")}>
+                  <Info size={13} />
+                </a>}
                 <div className="anat-hint">
                   <span><RotateCw size={11} /> {tr("Trascina per ruotare")}</span>
                   <span><MousePointerClick size={11} /> {tr("Tocca un muscolo")}</span>
@@ -65,17 +71,10 @@ export function AnatomyLibraryModal({ onClose, onAdd, activeNames = [] }) {
               <div className="anat-chips">
                 {groups.map((g) => (
                   <button key={g} type="button" onClick={() => { setSel(g); setQ(""); }}
-                    className={`tap anat-chip${sel === g && !q ? " on" : ""}`}>
-                    <MuscleIcon group={g} size={14} />{tr(g)}
+                    className={`tap anat-chip${sel === g && !q ? " on" : ""}`} title={tr(g)} aria-label={tr(g)}>
+                    <MuscleIcon group={g} size={14} /><span className="anat-chip-label">{tr(g)}</span>
                   </button>
                 ))}
-              </div>
-              {/* crediti richiesti dalla licenza CC BY-SA 4.0 del modello */}
-              <div className="micro t-faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
-                {tr("Modello 3D")}: <a href="https://github.com/Z-Anatomy/Models-of-human-anatomy" target="_blank" rel="noreferrer" style={{ color: "inherit" }}>Z-Anatomy</a>
-                {" / "}BodyParts3D, © The Database Center for Life Science ·{" "}
-                <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer" style={{ color: "inherit" }}>CC BY-SA 4.0</a>
-                {" · "}<a href="/models/ANATOMY-ATTRIBUTION.txt" target="_blank" rel="noreferrer" style={{ color: "inherit" }}>{tr("crediti e modifiche")}</a>
               </div>
             </div>
 

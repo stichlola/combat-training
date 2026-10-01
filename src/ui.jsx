@@ -186,6 +186,15 @@ button.btn{text-align:center}
   font-size:11.5px;font-weight:700;color:var(--dim);background:var(--input);border:1px solid var(--soft2);transition:all .15s ease}
 .anat-chip:hover{border-color:#ef4444;color:#ef4444}
 .anat-chip.on{background:#ef4444;border-color:#ef4444;color:#fff}
+/* mobile: solo icone, tutte su una riga */
+@media (max-width:720px){
+  .anat-chips{flex-wrap:nowrap;gap:5px}
+  .anat-chip{flex:1;min-width:0;justify-content:center;padding:8px 0}
+  .anat-chip-label{display:none}
+}
+.anat-credits{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:#8b8f99;background:rgba(255,255,255,.06)}
+.anat-credits:hover{color:#d0d3da;background:rgba(255,255,255,.12)}
 .anat-side{display:flex;flex-direction:column;min-height:0}
 .anat-list{max-height:400px;overflow-y:auto;border:1px solid var(--soft2);border-radius:12px;padding:4px;background:var(--input)}
 @media (max-width:720px){.anat-list{max-height:none}}

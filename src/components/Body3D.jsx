@@ -1,6 +1,7 @@
 /* Corpo umano 3D per la libreria esercizi.
-   Modello: atlante muscolare Z-Anatomy / BodyParts3D (CC BY-SA 4.0, vedi
-   public/models/ANATOMY-ATTRIBUTION.txt). Ogni muscolo è una mesh con glTF extras
+   Modello principale: public/models/body-custom.glb (oggetti grp_<Gruppo>).
+   Riserva: atlante muscolare Z-Anatomy / BodyParts3D (CC BY-SA 4.0, vedi
+   public/models/ANATOMY-ATTRIBUTION.txt), dove ogni muscolo è una mesh con glTF extras
    (userData.group = gruppo di allenamento dell'atlante) che mappiamo sui gruppi
    dell'app (userData.appGroup). Se il GLB non si carica si usa un corpo
    stilizzato fatto di primitive. Si ruota solo trascinando (OrbitControls, niente auto-rotazione), il gruppo
@@ -9,8 +10,16 @@ import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { makeAuraMaterial, makeSparks } from "./auraFx";
 
-const MODEL_URL = "/models/full-body-male-mobile.glb";
+/* modelli in ordine di preferenza: personale (oggetti grp_<Gruppo>, esportato da
+   Blender) → atlante anatomico → corpo stilizzato di primitive */
+const CUSTOM_URL = "/models/body-custom.glb";
+const ATLAS_URL = "/models/full-body-male-mobile.glb";
 /* gruppi dell'atlante → gruppi della libreria (Collo resta neutro, non cliccabile) */
 const ATLAS_GROUPS = {
   Chest: "Petto",
@@ -98,27 +107,49 @@ function buildBody() {
   return { root, muscles };
 }
 
-/* carica l'atlante GLB: materiali propri per mesh (servono per l'evidenziazione),
-   scala/centra il corpo come il modello stilizzato */
-function loadAtlas() {
+/* carica un GLB e riconosce i muscoli in due formati:
+   - atlante: glTF extras (muscleId + group) → ATLAS_GROUPS
+   - personale: oggetti chiamati grp_<Gruppo> (es. grp_Petto), con texture propria
+   Materiali clonati per mesh (servono per l'evidenziazione); il corpo viene
+   scalato/centrato come il modello stilizzato */
+function loadModel(url) {
   return new Promise((resolve, reject) => {
-    new GLTFLoader().load(MODEL_URL, (gltf) => {
+    new GLTFLoader().load(url, (gltf) => {
       const model = gltf.scene;
       const muscles = [];
+      const auras = []; // oggetto "aura" esportato da Blender: effetto animato in auraFx
       const boneMat = new THREE.MeshStandardMaterial({ color: 0xece3d6, roughness: 0.8 });
       const tissueMat = new THREE.MeshStandardMaterial({ color: 0xd8c9bb, roughness: 0.8 });
       model.traverse((o) => {
         if (!o.isMesh) return;
-        const g = ATLAS_GROUPS[o.userData.group];
-        if (o.userData.muscleId && g) {
-          o.material = new THREE.MeshStandardMaterial({ color: MUSCLE, roughness: 0.55, metalness: 0.03, emissive: 0x000000 });
-          o.userData.appGroup = g;
-          muscles.push(o);
-        } else {
-          o.material = o.userData.boneId ? boneMat : tissueMat;
+        if (o.name === "aura" || o.parent?.name === "aura") {
+          o.material = makeAuraMaterial(o.geometry);
+          o.userData.isAura = true;
+          o.raycast = () => {};                      // non deve bloccare i clic sui muscoli
+          o.renderOrder = 2;
+          auras.push(o);
+          return;
         }
+        const custom = /^grp_([A-Za-z]+)/.exec(o.name) || /^grp_([A-Za-z]+)/.exec(o.parent?.name || "");
+        if (custom) {
+          o.material = o.material.clone();           // texture del modello, tinta solo al bisogno
+          o.userData.appGroup = custom[1];
+          o.userData.textured = true;
+          muscles.push(o);
+          return;
+        }
+        if (o.userData.muscleId && ATLAS_GROUPS[o.userData.group]) {
+          o.material = new THREE.MeshStandardMaterial({ color: MUSCLE, roughness: 0.55, metalness: 0.03, emissive: 0x000000 });
+          o.userData.appGroup = ATLAS_GROUPS[o.userData.group];
+          muscles.push(o);
+        } else if (o.userData.boneId || o.userData.supportId) {
+          o.material = o.userData.boneId ? boneMat : tissueMat;
+        }                                             // altrimenti (base del modello personale) resta com'è
       });
-      const box = new THREE.Box3().setFromObject(model);
+      // dimensioni del solo corpo: l'aura è più grande e non deve rimpicciolirlo
+      model.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      model.traverse((o) => { if (o.isMesh && !o.userData.isAura) box.expandByObject(o); });
       const size = box.getSize(new THREE.Vector3());
       const k = BODY_HEIGHT / size.y;
       model.scale.setScalar(k);
@@ -126,12 +157,13 @@ function loadAtlas() {
       model.position.set(-c.x * k, -box.min.y * k - BODY_HEIGHT / 2, -c.z * k);
       const root = new THREE.Group();
       root.add(model);
-      resolve({ root, muscles });
+      if (!muscles.length) return reject(new Error("nessun gruppo muscolare nel modello"));
+      resolve({ root, muscles, auras, kind: muscles[0].userData.textured ? "custom" : "atlas" });
     }, undefined, reject);
   });
 }
 
-export default function Body3D({ selected, onSelect }) {
+export default function Body3D({ selected, onSelect, onModel }) {
   const mountRef = useRef(null);
   const musclesRef = useRef([]);
   const hoverRef = useRef(null);
@@ -141,19 +173,23 @@ export default function Body3D({ selected, onSelect }) {
   const onSelectRef = useRef(onSelect);
   const [status, setStatus] = useState("loading");
   onSelectRef.current = onSelect;
+  const onModelRef = useRef(onModel);
+  onModelRef.current = onModel;
 
-  /* colori: selezionato rosso acceso, hover più chiaro, altrimenti tono muscolo */
+  /* colori: selezionato rosso acceso, hover più chiaro, altrimenti tono muscolo.
+     Sui modelli con texture il colore fa da tinta (bianco = texture originale) */
   const paint = () => {
     for (const m of musclesRef.current) {
       const g = m.userData.appGroup;
+      const tex = m.userData.textured;
       if (g === selRef.current) {
-        m.material.color.setHex(SELECTED);
-        m.material.emissive.setHex(0x7f1d1d);
+        m.material.color.setHex(tex ? 0xff5050 : SELECTED);
+        m.material.emissive.setHex(tex ? 0x8a0f0f : 0x7f1d1d);
       } else if (g === hoverRef.current) {
-        m.material.color.setHex(HOVER);
-        m.material.emissive.setHex(0x000000);
+        m.material.color.setHex(tex ? 0xffd2c4 : HOVER);
+        m.material.emissive.setHex(tex ? 0x1a0a06 : 0x000000);
       } else {
-        m.material.color.setHex(MUSCLE);
+        m.material.color.setHex(tex ? 0xffffff : MUSCLE);
         m.material.emissive.setHex(0x000000);
       }
     }
@@ -181,6 +217,17 @@ export default function Body3D({ selected, onSelect }) {
     renderer.domElement.style.touchAction = "none";
     mount.appendChild(renderer.domElement);
 
+    // post-processing: il bloom fa "brillare" l'aura (attivo solo se il modello ce l'ha)
+    const composer = new EffectComposer(renderer);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    composer.setSize(W, H);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.9, 0.5, 0.72);
+    bloom.enabled = false;
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+    let auraFx = null; // { mats, sparks }
+
     scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7a6e, 1.1));
     const key = new THREE.DirectionalLight(0xffffff, 1.6);
     key.position.set(2.5, 3, 4);
@@ -192,17 +239,33 @@ export default function Body3D({ selected, onSelect }) {
     const root = new THREE.Group();
     scene.add(root);
     let disposed = false;
-    const mountBody = ({ root: body, muscles }) => {
+    const mountBody = ({ root: body, muscles, auras = [], kind }) => {
       if (disposed) return;
       root.add(body);
+      if (auras.length) {
+        root.updateMatrixWorld(true);
+        const auraBox = new THREE.Box3();
+        auras.forEach((a) => auraBox.expandByObject(a));
+        const sparks = makeSparks(auraBox);
+        scene.add(sparks.points);
+        const warm = new THREE.PointLight(0xffc94a, 1.2, 4); // riflesso dorato sul corpo
+        warm.position.set(0, 0.3, 0.6);
+        scene.add(warm);
+        auraFx = { mats: auras.map((a) => a.material), sparks };
+        bloom.enabled = true;
+      }
       musclesRef.current = muscles;
       paint();
       setStatus("ready");
+      onModelRef.current && onModelRef.current(kind);
     };
-    loadAtlas().then(mountBody).catch((err) => {
-      console.warn("Atlante 3D non disponibile, uso il modello stilizzato", err);
-      mountBody(buildBody());
-    });
+    loadModel(CUSTOM_URL)
+      .catch((err) => { console.warn("Modello personale non disponibile, uso l'atlante", err); return loadModel(ATLAS_URL); })
+      .then(mountBody)
+      .catch((err) => {
+        console.warn("Atlante 3D non disponibile, uso il modello stilizzato", err);
+        mountBody({ ...buildBody(), kind: "basic" });
+      });
 
     // sfondo scuro con griglia sul pavimento (stile viewer 3D), sfumata dalla nebbia
     const BG = 0x1b1c21;
@@ -278,11 +341,19 @@ export default function Body3D({ selected, onSelect }) {
       camera.aspect = W / H;
       camera.updateProjectionMatrix();
       renderer.setSize(W, H);
+      composer.setSize(W, H);
     });
     ro.observe(mount);
 
     let raf;
+    const clock = new THREE.Clock();
     const loop = () => {
+      const dt = Math.min(clock.getDelta(), 0.05);
+      if (auraFx) {
+        const t = clock.elapsedTime;
+        auraFx.mats.forEach((m) => { m.uniforms.uTime.value = t; });
+        auraFx.sparks.update(dt);
+      }
       /* rotazione animata verso il lato del muscolo selezionato */
       if (turnRef.current != null) {
         const cur = controls.getAzimuthalAngle();
@@ -297,7 +368,7 @@ export default function Body3D({ selected, onSelect }) {
         }
       }
       controls.update();
-      renderer.render(scene, camera);
+      composer.render();
       raf = requestAnimationFrame(loop);
     };
     loop();
@@ -311,6 +382,8 @@ export default function Body3D({ selected, onSelect }) {
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerleave", onLeave);
       controls.dispose();
+      bloom.dispose();
+      composer.dispose();
       scene.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         if (o.material) o.material.dispose();
