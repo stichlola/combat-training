@@ -1,6 +1,49 @@
 // Helper server-side: identità utente + stato/concessione premium + usage/crediti.
 // Usa la SERVICE ROLE KEY (mai esposta al client): è l'unica via di scrittura
 // delle tabelle "premium" e "usage", che lato client sono in sola lettura (RLS).
+import fs from "fs";
+import path from "path";
+
+// Carica .env locale in sviluppo cercando il file ricorsivamente verso l'alto
+if (!process.env.SUPABASE_URL || !process.env.ANTHROPIC_API_KEY) {
+  try {
+    let currentDir = process.cwd();
+    let envPath = "";
+    for (let i = 0; i < 5; i++) {
+      const checkPath = path.join(currentDir, ".env");
+      if (fs.existsSync(checkPath)) {
+        envPath = checkPath;
+        break;
+      }
+      const parentDir = path.dirname(currentDir);
+      if (parentDir === currentDir) break;
+      currentDir = parentDir;
+    }
+
+    if (envPath) {
+      const lines = fs.readFileSync(envPath, "utf-8").split("\n");
+      for (const line of lines) {
+        const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+        if (match) {
+          const key = match[1];
+          let value = match[2] || "";
+          value = value.trim();
+          if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
+          if (value.startsWith("'") && value.endsWith("'")) value = value.slice(1, -1);
+          if (!process.env[key]) process.env[key] = value;
+        }
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+// Fallback: se SUPABASE_URL non è presente ma è definita VITE_SUPABASE_URL, la copio
+if (!process.env.SUPABASE_URL && process.env.VITE_SUPABASE_URL) {
+  process.env.SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+}
+
 const SB_URL = process.env.SUPABASE_URL;
 const SB_SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const H = () => ({ apikey: SB_SERVICE, Authorization: `Bearer ${SB_SERVICE}`, "Content-Type": "application/json" });

@@ -10,7 +10,7 @@ import { todayISO, repVal, progTotal, currentWeek } from "../lib/progression";
 import { exMode, holdSets, isDumbbell, isHold, EXERCISE_DB, GROUPS, ALL_EXERCISES, findGroup, matchToDb } from "../lib/exercises";
 import { aiCall, parseLoose, resizeImage } from "../lib/ai";
 import { tr } from "../lib/i18n";
-import { Btn, Overlay, Panel } from "../ui";
+import { ActionCard, Btn, Overlay, Panel } from "../ui";
 
 /* ---------------- Editor modello scheda (crea + modifica, senza timer né log) ----------------
    ptMode: lo usa il personal trainer sulle schede del cliente — sblocca per ogni
@@ -977,11 +977,10 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         )}
       </div>
 
-      <div className="row g8" style={{ marginBottom: 14 }}>
-        <Btn small ai onClick={() => { setSuggestOpen(true); setSugList(null); setSugErr(null); }} style={{ flex: 1 }}
-          title={tr("L'IA propone esercizi da aggiungere in base alla scheda")}>
-          <Sparkles size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Suggerisci con IA")}
-        </Btn>
+      <div className="act-grid" style={{ marginBottom: 14 }}>
+        <ActionCard icon={Sparkles} tone="ai" onClick={() => { setSuggestOpen(true); setSugList(null); setSugErr(null); }}
+          title={tr("Suggerisci con IA")} sub={tr("Esercizi adatti a questa scheda")}
+          hint={tr("L'IA propone esercizi da aggiungere in base alla scheda")} />
         {showScan && (
           <MachineScan premium={premium} variant="small" fireToast={fireToast}
             currentNames={draft.exercises.map((e) => e.name)}

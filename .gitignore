@@ -3,3 +3,8 @@ dist/
 .env
 .env.local
 *.log
+
+.vercel
+
+# sorgente dell atlante anatomico (i file usati dall app sono in public/models)
+human body glb/

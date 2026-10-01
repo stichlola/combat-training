@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
-  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, CheckCircle2, Gift, TrendingUp, Share2
+  Dumbbell, Flame, Plus, ChevronRight, ChevronDown, Play, Trash2, Bot, Upload, FileUp, FileText, Trophy, Utensils, X, Loader2, Search, User, LogOut, Lock, Mail, Eye, EyeOff, Ruler, Save, Pencil, Info, Medal, Gamepad2, GripVertical, Target, Users, Swords, LayoutTemplate, CreditCard, ShieldCheck, ArrowLeftRight, Sparkles, Check, CheckCircle2, Gift, TrendingUp, Share2, Star, PersonStanding
 } from "lucide-react";
 import GameTab from "./GameTab";
 import { TROPHIES, RARITY, unlockedTrophies } from "./trophies";
@@ -12,6 +12,7 @@ import { ExerciseInfoModal } from "./components/ExerciseInfoModal";
 import { RoutineEditor } from "./components/RoutineEditor";
 import { SessionView } from "./components/SessionView";
 import { MuscleIcon } from "./components/MuscleIcon";
+import { AnatomyLibraryModal } from "./components/AnatomyLibraryModal";
 import { ResultsScreen } from "./components/ResultsScreen";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
@@ -32,7 +33,7 @@ const UI_MODES = [
   { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
     desc: "La versione gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
 ];
-import { Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar, shareLink } from "./ui";
+import { ActionCard, Btn, CSS, HudToast, Overlay, Panel, QBar, ShieldBar, shareLink } from "./ui";
 const Trophy3D = React.lazy(() => import("./Trophy3D"));   // three.js caricato solo quando serve
 
 /* ================================== APP ================================== */
@@ -2025,16 +2026,19 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
           </Panel>
         )}
 
-        <h2 className="hud-title" style={{ marginBottom: 12 }}>{tr("▸ Schede attive")}</h2>
+        <div className="row between" style={{ alignItems: "baseline", marginBottom: 10 }}>
+          <h2 className="hud-title" style={{ marginBottom: 0 }}>{tr("▸ Schede attive")}</h2>
+          {routines.length > 0 && <span className="micro t-faint">{routines.length} {routines.length === 1 ? tr("scheda") : tr("schede")}</span>}
+        </div>
 
-        {/* stessa grafica dei pulsanti nutrizione: AI a sinistra, import a destra (arancione) */}
-        <div className="row g8">
-          <Btn small ai onClick={() => setView("ai")} style={{ flex: 1 }} title={tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")}>
-            <Bot size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Genera scheda con AI")}
-          </Btn>
-          <Btn small ai onClick={() => setView("import")} style={{ flex: 1 }} title={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")}>
-            <Upload size={12} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Importa scheda PT")}
-          </Btn>
+        {/* azioni rapide: card compatte con icona, titolo e descrizione breve */}
+        <div className="act-grid">
+          <ActionCard icon={Sparkles} tone="ai" onClick={() => setView("ai")}
+            title={tr("Genera con IA")} sub={tr("Su misura per obiettivo e giorni")}
+            hint={tr("Crea un allenamento su misura per obiettivo, giorni e attrezzatura")} />
+          <ActionCard icon={FileUp} tone="pt" onClick={() => setView("import")}
+            title={tr("Importa scheda")} sub={tr("Dal PT: PDF, foto o testo")}
+            hint={tr("Carica un documento (PDF, foto, testo) — l'AI lo converte in allenamento")} />
         </div>
 
         {routines.length === 0 && (
@@ -2124,7 +2128,7 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
 
       </div>
 
-      {/* RIGHT: libreria + ultimi allenamenti + PR (la libreria sta sopra le altre card) */}
+      {/* RIGHT: libreria + ultimi allenamenti (la libreria sta sopra) */}
       <div className="col stack">
         <ExerciseLibrary />
 
@@ -2134,39 +2138,35 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
               {tr("Nessun allenamento registrato. Completa il primo workout per iniziare il log.")}
             </div>
           )}
-          {(history || []).slice(0, 8).map((h, i) => (
-            <button key={i} onClick={() => setReport(h)} className="tap divider-row g12"
-              style={{ width: "100%", cursor: "pointer", textAlign: "left" }}>
-              <div className="micro" style={{ width: 46, flexShrink: 0 }}>{h.date}</div>
-              <div className="grow">
-                <div className="row g6 t-bright" style={{ fontSize: 14 }}>
-                  {h.name}{h.pr > 0 && <Trophy size={11} color="#ffd76a" />}
-                </div>
-                <div className="tiny t-faint">{h.sets} serie · {h.duration}</div>
-              </div>
-              <div className="row g6" style={{ alignItems: "center" }}>
-                <span className="f-hud t-cyan" style={{ fontWeight: 700, fontSize: 13 }}>
-                  {h.volume.toLocaleString()} <span className="t-faint" style={{ fontWeight: 500 }}>{tr("kg")}</span>
+          <div className="hist-list">
+          {(history || []).slice(0, 8).map((h, i) => {
+            const [dd, mm] = String(h.date || "").split("/");
+            const empty = !h.sets && !h.volume;
+            return (
+              <button key={i} onClick={() => setReport(h)} className={`tap hist-row${empty ? " empty" : ""}`}>
+                <span className="hist-date">
+                  <span className="hist-day">{dd || "—"}</span>
+                  <span className="hist-mon">{MONTHS_IT[(Number(mm) || 1) - 1]}</span>
                 </span>
-                <ChevronRight size={13} color="var(--faint)" />
-              </div>
-            </button>
-          ))}
+                <span className="hist-main">
+                  <span className="hist-name">
+                    {h.name}
+                    {h.pr > 0 && <span className="hist-pr"><Trophy size={10} /> {h.pr} PR</span>}
+                  </span>
+                  <span className="hist-meta">
+                    {empty ? tr("Nessuna serie completata") : <>{h.sets} {tr("serie")} · {h.duration}{h.cardio ? ` · ${h.cardio} min cardio` : ""}</>}
+                  </span>
+                </span>
+                <span className="hist-vol">
+                  {empty ? <span className="t-faint">—</span> : <>{(h.volume || 0).toLocaleString("it-IT")}<small> kg</small></>}
+                </span>
+                <ChevronRight size={14} className="hist-chev" />
+              </button>
+            );
+          })}
+          </div>
         </CollapsiblePanel>
 
-        <CollapsiblePanel id="prs" label="Personal records" icon={<Trophy size={13} color="#ffd76a" />}>
-          {Object.keys(prs).length === 0 && (
-            <div className="tiny t-faint" style={{ padding: "6px 0" }}>
-              {tr("Nessun record. Completa serie con carichi crescenti per registrare i PR.")}
-            </div>
-          )}
-          {Object.entries(prs).map(([k, v]) => (
-            <div key={k} className="divider-row">
-              <span style={{ fontSize: 14 }}>{tr(k)}</span>
-              <span className="f-hud t-amber" style={{ fontWeight: 700, fontSize: 13 }}>{v} KG</span>
-            </div>
-          ))}
-        </CollapsiblePanel>
       </div>
     </div>
   );
@@ -2176,61 +2176,92 @@ Per le tenute ogni serie è {"sec":number}; per il cardio a tempo {"sec":number 
 /* ---------------- Report allenamento (dallo storico) ---------------- */
 function WorkoutReport({ rec, onClose }) {
   const fmt = (sec) => `${Math.floor((sec || 0) / 60)}:${String((sec || 0) % 60).padStart(2, "0")}`;
+  const modeOf = (ex) => ex.mode || exMode(ex);
   const bestOf = (ex) => {
-    if (ex.mode === "time") return null;
+    if (modeOf(ex) === "time" || modeOf(ex) === "hold") return -1; // niente "miglior serie" per cardio e tenute
     let best = -1, idx = -1;
     ex.sets.forEach((s, i) => { const v = (Number(s.w) || 0) * repsNum(s.r); if (s.done && v > best) { best = v; idx = i; } });
     return idx;
   };
+  const setLabel = (ex, s) => {
+    const m = modeOf(ex);
+    if (m === "time") return `${fmt(s.elapsed || s.sec)}${s.dist ? ` · ${s.dist}km` : ""}`;
+    if (m === "hold") return `${s.sec || 0}s`;
+    return `${s.w || 0}kg × ${s.r || 0}`;
+  };
+  const exs = rec.exercises || [];
+  const totSets = exs.reduce((a, e) => a + (e.sets || []).length, 0);
+  const doneSets = exs.reduce((a, e) => a + (e.sets || []).filter((x) => x.done).length, 0);
+  const pct = totSets ? Math.round((doneSets / totSets) * 100) : 0;
+  const stats = [
+    [Dumbbell, tr("Volume"), `${(rec.volume || 0).toLocaleString("it-IT")} kg`],
+    [Check, tr("Serie"), totSets ? `${rec.sets}/${totSets}` : rec.sets],
+    [Flame, tr("Cardio"), rec.cardio ? `${rec.cardio} min` : "—"],
+    [Trophy, tr("Record"), rec.pr > 0 ? rec.pr : "—"],
+  ];
   return (
     <Overlay>
     <div className="modal-back" onClick={onClose}>
-      <div className="modal-box cham fade-in" onClick={(e) => e.stopPropagation()}>
-        <div className="row between" style={{ marginBottom: 2 }}>
-          <div className="f-hud t-cyan" style={{ fontWeight: 700, letterSpacing: ".2em", fontSize: 14 }}>{tr("◈ MISSION REPORT")}</div>
-          <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0" }}>✕</span>
+      <div className="modal-box cham fade-in rep-box" onClick={(e) => e.stopPropagation()}>
+        <div className="row between" style={{ alignItems: "flex-start", gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="rep-kicker">{tr("Riepilogo allenamento")}</div>
+            <div className="rep-title">{rec.name}</div>
+            <div className="row g6" style={{ marginTop: 6, flexWrap: "wrap" }}>
+              <span className="rep-chip">{rec.date}</span>
+              <span className="rep-chip">{rec.duration}</span>
+              {rec.pr > 0 && <span className="rep-chip rep-chip-pr"><Trophy size={10} /> {rec.pr} PR</span>}
+            </div>
+          </div>
+          <span onClick={onClose} className="tap icon-tap t-faint" title={tr("Chiudi")}><X size={18} /></span>
         </div>
-        <div className="t-bright" style={{ fontSize: 16, fontWeight: 700 }}>{rec.name}</div>
-        <div className="tiny t-faint" style={{ marginBottom: 14 }}>{rec.date} · {rec.duration}</div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-          {[
-            ["VOLUME", `${(rec.volume || 0).toLocaleString()} kg`, "t-cyan"],
-            ["SERIE", rec.sets, "t-bright"],
-            ["CARDIO", rec.cardio ? `${rec.cardio} min` : "—", "t-cyan"],
-            ["RECORD", rec.pr > 0 ? `🏆 ${rec.pr}` : "—", "t-amber"],
-          ].map(([l, v, c]) => (
-            <div key={l} className="cham-s" style={{ padding: "10px 12px", background: "var(--card)", border: "1px solid var(--soft)" }}>
-              <div className="micro">{l}</div>
-              <div className={`f-hud ${c}`} style={{ fontWeight: 700, fontSize: 17 }}>{v}</div>
+        <div className="rep-stats">
+          {stats.map(([Icon, l, v]) => (
+            <div key={l} className="rep-stat">
+              <span className="rep-stat-ico"><Icon size={14} /></span>
+              <span>
+                <span className="rep-stat-l">{l}</span>
+                <span className="rep-stat-v">{v}</span>
+              </span>
             </div>
           ))}
         </div>
 
-        {(rec.exercises || []).length > 0 ? (
+        {totSets > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div className="row between micro" style={{ marginBottom: 5 }}>
+              <span className="t-dim" style={{ fontWeight: 700 }}>{tr("Completamento")}</span>
+              <span className="t-dim">{doneSets}/{totSets} {tr("serie")} · {pct}%</span>
+            </div>
+            <div className="rep-bar"><div style={{ width: `${pct}%` }} /></div>
+          </div>
+        )}
+
+        {exs.length > 0 ? (
           <>
-            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("▸ Dettaglio esercizi")}</div>
+            <div className="hud-label" style={{ marginBottom: 8 }}>{tr("Esercizi")}</div>
             <div className="stack-s">
-              {rec.exercises.map((ex, i) => {
+              {exs.map((ex, i) => {
                 const bi = bestOf(ex);
+                const done = ex.sets.filter((x) => x.done).length;
                 return (
-                  <div key={i} className="cham-s" style={{ padding: "10px 12px", background: "var(--card2)", border: "1px solid var(--soft)" }}>
-                    <div className="row between">
-                      <span className="t-bright" style={{ fontSize: 14, fontWeight: 700 }}>{tr(ex.name)}</span>
-                      <span className="micro t-cyan">{tr(ex.group || "").toUpperCase()}</span>
+                  <div key={i} className="rep-ex">
+                    <div className="row" style={{ alignItems: "center", gap: 10 }}>
+                      <span className="lib-badge"><MuscleIcon group={ex.group} /></span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span className="rep-ex-name">{tr(ex.name)}</span>
+                        <span className="rep-ex-sub">
+                          {tr(ex.group || "")}{ex.note ? ` · ${ex.note}` : ""}
+                        </span>
+                      </span>
+                      <span className={`rep-ex-count${done === ex.sets.length && done ? " full" : ""}`}>{done}/{ex.sets.length}</span>
                     </div>
-                    {ex.note && <div className="tiny" style={{ color: "#8fb2c9", marginTop: 2 }}>{ex.note}</div>}
-                    <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>
-                      {ex.sets.map((s, si) => (
-                        <span key={si} className="cham-s tiny" style={{
-                          padding: "4px 9px",
-                          border: `1px solid ${si === bi ? "#ffd76a" : s.done ? "#1b4a63" : "#14202e"}`,
-                          color: si === bi ? "#ffd76a" : s.done ? "#c9e8f7" : "var(--faint)",
-                          background: s.done ? "#0a2333" : "var(--input)",
-                          textDecoration: s.done ? "none" : "line-through",
-                        }}>
-                          {ex.mode === "time" ? `${fmt(s.elapsed)}${s.dist ? ` · ${s.dist}km` : ""}` : `${s.w || 0}kg × ${s.r || 0}`}
-                          {si === bi && " ★"}
+                    <div className="row wrap" style={{ gap: 6, marginTop: 10 }}>
+                      {ex.sets.map((st, si) => (
+                        <span key={si} className={`rep-set${st.done ? " done" : ""}${si === bi ? " best" : ""}`}>
+                          {si === bi ? <Star size={10} /> : st.done ? <Check size={10} strokeWidth={3} /> : null}
+                          {setLabel(ex, st)}
                         </span>
                       ))}
                     </div>
@@ -2238,7 +2269,11 @@ function WorkoutReport({ rec, onClose }) {
                 );
               })}
             </div>
-            <div className="micro t-faint" style={{ marginTop: 10, textAlign: "center" }}>{tr("★ MIGLIOR SERIE · LE SERIE BARRATE NON SONO STATE COMPLETATE")}</div>
+            <div className="row g12 micro t-faint" style={{ marginTop: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <span className="row g4"><span className="rep-dot best" />{tr("Miglior serie")}</span>
+              <span className="row g4"><span className="rep-dot done" />{tr("Completata")}</span>
+              <span className="row g4"><span className="rep-dot" />{tr("Non completata")}</span>
+            </div>
           </>
         ) : (
           <div className="tiny t-faint">{tr("Nessun dettaglio disponibile per questo allenamento (registrato con una versione precedente).")}</div>
@@ -2248,6 +2283,8 @@ function WorkoutReport({ rec, onClose }) {
     </Overlay>
   );
 }
+
+const MONTHS_IT = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"];
 
 /* ---------------- Collapsible Panel (aperto di default, stato salvato) ---------------- */
 const PANELS_KEY = "gq_panels_v1";
@@ -2273,11 +2310,13 @@ function CollapsiblePanel({ id, label, icon, children }) {
   );
 }
 
-/* ---------------- Exercise Library ---------------- */
+/* ---------------- Exercise Library ----------------
+   Lista per gruppo muscolare + pulsante "Esplora in 3D" (modello umano cliccabile) */
 function ExerciseLibrary() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(null); // libreria: tutti i gruppi chiusi di default
   const [info, setInfo] = useState(null);
+  const [show3d, setShow3d] = useState(false);
   const filtered = useMemo(() => {
     if (!q) return EXERCISE_DB;
     const out = {};
@@ -2290,6 +2329,11 @@ function ExerciseLibrary() {
   return (
     <CollapsiblePanel id="library" label={tr("Libreria esercizi")}>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
+      {show3d && <AnatomyLibraryModal onClose={() => setShow3d(false)} />}
+      <div style={{ marginBottom: 10 }}>
+        <ActionCard icon={PersonStanding} tone="lib" onClick={() => setShow3d(true)}
+          title={tr("Esplora in 3D")} sub={tr("Tocca un muscolo sul modello umano")} />
+      </div>
       <div style={{ position: "relative", marginBottom: 12 }}>
         <Search size={14} color="var(--faint)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
         <input className="hud-input cham-s" value={q} onChange={(e) => setQ(e.target.value)}
@@ -4197,11 +4241,11 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
           <h2 className="hud-title">▸ Piano — {nutri.goal}</h2>
         </div>
       )}
-      <div className="row g8">
-        <Btn small ai onClick={() => (nutri ? setRegenOpen(true) : generate(false))} disabled={loading} style={{ flex: 1 }}>
-          {loading ? tr("Rigenerazione...") : tr("◈ Rigenera con AI")}
-        </Btn>
-        <Btn small ai onClick={() => setImporting(true)} style={{ flex: 1 }}>{tr("⤓ Importa piano")}</Btn>
+      <div className="act-grid">
+        <ActionCard icon={Sparkles} tone="ai" onClick={() => (nutri ? setRegenOpen(true) : generate(false))} busy={loading}
+          title={loading ? tr("Rigenerazione...") : tr("Rigenera con IA")} sub={tr("Nuovo piano su obiettivo e dati")} />
+        <ActionCard icon={FileUp} tone="pt" onClick={() => setImporting(true)}
+          title={tr("Importa piano")} sub={tr("Dal nutrizionista: PDF, foto o testo")} />
       </div>
       <NutriSubTabs value={subTab} onChange={setSubTab} />
       <SourcePlanView
@@ -4315,11 +4359,11 @@ Rispondi SOLO con il JSON aggiornato, con la STESSA identica struttura dell'inpu
           <h2 className="hud-title">▸ Piano — {nutri.goal}</h2>
         </div>
 
-        <div className="row g8">
-          <Btn small ai onClick={() => setRegenOpen(true)} disabled={loading} style={{ flex: 1 }}>
-            {loading ? tr("Rigenerazione...") : tr("◈ Rigenera con AI")}
-          </Btn>
-          <Btn small ai onClick={() => setImporting(true)} style={{ flex: 1 }}>{tr("⤓ Importa piano")}</Btn>
+        <div className="act-grid">
+          <ActionCard icon={Sparkles} tone="ai" onClick={() => setRegenOpen(true)} busy={loading}
+            title={loading ? tr("Rigenerazione...") : tr("Rigenera con IA")} sub={tr("Nuovo piano su obiettivo e dati")} />
+          <ActionCard icon={FileUp} tone="pt" onClick={() => setImporting(true)}
+            title={tr("Importa piano")} sub={tr("Dal nutrizionista: PDF, foto o testo")} />
         </div>
 
         <NutriSubTabs value={subTab} onChange={setSubTab} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen, TrendingUp, AlertTriangle } from "lucide-react";
+import { Plus, Check, Play, PersonStanding, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen, TrendingUp, AlertTriangle } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
@@ -11,7 +11,8 @@ import { exMode, holdSets, isDumbbell, isHold } from "../lib/exercises";
 import { markProgDone, repVal, repsNum, progTotal } from "../lib/progression";
 import { supabase } from "../lib/supabase";
 import { tr } from "../lib/i18n";
-import { Btn, Overlay, Panel } from "../ui";
+import { ActionCard, Btn, Overlay, Panel } from "../ui";
+import { AnatomyLibraryModal } from "./AnatomyLibraryModal";
 
 /* ---------------- Sessione di allenamento attiva ---------------- */
 export function SessionView({ standard, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome, onResultsClose, onCompleteResults, user }) {
@@ -25,6 +26,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const [runKey, setRunKey] = useState(null); // cronometro attivo per esercizi a tempo: "ei-si"
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi (aggiungi/sostituisci)
+  const [showAnatomy, setShowAnatomy] = useState(false); // libreria esercizi 3D
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [progIdx, setProgIdx] = useState(null); // esercizio con piano settimanale aperto (📈)
   const [confirmExDel, setConfirmExDel] = useState(null); // eliminazione esercizio in attesa di conferma
@@ -830,6 +832,15 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
         </Panel>
       ))}
       </div>
+
+      {/* Libreria 3D: esplora i muscoli e aggiungi esercizi alla sessione */}
+      <ActionCard icon={PersonStanding} tone="lib" onClick={() => setShowAnatomy(true)}
+        title={tr("Libreria esercizi")} sub={locked ? tr("Esplora il corpo in 3D") : tr("Esplora il corpo in 3D e aggiungi esercizi")} />
+      {showAnatomy && (
+        <AnatomyLibraryModal onClose={() => setShowAnatomy(false)}
+          activeNames={session.exercises.map((e) => e.name)}
+          onAdd={locked ? undefined : addExercises} />
+      )}
 
       {/* Gestione esercizi in sessione: l'elenco si apre in un popup (anche per la sostituzione) */}
       {!locked && (

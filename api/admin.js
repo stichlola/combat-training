@@ -1,8 +1,9 @@
-// Operazioni admin — SOLO l'account admin (riconosciuto via email).
+// Operazioni admin — SOLO l'account admin (riconosciuto via email d'ambiente).
 // Per ora: assegnazione manuale di crediti a un utente dato il suo username.
 import { getUserFromToken, addCredits } from "./_premium.js";
 
-const ADMIN_EMAIL = "candotto.d@gmail.com";
+const adminEmailsStr = process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || "super.pippo.candy@gmail.com";
+const ADMIN_EMAILS = adminEmailsStr.split(",").map(e => e.trim().toLowerCase());
 const SB_URL = process.env.SUPABASE_URL;
 const SB_SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -11,7 +12,7 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     const jwt = (req.headers.authorization || "").replace("Bearer ", "");
     const user = await getUserFromToken(jwt);
-    if (!user || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Solo admin" });
+    if (!user || !ADMIN_EMAILS.includes(user.email.toLowerCase())) return res.status(403).json({ error: "Solo admin" });
 
     const { username, credits } = req.body || {};
     const n = Math.floor(Number(credits) || 0);

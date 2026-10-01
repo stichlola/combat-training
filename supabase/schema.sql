@@ -257,32 +257,32 @@ create policy "L'utente legge le proprie richieste PT"
 drop policy if exists "L'admin legge tutte le richieste PT" on public.pt_requests;
 create policy "L'admin legge tutte le richieste PT"
   on public.pt_requests for select
-  using ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com');
+  using ((auth.jwt() ->> 'email') = 'super.pippo.candy@gmail.com');
 
 -- Solo l'admin può aggiornare (approvare/rifiutare).
 drop policy if exists "L'admin decide le richieste PT" on public.pt_requests;
 create policy "L'admin decide le richieste PT"
   on public.pt_requests for update
-  using ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com')
-  with check ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com');
+  using ((auth.jwt() ->> 'email') = 'super.pippo.candy@gmail.com')
+  with check ((auth.jwt() ->> 'email') = 'super.pippo.candy@gmail.com');
 
 -- 3) POLICY profiles — l'admin può promuovere/retrocedere i ruoli.
 drop policy if exists "L'admin aggiorna i ruoli" on public.profiles;
 create policy "L'admin aggiorna i ruoli"
   on public.profiles for update
-  using ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com')
-  with check ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com');
+  using ((auth.jwt() ->> 'email') = 'super.pippo.candy@gmail.com')
+  with check ((auth.jwt() ->> 'email') = 'super.pippo.candy@gmail.com');
 
 -- v3.1) Policy admin mancanti su profiles: SELECT (verifica) e INSERT (upsert ruoli)
 drop policy if exists "L'admin legge tutti i profili" on public.profiles;
 create policy "L'admin legge tutti i profili"
   on public.profiles for select
-  using ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com');
+  using ((auth.jwt() ->> 'email') = 'super.pippo.candy@gmail.com');
 
 drop policy if exists "L'admin crea profili" on public.profiles;
 create policy "L'admin crea profili"
   on public.profiles for insert
-  with check ((auth.jwt() ->> 'email') = 'candotto.d@gmail.com');
+  with check ((auth.jwt() ->> 'email') = 'super.pippo.candy@gmail.com');
 
 -- ============================================================
 -- v4 — IDENTITÀ CLIENTI + MODIFICA SCHEDE DA PARTE DEL PT

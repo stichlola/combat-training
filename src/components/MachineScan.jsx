@@ -3,7 +3,7 @@ import { Loader2, Camera } from "lucide-react";
 import { aiCall, parseLoose, resizeImage } from "../lib/ai";
 import { EXERCISE_DB, EXERCISE_INFO, EXERCISE_MEDIA, INFO_FALLBACK } from "../lib/exercises";
 import { tr } from "../lib/i18n";
-import { Btn, Overlay } from "../ui";
+import { ActionCard, Btn, Overlay } from "../ui";
 
 /* ================================ MACHINE SCAN ================================ */
 /* Mappa leggera macchinario -> esercizi (1 a N) sopra il database esistente:
@@ -93,9 +93,9 @@ Rispondi SOLO con JSON valido senza markdown: {"machine": string (nome esatto da
           </>}
     </button>
   ) : variant === "small" ? (
-    <Btn small ai onClick={() => camRef.current && camRef.current.click()} style={{ flex: 1 }} title={tr("Fotografa un attrezzo in palestra: l'AI lo riconoscerà e aggiungerà gli esercizi corretti.")}>
-      {busy ? <Loader2 size={12} className="spin" style={{ display: "inline", verticalAlign: -2 }} /> : <Camera size={12} style={{ display: "inline", verticalAlign: -2 }} />} {tr("Scansiona con AI")}
-    </Btn>
+    <ActionCard icon={Camera} tone="cam" busy={busy} onClick={() => camRef.current && camRef.current.click()}
+      title={busy ? tr("Analisi in corso...") : tr("Scansiona attrezzo")} sub={tr("Foto del macchinario con IA")}
+      hint={tr("Fotografa un attrezzo in palestra: l'AI lo riconoscerà e aggiungerà gli esercizi corretti.")} />
   ) : (
     <Btn ai full onClick={() => camRef.current && camRef.current.click()} style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em", marginTop: 10 }}>
       <div className="row center g8">

@@ -1,5 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
+import { ChevronRight, Loader2 } from "lucide-react";
 
 /* ============================== STYLES ============================== */
 export const CSS = `
@@ -102,6 +103,99 @@ button.btn{text-align:center}
   min-width:260px;box-sizing:border-box}
 .set-grid-t{display:grid;grid-template-columns:auto 42px 1fr 64px 46px;gap:8px;align-items:center}
 .icon-tap{display:inline-flex;align-items:center;justify-content:center;padding:7px;margin:-5px;cursor:pointer;min-width:36px;min-height:36px}
+
+/* --- training: azioni rapide (genera con IA / importa scheda PT) --- */
+.act-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.act-grid{grid-template-columns:1fr}}
+.act-card{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;text-align:left;width:100%;min-width:0;
+  background:var(--input);border:1px solid var(--soft2);border-radius:14px;
+  transition:border-color .2s ease,box-shadow .2s ease,transform .15s ease}
+.act-card:hover{border-color:var(--cyan);box-shadow:0 6px 18px -10px var(--cyan)}
+.act-card:active{transform:scale(.99)}
+.act-card:disabled{opacity:.55;cursor:default;box-shadow:none;border-color:var(--soft2)}
+.act-ico{width:38px;height:38px;flex-shrink:0;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff}
+.act-ico-ai{background:linear-gradient(135deg,#a78bfa,#7c3aed);box-shadow:0 4px 10px -4px rgba(124,58,237,.6)}
+.act-ico-cam{background:linear-gradient(135deg,#38bdf8,#0284c7);box-shadow:0 4px 10px -4px rgba(2,132,199,.6)}
+.act-ico-lib{background:linear-gradient(135deg,#fb7185,#e11d48);box-shadow:0 4px 10px -4px rgba(225,29,72,.6)}
+.act-ico-pt{background:linear-gradient(135deg,var(--cyan-hi),var(--cyan));box-shadow:0 4px 10px -4px var(--cyan)}
+.act-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.act-title{font-size:13.5px;font-weight:700;color:var(--bright);line-height:1.25}
+.act-sub{font-size:11.5px;color:var(--faint);line-height:1.3}
+.act-chev{color:var(--faint);flex-shrink:0;transition:transform .2s ease,color .2s ease}
+.act-card:hover .act-chev{color:var(--cyan);transform:translateX(2px)}
+
+/* --- ultimi allenamenti (storico) --- */
+.hist-list{display:flex;flex-direction:column;gap:6px}
+.hist-row{display:flex;align-items:center;gap:12px;width:100%;padding:8px 10px 8px 8px;cursor:pointer;text-align:left;
+  background:var(--input);border:1px solid var(--soft2);border-radius:12px;transition:border-color .2s ease,box-shadow .2s ease}
+.hist-row:hover{border-color:var(--cyan);box-shadow:0 4px 14px -8px var(--cyan)}
+.hist-row.empty{opacity:.6}
+.hist-date{width:40px;height:40px;flex-shrink:0;border-radius:10px;background:var(--active);color:var(--cyan);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.hist-row.empty .hist-date{background:var(--soft);color:var(--faint)}
+.hist-day{font-family:'Chakra Petch',sans-serif;font-size:15px;font-weight:700}
+.hist-mon{font-size:8.5px;font-weight:700;letter-spacing:.1em;margin-top:2px}
+.hist-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hist-name{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:var(--bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-pr{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 6px;border-radius:999px;
+  background:rgba(245,184,61,.16);color:var(--amber);flex-shrink:0}
+.hist-meta{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-vol{font-family:'Chakra Petch',sans-serif;font-size:14px;font-weight:700;color:var(--bright);flex-shrink:0;text-align:right}
+.hist-vol small{font-size:10.5px;font-weight:600;color:var(--faint)}
+.hist-chev{color:var(--faint);flex-shrink:0}
+.hist-row:hover .hist-chev{color:var(--cyan)}
+
+/* --- report allenamento (modale dallo storico) --- */
+.rep-kicker{font-family:'Chakra Petch',sans-serif;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan)}
+.rep-title{font-size:20px;font-weight:800;color:var(--bright);margin-top:2px;letter-spacing:.02em}
+.rep-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--dim);background:var(--soft);padding:3px 9px;border-radius:999px}
+.rep-chip-pr{background:rgba(245,184,61,.16);color:var(--amber)}
+.rep-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}
+.rep-stat{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:var(--input);border:1px solid var(--soft2)}
+.rep-stat > span:last-child{display:flex;flex-direction:column;min-width:0}
+.rep-stat-ico{width:30px;height:30px;flex-shrink:0;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--active);color:var(--cyan)}
+.rep-stat-l{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.rep-stat-v{font-family:'Chakra Petch',sans-serif;font-size:16px;font-weight:700;color:var(--bright)}
+.rep-bar{height:6px;border-radius:999px;background:var(--soft);overflow:hidden}
+.rep-bar > div{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cyan-hi),var(--cyan));transition:width .5s ease}
+.rep-ex{padding:10px;border-radius:12px;background:var(--input);border:1px solid var(--soft2)}
+.rep-ex-name{display:block;font-size:13.5px;font-weight:700;color:var(--bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-ex-sub{display:block;font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-ex-count{font-size:11px;font-weight:700;color:var(--faint);background:var(--soft);padding:2px 8px;border-radius:999px;flex-shrink:0}
+.rep-ex-count.full{background:rgba(16,185,129,.14);color:#059669}
+.rep-set{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:8px;
+  border:1px dashed var(--soft2);color:var(--faint);background:transparent}
+.rep-set.done{border:1px solid transparent;background:var(--active);color:var(--cyan-hi)}
+.rep-set.best{border:1px solid #f5b83d;background:rgba(255,215,106,.25);color:var(--amber)}
+.rep-dot{width:10px;height:10px;border-radius:3px;border:1px dashed var(--soft2);display:inline-block}
+.rep-dot.done{border:none;background:var(--active)}
+.rep-dot.best{border:1px solid #f5b83d;background:rgba(255,215,106,.4)}
+
+/* --- libreria esercizi 3D (modale con modello umano) --- */
+.anat-box{max-width:900px}
+.anat-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px}
+@media (max-width:720px){.anat-grid{grid-template-columns:1fr}}
+.anat-stage{position:relative;height:420px;border-radius:16px;overflow:hidden;background:#1b1c21;border:1px solid #2b2e36}
+@media (max-width:720px){.anat-stage{height:330px}}
+.anat-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b8f99;font-size:12px}
+.anat-hint{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:center;gap:12px;pointer-events:none;
+  font-size:10.5px;font-weight:600;color:var(--faint)}
+.anat-hint span{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.08);color:#a3a7b0;padding:3px 8px;border-radius:999px;backdrop-filter:blur(4px)}
+.anat-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.anat-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;cursor:pointer;
+  font-size:11.5px;font-weight:700;color:var(--dim);background:var(--input);border:1px solid var(--soft2);transition:all .15s ease}
+.anat-chip:hover{border-color:#ef4444;color:#ef4444}
+.anat-chip.on{background:#ef4444;border-color:#ef4444;color:#fff}
+.anat-side{display:flex;flex-direction:column;min-height:0}
+.anat-list{max-height:400px;overflow-y:auto;border:1px solid var(--soft2);border-radius:12px;padding:4px;background:var(--input)}
+@media (max-width:720px){.anat-list{max-height:none}}
+.anat-item{padding:7px 8px}
+.anat-badge{width:26px;height:26px;background:#ef4444;color:#fff}
+.anat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding:30px 16px;border:1px dashed var(--soft2);border-radius:12px;color:var(--faint)}
+.anat-add{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  background:var(--cyan);color:#fff}
+.anat-add.done{background:rgba(16,185,129,.16);color:#059669;cursor:default}
 
 /* --- libreria esercizi: bottoni gruppo muscolare --- */
 .lib-group{width:100%;display:flex;align-items:center;gap:12px;padding:9px 12px 9px 9px;cursor:pointer;
@@ -494,6 +588,24 @@ export function QBar({ pct, done, animate }) {
 }
 
 export const Overlay = ({ children }) => createPortal(children, document.body);
+
+/* Card d'azione (es. "Genera con IA", "Importa scheda"): icona colorata,
+   titolo, descrizione breve e freccia. tone: "ai" | "pt" | "cam".
+   Da affiancare dentro un contenitore .act-grid */
+export function ActionCard({ icon: Icon, tone = "ai", title, sub, hint, onClick, disabled, busy }) {
+  return (
+    <button type="button" className="tap act-card" onClick={onClick} disabled={disabled || busy} title={hint}>
+      <span className={`act-ico act-ico-${tone}`}>
+        {busy ? <Loader2 size={17} className="spin" /> : Icon && <Icon size={17} />}
+      </span>
+      <span className="act-txt">
+        <span className="act-title">{title}</span>
+        {sub && <span className="act-sub">{sub}</span>}
+      </span>
+      <ChevronRight size={15} className="act-chev" />
+    </button>
+  );
+}
 
 /* Condivisione nativa (WhatsApp, Instagram, …) via Web Share API; dove non è
    supportata (es. desktop) ricade sulla copia negli appunti.
