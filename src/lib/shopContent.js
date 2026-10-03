@@ -1,15 +1,22 @@
 /* Contenuti del negozio a crediti: temi extra e piani prefatti.
    Gli ID devono corrispondere a SHOP_ITEMS in api/_premium.js. */
-import { Leaf, Dumbbell, Flame, Gem, Zap } from "lucide-react";
+import { Leaf, Dumbbell, Flame, Sun, Zap, Utensils } from "lucide-react";
 import { holdSets } from "./exercises";
 
 export const SHOP_META = [
+  /* sezione Nutrizione sbloccata per sempre (inclusa anche nell'abbonamento Premium);
+     le generazioni con IA restano a consumo: Premium oppure 1 credito ciascuna */
+  { id: "nutrition", credits: 100, kind: "feature", Icon: Utensils,
+    title: "SEZIONE NUTRIZIONE",
+    desc: "Sblocca per sempre piano alimentare, pasti e target. Le generazioni con IA usano 1 credito ciascuna (illimitate con Premium)." },
   { id: "theme-emerald", credits: 40, kind: "theme", Icon: Leaf,
     title: "TEMA SMERALDO",
     desc: "Una versione verde smeraldo dell'interfaccia: la attivi dal profilo quando vuoi." },
-  { id: "theme-crimson", credits: 40, kind: "theme", Icon: Gem,
-    title: "TEMA CRIMSON",
-    desc: "Una versione rosso cremisi dell'interfaccia: la attivi dal profilo quando vuoi." },
+  /* l'ID resta "theme-crimson" (acquisti già registrati lato server): dal
+     rosso cremisi diventato tema base, questo articolo ora sblocca l'arancio */
+  { id: "theme-crimson", credits: 40, kind: "theme", Icon: Sun,
+    title: "TEMA ARANCIO",
+    desc: "La versione arancione e solare dell'interfaccia: la attivi dal profilo quando vuoi." },
   { id: "pack-strength", credits: 50, kind: "routines", Icon: Dumbbell,
     title: "PIANO FORZA 5×5",
     desc: "Due schede complete A/B per la forza massimale: squat, panca, stacco e militari." },
@@ -25,9 +32,9 @@ export const SHOP_META = [
 export const EMERALD_MODE = { id: "emerald", label: "Smeraldo", flag: "❖", Icon: Leaf,
   desc: "La versione base in verde smeraldo — sbloccata con i crediti" };
 
-/* Voce extra del selettore tema, visibile solo a chi ha sbloccato "theme-crimson" */
-export const CRIMSON_MODE = { id: "crimson", label: "Crimson", flag: "◆", Icon: Gem,
-  desc: "Rosso cremisi elite — sbloccato con i crediti" };
+/* Voce extra del selettore tema, visibile solo a chi ha sbloccato "theme-crimson" (Arancio) */
+export const ORANGE_MODE = { id: "orange", label: "Arancio", flag: "◆", Icon: Sun,
+  desc: "Toni arancio caldi e solari — sbloccato con i crediti" };
 
 const rid = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const ex = (name, group, w, n, r = 5) => ({

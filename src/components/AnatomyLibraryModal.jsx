@@ -1,5 +1,5 @@
 import React, { Suspense, useMemo, useState } from "react";
-import { Info, Search, X, Plus, Check, Loader2, RotateCw, MousePointerClick } from "lucide-react";
+import { Info, Search, X, Plus, Check, Loader2, RotateCw, MousePointerClick, ArrowLeftRight } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { MuscleIcon } from "./MuscleIcon";
 import { EXERCISE_DB } from "../lib/exercises";
@@ -12,8 +12,9 @@ const Body3D = React.lazy(() => import("./Body3D")); // three.js caricato solo a
    Modello umano ruotabile: clic su un gruppo muscolare → si illumina di rosso
    e a fianco compare l'elenco degli esercizi. I chip sotto il modello fanno lo
    stesso (e coprono il Cardio, che non è un muscolo sul modello).
-   Con onAdd (sessione attiva) ogni esercizio si può aggiungere all'allenamento. */
-export function AnatomyLibraryModal({ onClose, onAdd, activeNames = [] }) {
+   Con onAdd ogni esercizio si può aggiungere (sessione o selezione del popup
+   "Aggiungi esercizio"); con onPick si sceglie il sostituto (popup "Sostituisci"). */
+export function AnatomyLibraryModal({ onClose, onAdd, onPick, activeNames = [], addedLabel = "Già nell'allenamento" }) {
   const [sel, setSel] = useState(null);
   const [q, setQ] = useState("");
   const [info, setInfo] = useState(null);
@@ -116,9 +117,12 @@ export function AnatomyLibraryModal({ onClose, onAdd, activeNames = [] }) {
                           <span onClick={() => setInfo(it)} className="tap icon-tap" style={{ color: "var(--faint)" }} title={tr("Info esercizio")}>
                             <Info size={14} />
                           </span>
+                          {onPick && (
+                            <span onClick={() => onPick(it.name, it.group)} className="tap anat-add" title={tr("Usa come sostituto")}><ArrowLeftRight size={13} /></span>
+                          )}
                           {onAdd && (isIn(it.name)
-                            ? <span className="anat-add done" title={tr("Già nell'allenamento")}><Check size={13} strokeWidth={3} /></span>
-                            : <span onClick={() => addOne(it)} className="tap anat-add" title={tr("Aggiungi all'allenamento")}><Plus size={14} /></span>)}
+                            ? <span className="anat-add done" title={tr(addedLabel)}><Check size={13} strokeWidth={3} /></span>
+                            : <span onClick={() => addOne(it)} className="tap anat-add" title={tr("Aggiungi")}><Plus size={14} /></span>)}
                         </span>
                       </div>
                     ))}

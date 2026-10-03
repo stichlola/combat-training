@@ -171,6 +171,35 @@ button.btn{text-align:center}
 .rep-dot.done{border:none;background:var(--active)}
 .rep-dot.best{border:1px solid #f5b83d;background:rgba(255,215,106,.4)}
 
+/* --- sezioni bloccate (es. nutrizione senza Premium) --- */
+.nav-lock{position:absolute;right:4px;top:-2px;color:var(--faint);background:var(--input);border-radius:50%;padding:1px}
+.lock-badge{width:56px;height:56px;margin:0 auto;border-radius:16px;display:flex;align-items:center;justify-content:center;
+  color:#fff;background:linear-gradient(135deg,var(--cyan-hi),var(--cyan));box-shadow:0 8px 20px -8px var(--cyan)}
+.lock-perk{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:var(--input);border:1px solid var(--soft2)}
+
+/* --- circuiti: card dello stesso circuito unite "a catena" con barra laterale --- */
+.circ-item{border-left:4px solid var(--cyan) !important}
+.circ-item:not(.circ-first){margin-top:-8px;border-top-left-radius:6px !important;border-top-right-radius:6px !important}
+.circ-item:not(.circ-last){border-bottom-left-radius:6px !important;border-bottom-right-radius:6px !important}
+.circ-picked{box-shadow:0 0 0 2px var(--cyan) !important}
+.circ-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:-2px 0 10px;padding:8px 10px;border-radius:10px;
+  background:var(--active2);border:1px dashed var(--cyan)}
+.circ-badge{display:inline-flex;align-items:center;gap:5px;font-family:'Chakra Petch',sans-serif;font-size:10.5px;font-weight:700;
+  letter-spacing:.12em;color:var(--cyan)}
+.circ-ctl{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--dim)}
+.circ-ctl b{min-width:16px;text-align:center;color:var(--bright);font-size:13px}
+.circ-step{width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  border:1px solid var(--soft2);background:var(--input);color:var(--dim)}
+.circ-step:hover{border-color:var(--cyan);color:var(--cyan)}
+.circ-check{display:flex;align-items:center;gap:8px;width:100%;margin-bottom:8px;padding:7px 10px;border-radius:10px;cursor:pointer;
+  font-size:12px;font-weight:700;color:var(--dim);background:var(--input);border:1px dashed var(--soft2);text-align:left}
+.circ-check.on{color:var(--cyan);border:1px solid var(--cyan);background:var(--active2)}
+.circ-box{width:18px;height:18px;border-radius:5px;border:2px solid var(--soft2);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.circ-check.on .circ-box{background:var(--cyan);border-color:var(--cyan);color:#fff}
+.circ-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-radius:14px;border:1px solid var(--cyan);background:var(--active2)}
+.circ-round{margin-left:auto;font-size:11px;font-weight:700;color:#fff;background:var(--cyan);padding:2px 9px;border-radius:999px}
+.circ-round.done{background:#10b981}
+
 /* --- libreria esercizi 3D (modale con modello umano) --- */
 .anat-box{max-width:900px}
 .anat-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px}
@@ -523,11 +552,13 @@ body.standard{background:#f5f5f4}
 .emerald .guest-banner .t-cyan{color:#6ee7b7}
 .emerald .float-cam-btn{box-shadow:0 4px 12px rgba(5,150,105,.35)}
 
-/* TEMA CRIMSON: variante rosso cremisi del tema standard (sbloccabile con i crediti). */
+/* TEMA CRIMSON: accenti rosso cremisi del tema standard — è il tema BASE (l'arancio
+   di .standard resta per chi sblocca "Arancio" nel negozio). */
 .crimson{--cyan:#dc2626;--cyan-hi:#b91c1c;--amber:#991b1b;--green:#b91c1c;
   --active:#fee2e2;--active2:#fef2f2}
 .crimson .btn-primary{background:linear-gradient(135deg,#f87171,#dc2626)}
 .crimson .btn-primary:hover{background:linear-gradient(135deg,#ef4444,#b91c1c)}
+.crimson .btn-primary{box-shadow:0 4px 12px rgba(220,38,38,.3)}
 .crimson .chip-on{background:#fee2e2}
 .crimson .dash-btn{border-color:rgba(220,38,38,.35);background:#fdf4f4}
 .crimson .dash-btn:hover{border-color:rgba(220,38,38,.6);background:#fbe9e9}

@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { Check, Info, Search, ChevronRight } from "lucide-react";
+import { Check, Info, Search, ChevronRight, PersonStanding } from "lucide-react";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { MuscleIcon } from "./MuscleIcon";
+import { AnatomyLibraryModal } from "./AnatomyLibraryModal";
 import { EXERCISE_DB } from "../lib/exercises";
 import { tr } from "../lib/i18n";
-import { Btn, Overlay } from "../ui";
+import { ActionCard, Btn, Overlay } from "../ui";
 
 /* ---------------- Popup selezione esercizi (editor + sessione attiva) ----------------
    Stessa grafica della Libreria esercizi (classi .lib-*): card per categoria apribili/chiudibili,
@@ -16,6 +17,7 @@ export function ExercisePickerModal({ activeNames = [], mode = "add", replacing 
   const [open, setOpen] = useState(null); // categorie chiuse di default, come in libreria
   const [sel, setSel] = useState([]);     // { name, group } selezionati in modalità aggiungi
   const [info, setInfo] = useState(null);
+  const [show3d, setShow3d] = useState(false); // libreria 3D (modello umano)
 
   const filtered = useMemo(() => {
     if (!q) return EXERCISE_DB;
@@ -38,6 +40,13 @@ export function ExercisePickerModal({ activeNames = [], mode = "add", replacing 
   return (
     <Overlay>
       {info && <ExerciseInfoModal name={info.name} group={info.group} ex={info} onClose={() => setInfo(null)} />}
+      {/* "aggiungi": gli esercizi scelti in 3D entrano nella selezione da confermare;
+          "sostituisci": la scelta in 3D vale subito come sostituto */}
+      {show3d && (mode === "replace"
+        ? <AnatomyLibraryModal onClose={() => setShow3d(false)} onPick={(name, group) => { setShow3d(false); onPick(name, group); }} />
+        : <AnatomyLibraryModal onClose={() => setShow3d(false)} addedLabel="Selezionato"
+            activeNames={[...activeNames, ...sel.map((x) => x.name)]}
+            onAdd={(items) => setSel((s) => [...s, ...items.filter((it) => !s.some((x) => x.name === it.name))])} />)}
       <div className="modal-back" onClick={onClose}>
         <div className="modal-box cham fade-in picker-modal" onClick={(e) => e.stopPropagation()}>
           <div className="row between" style={{ marginBottom: 10 }}>
@@ -52,6 +61,11 @@ export function ExercisePickerModal({ activeNames = [], mode = "add", replacing 
               </div>
             </div>
             <span onClick={onClose} className="tap t-faint" style={{ cursor: "pointer", fontSize: 18, padding: "6px 10px", margin: "-6px -8px 0 0", flexShrink: 0 }}>✕</span>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <ActionCard icon={PersonStanding} tone="lib" onClick={() => setShow3d(true)}
+              title={tr("Esplora in 3D")} sub={mode === "replace" ? tr("Tocca un muscolo e scegli il sostituto") : tr("Tocca un muscolo sul modello umano")} />
           </div>
 
           <div style={{ position: "relative", marginBottom: 10 }}>

@@ -221,10 +221,11 @@ export async function redeemCode(userId, rawCode) {
 /* ---------------- Shop a crediti (temi extra, piani prefatti, ...) ---------------- */
 /* Il costo è deciso QUI; il contenuto sbloccato è applicato dal client. */
 export const SHOP_ITEMS = {
+  "nutrition":     { credits: 100 }, // sezione Nutrizione per sempre (inclusa anche in Premium)
   "theme-emerald": { credits: 40 },  // tema grafico Smeraldo
   "pack-strength": { credits: 50 },  // schede pronte: Forza 5x5 A/B
   "pack-core":     { credits: 40 },  // scheda pronta: 30 giorni Core & Addome
-  "theme-crimson": { credits: 40 },  // tema grafico Crimson
+  "theme-crimson": { credits: 40 },  // tema grafico Arancio (ID storico: il cremisi ora è la base)
   "pack-ppl":      { credits: 50 },  // schede pronte: Push / Pull / Legs
 };
 

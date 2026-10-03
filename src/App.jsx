@@ -12,12 +12,13 @@ import { ExerciseInfoModal } from "./components/ExerciseInfoModal";
 import { RoutineEditor } from "./components/RoutineEditor";
 import { SessionView } from "./components/SessionView";
 import { MuscleIcon } from "./components/MuscleIcon";
+import { fitSets } from "./lib/circuits";
 import { AnatomyLibraryModal } from "./components/AnatomyLibraryModal";
 import { ResultsScreen } from "./components/ResultsScreen";
 import { TrainerView, TrainerProfile } from "./components/TrainerView";
 import { PtRequestCard, PtRequestsAdmin } from "./components/PtRequest";
 import { captureInviteHash, captureRefHash, clearInvite, clearRef, fetchMyRole, fetchMyTrainer, isAdminUser, linkToTrainer, pendingInvite, pendingInviteName, pendingRef, saveMyFullName, syncMyUsername, unlinkMyTrainer } from "./lib/trainer";
-import { SHOP_META, EMERALD_MODE, CRIMSON_MODE, buildPackRoutines } from "./lib/shopContent";
+import { SHOP_META, EMERALD_MODE, ORANGE_MODE, buildPackRoutines } from "./lib/shopContent";
 import { dlStart } from "./lib/dnd";
 import { applyProgression, todayISO, currentWeek, progTotal, syncProgression, repsNum, REP_RANGE } from "./lib/progression";
 import { ALL_EXERCISES, EXERCISE_DB, GROUPS, findGroup, matchToDb, exMode } from "./lib/exercises";
@@ -29,7 +30,7 @@ import { LANG_OPTS, setLangGlobal, tr } from "./lib/i18n";
    default. Combat Training è la variante gamificata, invariata. */
 const UI_MODES = [
   { id: "standard", label: "Fit Training", flag: "◻", Icon: LayoutTemplate,
-    desc: "La versione base: interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara in toni caldi e solari" },
+    desc: "La versione base: interfaccia pulita e minimale, stessa struttura senza gamification — grafica chiara con accenti rosso cremisi" },
   { id: "combat", label: "Combat Training", flag: "⚔", Icon: Swords,
     desc: "La versione gamificata: livelli, XP, sfide e ricompense — grafica HUD da gioco" },
 ];
@@ -366,7 +367,7 @@ function AdminCredits({ fireToast }) {
   );
 }
 
-function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast, initialCode, onCreateAccount, unlocks = [], onBuyShop }) {
+function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToast, initialCode, onCreateAccount, unlocks = [], onBuyShop, initialSection = null }) {
   const [code, setCode] = useState(initialCode || null); // codice emesso per acquisto senza account
   const [redeem, setRedeem] = useState("");
   const [redeemMsg, setRedeemMsg] = useState(null);
@@ -393,8 +394,8 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
   const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
   const [stripeLoading, setStripeLoading] = useState(false);
   const [shopBusy, setShopBusy] = useState(null);
-  const [shopTab, setShopTab] = useState("theme"); // sottocategoria negozio: temi | allenamenti
-  const [section, setSection] = useState(premium.is ? "credits" : "sub"); // sezione store: abbonamento | crediti | negozio
+  const [shopTab, setShopTab] = useState(initialSection === "shop" ? "feature" : "theme"); // sottocategoria negozio: funzioni | temi | allenamenti
+  const [section, setSection] = useState(initialSection || (premium.is ? "credits" : "sub")); // sezione store: abbonamento | crediti | negozio
   const buyShopLocal = async (it) => {
     if (!onBuyShop) return;
     setShopBusy(it.id);
@@ -609,7 +610,7 @@ function StoreModal({ premium, isGuest, onClose, onUnlocked, onCredits, fireToas
             <span className={"chip cham-s" + ((usage?.credits || 0) > 0 ? " chip-on" : "")} style={{ fontSize: 9 }}>⬡ {usage?.credits ?? 0}</span>
           </div>
           <div className="row g8" style={{ marginBottom: 12, flexWrap: "wrap" }}>
-            {[["theme", tr("Temi")], ["routines", tr("Allenamenti")]].map(([k, lab]) => (
+            {[["feature", tr("Funzioni")], ["theme", tr("Temi")], ["routines", tr("Allenamenti")]].map(([k, lab]) => (
               <button key={k} onClick={() => setShopTab(k)}
                 className={"chip cham-s tap" + (shopTab === k ? " chip-on" : "")}
                 style={{ fontSize: 10, letterSpacing: ".12em", padding: "7px 14px", cursor: "pointer" }}>{lab}</button>
@@ -751,14 +752,21 @@ export default function App() {
   const [prs, setPrs] = useState(DEFAULT_PRS);
   const [premiumUntil, setPremiumUntil] = useState(null);
   const [gateOpen, setGateOpen] = useState(false);
+  const [gateSection, setGateSection] = useState(null); // sezione dello store da aprire (es. "shop")
   const [stripeCode, setStripeCode] = useState(null); // codice di riscatto emesso al rientro da Stripe (ospite)
   
   const isPremium = isPT || (isAdmin && adminOverride
     ? adminOverride === "premium"
     : (!!premiumUntil && new Date(premiumUntil) > new Date()));
 
+  /* Nutrizione: sezione riservata a Premium. Predisposta anche per uno sblocco
+     separato nel negozio (articolo "nutrition", da aggiungere a SHOP_META e
+     SHOP_ITEMS in api/_premium.js se si decide di venderla a crediti) */
+  const nutritionUnlocked = isPremium || unlocks.includes("nutrition");
+
   const premium = { is: isPremium, until: premiumUntil, guest: isGuest,
-    open: () => setGateOpen(true),
+    open: () => { setGateSection(null); setGateOpen(true); },
+    openShop: () => { setGateSection("shop"); setGateOpen(true); },
     needAccount: () => { setGateOpen(true); } };
 
   /* Acquisto extra con i crediti (temi, piani prefatti) via /api/shop */
@@ -780,7 +788,7 @@ export default function App() {
         if (add.length) setRoutines((rs) => [...rs, ...add]);
       }
       if (item.id === "theme-emerald") setBody((b) => ({ ...b, uiMode: "emerald" }));
-      if (item.id === "theme-crimson") setBody((b) => ({ ...b, uiMode: "crimson" }));
+      if (item.id === "theme-crimson") setBody((b) => ({ ...b, uiMode: "orange" })); // articolo Arancio
       fireToast({ title: d.already ? tr("Già sbloccato") : tr("◈ SBLOCCATO"), sub: tr(item.title) });
       return { ok: true, credits: d.credits };
     } catch { fireToast({ title: tr("Errore di rete, riprova") }); return { ok: false }; }
@@ -1178,12 +1186,15 @@ export default function App() {
      Combat Training (gamificata) si attiva solo con uiMode === "combat". */
   const standard = body.uiMode !== "combat"; // interfaccia pulita: stessa struttura, zero gamification
   /* i portali (Overlay → document.body) ereditano il tema: la classe standard va anche su <body> */
+  /* colori della versione standard: rosso cremisi è la base; Arancio e Smeraldo
+     si sbloccano nel negozio ("crimson" salvato dai vecchi acquisti = base) */
+  const themeClass = !standard ? "" : body.uiMode === "orange" ? "" : body.uiMode === "emerald" ? "emerald" : "crimson";
   useEffect(() => {
     document.body.classList.toggle("standard", standard);
-    document.body.classList.toggle("emerald", body.uiMode === "emerald");
-    document.body.classList.toggle("crimson", body.uiMode === "crimson");
+    document.body.classList.toggle("emerald", themeClass === "emerald");
+    document.body.classList.toggle("crimson", themeClass === "crimson");
     return () => { document.body.classList.remove("standard"); document.body.classList.remove("emerald"); document.body.classList.remove("crimson"); };
-  }, [standard, body.uiMode]);
+  }, [standard, themeClass]);
   /* PT e admin vedono entrambe le facce dell'app: l'ultimo pulsante del menu
      (sempre in fondo) commuta tra area PT (clienti) e area utente normale */
   const canPt = isPT;
@@ -1198,7 +1209,7 @@ export default function App() {
       { id: "profile", label: "Profilo", icon: User },
     ] : [
       { id: "training", label: "Training", icon: Dumbbell },
-      { id: "nutrition", label: "Nutrition", icon: Utensils },
+      { id: "nutrition", label: "Nutrition", icon: Utensils, locked: !nutritionUnlocked },
       ...(standard ? [] : [{ id: "game", label: "Game", icon: Gamepad2 }]),
       { id: "profile", label: "Profilo", icon: User },
     ]),
@@ -1218,7 +1229,7 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className={"hud-root" + (standard ? " standard" : "")}>
+      <div className={"hud-root" + (standard ? " standard" : "") + (themeClass ? " " + themeClass : "")}>
         <style>{CSS}</style>
         <HudToast toast={toast} />
         <AuthScreen fireToast={fireToast} combat={brandCombat} />
@@ -1228,7 +1239,7 @@ export default function App() {
 
   if (!body.onboarded && !isPT) { // il PT non ha bisogno dei dati corporei: salta l'onboarding
     return (
-      <div className={"hud-root" + (standard ? " standard" : "")}>
+      <div className={"hud-root" + (standard ? " standard" : "") + (themeClass ? " " + themeClass : "")}>
         <style>{CSS}</style>
         <HudToast toast={toast} />
         <OnboardingWizard body={body} setBody={setBody} username={user.username} fireToast={fireToast} />
@@ -1237,7 +1248,7 @@ export default function App() {
   }
 
   return (
-    <div className={"hud-root" + (standard ? " standard" : "")}>
+    <div className={"hud-root" + (standard ? " standard" : "") + (themeClass ? " " + themeClass : "")}>
       <style>{CSS}</style>
       <HudToast toast={toast} />
 
@@ -1283,7 +1294,7 @@ export default function App() {
       {questsOpen && <QuestModal quests={quests} stats={stats} prs={prs} level={level} streak={streak} onClose={() => setQuestsOpen(false)} />}
       {gateOpen && <StoreModal premium={premium} isGuest={isGuest} fireToast={fireToast} onClose={() => setGateOpen(false)}
         onUnlocked={(until) => setPremiumUntil(until)} initialCode={stripeCode} onCreateAccount={exitGuest}
-        unlocks={unlocks} onBuyShop={buyShop} />}
+        unlocks={unlocks} onBuyShop={buyShop} initialSection={gateSection} />}
       {/* Paywall soft: proposta non bloccante dopo l'allenamento (max 1/giorno) */}
       {softGate && (
         <Overlay>
@@ -1389,6 +1400,7 @@ export default function App() {
                   }}>
                   <t.icon size={17} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : isSwitch ? { filter: "drop-shadow(0 0 5px rgba(255,215,106,.7))" } : {}} />
                   {isSwitch ? (ptMode ? tr("Vista utente") : tr("Vista PT")) : t.label}
+                  {t.locked && <Lock size={12} style={{ marginLeft: "auto", opacity: .7 }} />}
                 </button>
               );
             })}
@@ -1398,7 +1410,8 @@ export default function App() {
         <main className="main-area">
           {tab === "clients" && canPt && ptMode && <TrainerView user={user} fireToast={fireToast} />}
           {tab === "training" && <Training standard={standard} onWorkoutDone={applyWorkoutToQuests} premium={premium} body={body} addXp={addXp} fireToast={fireToast} routines={routines} setRoutines={setRoutines} prs={prs} setPrs={setPrs} session={session} setSession={setSession} history={history} setHistory={setHistory} user={user} />}
-          {tab === "nutrition" && (
+          {tab === "nutrition" && !nutritionUnlocked && <NutritionLocked premium={premium} />}
+          {tab === "nutrition" && nutritionUnlocked && (
             <NutritionTab premium={premium} body={body} nutri={nutri} setNutri={setNutri} fireToast={fireToast} goProfile={() => setTab("profile")} />
           )}
           {tab === "game" && (
@@ -1482,7 +1495,8 @@ export default function App() {
               style={isSwitch
                 ? { color: "#ffd76a", alignItems: "center", textAlign: "center", borderLeft: "1px solid var(--soft)" }
                 : { color: on ? "var(--cyan-hi)" : "var(--faint)", alignItems: "center", textAlign: "center" }}>
-              <span className="bnav-ico"><t.icon size={20} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : isSwitch ? { filter: "drop-shadow(0 0 5px rgba(255,215,106,.7))" } : {}} /></span>
+              <span className="bnav-ico" style={{ position: "relative" }}><t.icon size={20} style={on ? { filter: "drop-shadow(0 0 5px var(--cyan))" } : isSwitch ? { filter: "drop-shadow(0 0 5px rgba(255,215,106,.7))" } : {}} />
+                {t.locked && <Lock size={10} className="nav-lock" />}</span>
               {isSwitch ? (ptMode ? tr("Utente") : "PT") : t.label}
               <div style={{ height: 2, width: 32, background: on ? "var(--cyan)" : isSwitch ? "rgba(255,215,106,.55)" : "transparent", boxShadow: on ? "0 0 6px var(--cyan)" : "none" }} />
             </button>
@@ -1770,12 +1784,14 @@ function Training({ standard, onWorkoutDone, onSessionClosed, premium, body, add
       startedAt: Date.now(),
       routinePtModifiedAt: r.ptModifiedAt || 0,
       routineSnapshot: JSON.parse(JSON.stringify(r)),
+      circuits: r.circuits || {},
       exercises: exercisesToUse.map((e) => {
         const prog = applyProgression(e, r.progression);
+        const rounds = e.circuit && r.circuits?.[e.circuit]?.rounds;
         return {
           ...e,
           note: (prog && prog.note) || e.note || "",
-          sets: (prog ? prog.sets : e.sets.map((s) => ({ ...s }))).map((s) => ({ ...s, done: false, elapsed: 0 })),
+          sets: (rounds ? fitSets : (x) => x)((prog ? prog.sets : e.sets.map((s) => ({ ...s }))).map((s) => ({ ...s, done: false, elapsed: 0 })), rounds),
           progWeek: prog ? prog.week : undefined,
           progTotal: prog ? prog.total : undefined,
         };
@@ -2981,8 +2997,8 @@ function ProfileTab({ user, body, setBody, fireToast, onLogout, onUserUpdate, le
             {tr("L'app ha due versioni: puoi cambiare quando vuoi, i tuoi dati e i tuoi allenamenti restano sempre gli stessi.")}
           </div>
           <div className="stack g10">
-            {[...UI_MODES, ...(unlocks.includes("theme-emerald") ? [EMERALD_MODE] : []), ...(unlocks.includes("theme-crimson") ? [CRIMSON_MODE] : [])].map((o) => {
-              const curMode = body.uiMode === "combat" ? "combat" : (body.uiMode === "emerald" && unlocks.includes("theme-emerald") ? "emerald" : (body.uiMode === "crimson" && unlocks.includes("theme-crimson") ? "crimson" : "standard"));
+            {[...UI_MODES, ...(unlocks.includes("theme-emerald") ? [EMERALD_MODE] : []), ...(unlocks.includes("theme-crimson") ? [ORANGE_MODE] : [])].map((o) => {
+              const curMode = body.uiMode === "combat" ? "combat" : (body.uiMode === "emerald" && unlocks.includes("theme-emerald") ? "emerald" : (body.uiMode === "orange" && unlocks.includes("theme-crimson") ? "orange" : "standard"));
               const active = curMode === o.id;
               return (
                 <button key={o.id} onClick={() => setBody((b) => ({ ...b, uiMode: o.id }))}
@@ -3985,6 +4001,52 @@ REGOLE:
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ---------------- Nutrizione bloccata (serve Premium) ---------------- */
+function NutritionLocked({ premium }) {
+  const perks = [
+    [Sparkles, tr("Piano alimentare con IA"), tr("Calorie e macro calcolati su obiettivo, peso e allenamenti")],
+    [Utensils, tr("Pasti e alternative"), tr("Opzioni per ogni pasto e composizione libera dei piatti")],
+    [FileText, tr("Importa il piano del nutrizionista"), tr("Da PDF, foto o testo: l'IA lo converte nell'app")],
+    [Target, tr("Target personalizzati"), tr("Modifica calorie e macro quando vuoi")],
+  ];
+  return (
+    <div className="fade-in" style={{ maxWidth: 560, margin: "0 auto" }}>
+      <Panel style={{ textAlign: "center", padding: "28px 20px" }}>
+        <div className="lock-badge"><Lock size={22} /></div>
+        <div className="t-bright" style={{ fontSize: 20, fontWeight: 800, marginTop: 12 }}>{tr("Nutrizione Premium")}</div>
+        <div className="tiny t-faint" style={{ marginTop: 6, lineHeight: 1.6 }}>
+          {tr("Inclusa nell'abbonamento Premium, oppure sbloccabile per sempre con i crediti.")}
+        </div>
+        <div className="stack-s" style={{ textAlign: "left", margin: "18px 0" }}>
+          {perks.map(([Icon, t, d]) => (
+            <div key={t} className="lock-perk">
+              <span className="rep-stat-ico"><Icon size={14} /></span>
+              <span style={{ minWidth: 0 }}>
+                <span className="t-bright" style={{ display: "block", fontSize: 13.5, fontWeight: 700 }}>{t}</span>
+                <span className="tiny t-faint">{d}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <Btn primary full onClick={() => premium.open()} style={{ padding: 13 }}>
+          <Sparkles size={14} style={{ display: "inline", verticalAlign: -2, marginRight: 6 }} />{tr("Passa a Premium")}
+        </Btn>
+        <div className="row" style={{ alignItems: "center", gap: 10, margin: "12px 0" }}>
+          <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+          <span className="micro t-faint">{tr("OPPURE")}</span>
+          <div style={{ flex: 1, height: 1, background: "var(--soft)" }} />
+        </div>
+        <Btn full onClick={() => premium.openShop()} style={{ padding: 12 }}>
+          ⬡ {tr("Sblocca per sempre con 100 crediti")}
+        </Btn>
+        <div className="tiny t-faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
+          {tr("Senza abbonamento le generazioni con IA usano 1 credito ciascuna.")}
+        </div>
+      </Panel>
     </div>
   );
 }

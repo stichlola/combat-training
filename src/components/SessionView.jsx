@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Check, Play, PersonStanding, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen, TrendingUp, AlertTriangle } from "lucide-react";
+import { Plus, Minus, Check, Play, Trash2, Info, Pause, GripVertical, ArrowLeftRight, Lock, LockOpen, TrendingUp, AlertTriangle, Repeat } from "lucide-react";
+import { circuitPos, roundDone, currentRound, setCircuitRounds, normalizeCircuits, fitExercise, DEFAULT_CIRCUIT } from "../lib/circuits";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
@@ -11,8 +12,7 @@ import { exMode, holdSets, isDumbbell, isHold } from "../lib/exercises";
 import { markProgDone, repVal, repsNum, progTotal } from "../lib/progression";
 import { supabase } from "../lib/supabase";
 import { tr } from "../lib/i18n";
-import { ActionCard, Btn, Overlay, Panel } from "../ui";
-import { AnatomyLibraryModal } from "./AnatomyLibraryModal";
+import { Btn, Overlay, Panel } from "../ui";
 
 /* ---------------- Sessione di allenamento attiva ---------------- */
 export function SessionView({ standard, onWorkoutDone, premium, session, setSession, prs, setPrs, addXp, fireToast, routines, setRoutines, setHistory, exitToHome, onResultsClose, onCompleteResults, user }) {
@@ -26,7 +26,6 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   const [runKey, setRunKey] = useState(null); // cronometro attivo per esercizi a tempo: "ei-si"
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi (aggiungi/sostituisci)
-  const [showAnatomy, setShowAnatomy] = useState(false); // libreria esercizi 3D
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [progIdx, setProgIdx] = useState(null); // esercizio con piano settimanale aperto (📈)
   const [confirmExDel, setConfirmExDel] = useState(null); // eliminazione esercizio in attesa di conferma
@@ -107,7 +106,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
 
   const removeExercise = (ei) => {
     if (runKey && Number(runKey.split("-")[0]) === ei) setRunKey(null);
-    upd((s) => ({ ...s, exercises: s.exercises.filter((_, i) => i !== ei) }));
+    upd((s) => ({ ...s, ...normalizeCircuits(s.exercises.filter((_, i) => i !== ei), s.circuits || {}) }));
   };
 
   /* Sostituisce l'esercizio ei: conserva serie e flag done se resta forza→forza,
@@ -153,7 +152,15 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
   };
 
   /* Scelta dal popup in modalità sostituzione */
-  const pickReplace = (name, group) => { if (replaceIdx != null) replaceExercise(replaceIdx, name, group); };
+  const pickReplace = (name, group) => {
+    if (replaceIdx == null) return;
+    const cid = session.exercises[replaceIdx]?.circuit;
+    replaceExercise(replaceIdx, name, group);
+    if (cid) upd((s) => {
+      const rounds = (s.circuits?.[cid] || DEFAULT_CIRCUIT).rounds;
+      return { ...s, exercises: s.exercises.map((e) => (e.circuit === cid ? fitExercise(e, rounds) : e)) };
+    });
+  };
 
   /* Cronometro cardio/tenute: incrementa elapsed della riga attiva.
      Basato su timestamp con catch-up: in background i tick vengono sospesi,
@@ -239,9 +246,21 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
     if (!st.done) {
       addXp(10);
       if (runKey === `${ei}-${si}`) setRunKey(null);
-      // Avvia automaticamente il timer di recupero con il rest time dell'esercizio
-      const restSec = ex.rest || 90;
-      timerRef.current?.start(restSec);
+      if (ex.circuit) {
+        /* circuito: si passa subito al prossimo esercizio; a fine giro parte il recupero */
+        const next = session.exercises.map((e, i) => i !== ei ? e : { ...e, sets: e.sets.map((x, j) => j !== si ? x : { ...x, done: true }) });
+        if (roundDone(next, ex.circuit, si)) {
+          const c = { ...DEFAULT_CIRCUIT, ...(session.circuits?.[ex.circuit] || {}) };
+          const last = si + 1 >= c.rounds;
+          if (!last) timerRef.current?.start(Number(c.rest) || 90);
+          fireToast({ title: last ? tr("◈ CIRCUITO COMPLETATO") : `◈ ${tr("GIRO")} ${si + 1}/${c.rounds} ${tr("COMPLETATO")}`,
+            sub: last ? tr("Tutti i giri fatti") : `${tr("Recupero")} ${Number(c.rest) || 90}s` });
+        }
+      } else {
+        // Avvia automaticamente il timer di recupero con il rest time dell'esercizio
+        const restSec = ex.rest || 90;
+        timerRef.current?.start(restSec);
+      }
       if (ex.mode !== "time" && !st.warmup && (st.w || 0) > (prs[ex.name] || 0)) {
         setPrs((p) => ({ ...p, [ex.name]: st.w }));
         setSessionPrCount((c) => c + 1);
@@ -395,6 +414,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
           ...r,
           name: session.name,
           exercises: mergedExs,
+          ...(session.circuits ? { circuits: { ...(r.circuits || {}), ...session.circuits } } : {}),
         };
       }));
     }
@@ -689,8 +709,38 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
 
 
       <div data-dl className="stack" style={{ marginTop: 0 }}>
-      {session.exercises.map((ex, ei) => (
-        <Panel key={ei}>
+      {session.exercises.map((ex, ei) => {
+        const cp = circuitPos(session.exercises, ei);
+        const circ = cp ? { ...DEFAULT_CIRCUIT, ...(session.circuits?.[cp.id] || {}) } : null;
+        const allDone = cp && roundDone(session.exercises, cp.id, circ.rounds - 1);
+        return (
+        <Panel key={ei} className={cp ? `circ-item${cp.first ? " circ-first" : ""}${cp.last ? " circ-last" : ""}` : ""}>
+          {cp?.first && (
+            <div className="circ-head">
+              <span className="circ-badge"><Repeat size={12} /> {tr("CIRCUITO")} · {cp.count} {tr("esercizi")}</span>
+              {!locked ? (
+                <>
+                  <span className="circ-ctl">
+                    {tr("Giri")}
+                    <button type="button" className="circ-step tap" onClick={() => upd((s) => ({ ...s, ...setCircuitRounds(s.exercises, s.circuits || {}, cp.id, circ.rounds - 1) }))}><Minus size={12} /></button>
+                    <b>{circ.rounds}</b>
+                    <button type="button" className="circ-step tap" onClick={() => upd((s) => ({ ...s, ...setCircuitRounds(s.exercises, s.circuits || {}, cp.id, circ.rounds + 1) }))}><Plus size={12} /></button>
+                  </span>
+                  <span className="circ-ctl">
+                    {tr("Recupero")}
+                    <input type="number" inputMode="numeric" className="hud-input cham-s" value={circ.rest}
+                      onChange={(e) => { const v = e.target.value === "" ? "" : Number(e.target.value); upd((s) => ({ ...s, circuits: { ...(s.circuits || {}), [cp.id]: { ...circ, rest: v } } })); }}
+                      style={{ width: 46, textAlign: "center", padding: "4px 2px", fontSize: 11 }} />s
+                  </span>
+                </>
+              ) : (
+                <span className="circ-ctl">{circ.rounds} {tr("giri")} · {tr("recupero")} {circ.rest}s</span>
+              )}
+              <span className={`circ-round${allDone ? " done" : ""}`}>
+                {allDone ? tr("Completato ✓") : `${tr("Giro")} ${currentRound(session.exercises, cp.id, circ.rounds)}/${circ.rounds}`}
+              </span>
+            </div>
+          )}
           {/* riga 0: gruppo · PR (sopra il nome) · riga 1: nome + azioni · riga 2: INFO · settimana · recupero */}
           <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: locked ? 0 : 29 }}>
             {tr(ex.group || "").toUpperCase()}{!exMode(ex) && ` · PR ${prs[ex.name] || "—"} KG`}{exMode(ex) === "hold" && ` · ${tr("A TEMPO")}`}
@@ -734,8 +784,8 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               title={(ex.ptNote || ex.ptVideo) ? tr("Note e video del tuo PT") : undefined}>
               <Info size={11} /> INFO
             </button>
-            {/* recupero: sempre ancorato a destra nella riga */}
-            <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
+            {/* recupero: sempre ancorato a destra nella riga (nei circuiti vale quello di fine giro) */}
+            {!cp && <span className="row g4" style={{ alignItems: "center", marginLeft: "auto" }}>
               <span className="t-faint">REC</span>
               <input type="number" inputMode="numeric" readOnly={locked}
                 autoComplete="off" data-lpignore="true" data-form-type="other"
@@ -747,7 +797,7 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
                 className="hud-input cham-s"
                 style={{ width: 42, textAlign: "center", padding: "4px 2px", fontSize: 11 }} />
               <span className="t-faint">s</span>
-            </span>
+            </span>}
           </div>
           <input className="hud-input cham-s" value={ex.note || ""} readOnly={locked} onChange={(e) => updateNote(ei, e.target.value)}
             autoComplete="off" data-lpignore="true" data-form-type="other"
@@ -828,19 +878,11 @@ export function SessionView({ standard, onWorkoutDone, premium, session, setSess
               </div>
             </>
           )}
-          {!locked && <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>{tr("+ SERIE")}</button>}
+          {!locked && !cp && <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 4 }}>{tr("+ SERIE")}</button>}
         </Panel>
-      ))}
+        );
+      })}
       </div>
-
-      {/* Libreria 3D: esplora i muscoli e aggiungi esercizi alla sessione */}
-      <ActionCard icon={PersonStanding} tone="lib" onClick={() => setShowAnatomy(true)}
-        title={tr("Libreria esercizi")} sub={locked ? tr("Esplora il corpo in 3D") : tr("Esplora il corpo in 3D e aggiungi esercizi")} />
-      {showAnatomy && (
-        <AnatomyLibraryModal onClose={() => setShowAnatomy(false)}
-          activeNames={session.exercises.map((e) => e.name)}
-          onAdd={locked ? undefined : addExercises} />
-      )}
 
       {/* Gestione esercizi in sessione: l'elenco si apre in un popup (anche per la sostituzione) */}
       {!locked && (

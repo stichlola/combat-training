@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Minus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check, Camera, Copy } from "lucide-react";
+import { Plus, Minus, Trash2, Info, GripVertical, ArrowLeftRight, TrendingUp, StickyNote, Sparkles, Loader2, Check, Camera, Copy, Repeat } from "lucide-react";
+import { circuitPos, makeCircuit, dissolveCircuit, setCircuitRounds, normalizeCircuits, DEFAULT_CIRCUIT } from "../lib/circuits";
 import { ExerciseInfoModal } from "./ExerciseInfoModal";
 import { ProgressionModal } from "./ProgressionModal";
 import { ExercisePickerModal } from "./ExercisePicker";
@@ -24,6 +25,7 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
   const [setMenu, setSetMenu] = useState(null); // mini menu serie: { ei, si, x, y }
   const [replaceIdx, setReplaceIdx] = useState(null); // esercizio in fase di sostituzione
   const [showPicker, setShowPicker] = useState(false); // elenco esercizi: si apre in popup
+  const [circSel, setCircSel] = useState(null); // creazione circuito: indici degli esercizi scelti (null = non attiva)
   const [progIdx, setProgIdx] = useState(null); // esercizio con modale progressione aperta
   const [suggestOpen, setSuggestOpen] = useState(false); // popup suggerimenti AI
   const [sugPrefs, setSugPrefs] = useState("");   // preferenze opzionali per l'AI
@@ -252,6 +254,20 @@ export function RoutineEditor({ premium, fireToast, initial, onClose, onSave, on
 
   const hasEx = (name) => draft.exercises.some((e) => e.name === name);
 
+  /* circuiti: raggruppa gli esercizi scelti, giri = serie di ciascun esercizio */
+  const createCircuit = () => {
+    upd((d) => ({ ...d, ...makeCircuit(d.exercises, d.circuits || {}, circSel || []) }));
+    setCircSel(null);
+    fireToast({ title: tr("◈ CIRCUITO CREATO"), sub: tr("Imposta giri e recupero di fine giro") });
+  };
+  const toggleCircSel = (ei) => setCircSel((s) => (s.includes(ei) ? s.filter((i) => i !== ei) : [...s, ei]));
+  /* al salvataggio: serie di ogni circuito allineate ai giri (anche se toccate a mano) */
+  const finalize = (d) => {
+    let out = { ...d, name: d.name.toUpperCase() };
+    for (const [id, c] of Object.entries(d.circuits || {})) out = { ...out, ...setCircuitRounds(out.exercises, out.circuits, id, c.rounds) };
+    return { ...out, ...normalizeCircuits(out.exercises, out.circuits || {}) };
+  };
+
   /* Fotocamera AI nelle note PT (tutti i PT: lato server i trainer hanno le
      funzioni premium sbloccate): il PT fotografa il cliente che esegue
      l'esercizio, l'AI scrive la nota tecnica (errori, attenzioni, consigli).
@@ -365,7 +381,8 @@ Se la foto NON mostra una persona che si allena in palestra o è inutilizzabile,
 
   const toggleEx = (name, group) => upd((d) => {
     if (d.exercises.some((e) => e.name === name)) {
-      return { ...d, exercises: d.exercises.filter((e) => e.name !== name) };
+      const n = normalizeCircuits(d.exercises.filter((e) => e.name !== name), d.circuits || {});
+      return { ...d, exercises: n.exercises, circuits: n.circuits };
     }
     return { ...d, exercises: [...d.exercises, buildNewExercise(name, group, d)] };
   });
@@ -749,7 +766,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
         <Btn small onClick={onClose}>{tr("‹ Annulla")}</Btn>
         <span className="hud-title">{initial ? "Modifica modello" : "Nuova scheda"}</span>
         <Btn small primary disabled={!draft.name || !draft.exercises.length}
-          onClick={() => onSave({ ...draft, name: draft.name.toUpperCase() })}>{tr("Salva")}</Btn>
+          onClick={() => onSave(finalize(draft))}>{tr("Salva")}</Btn>
       </div>
       <input className="hud-input cham-s" value={draft.name}
         onChange={(e) => upd((d) => ({ ...d, name: e.target.value }))} placeholder={tr("Nome scheda (es. LEG DAY)")} />
@@ -997,8 +1014,37 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
           const isProgActive = draft.progression?.enabled && ex.progression?.weeks?.[activeSelectedWeek - 1];
           const displaySets = (isProgActive ? ex.progression.weeks[activeSelectedWeek - 1]?.sets : ex.sets) || [];
           const displayNote = isProgActive ? (ex.progression.weeks[activeSelectedWeek - 1]?.note || ex.note || "") : (ex.note || "");
+          const cp = circuitPos(draft.exercises, ei);
+          const circ = cp ? { ...DEFAULT_CIRCUIT, ...(draft.circuits?.[cp.id] || {}) } : null;
+          const picked = circSel?.includes(ei);
           return (
-            <Panel key={tr(ex.name) + "_" + ei} accent style={{ padding: 12 }}>
+            <Panel key={tr(ex.name) + "_" + ei} accent style={{ padding: 12 }}
+              className={`${cp ? `circ-item${cp.first ? " circ-first" : ""}${cp.last ? " circ-last" : ""}` : ""}${picked ? " circ-picked" : ""}`}>
+            {cp?.first && (
+              <div className="circ-head">
+                <span className="circ-badge"><Repeat size={12} /> {tr("CIRCUITO")} · {cp.count} {tr("esercizi")}</span>
+                <span className="circ-ctl">
+                  {tr("Giri")}
+                  <button type="button" className="circ-step tap" onClick={() => upd((d) => ({ ...d, ...setCircuitRounds(d.exercises, d.circuits, cp.id, circ.rounds - 1) }))}><Minus size={12} /></button>
+                  <b>{circ.rounds}</b>
+                  <button type="button" className="circ-step tap" onClick={() => upd((d) => ({ ...d, ...setCircuitRounds(d.exercises, d.circuits, cp.id, circ.rounds + 1) }))}><Plus size={12} /></button>
+                </span>
+                <span className="circ-ctl">
+                  {tr("Recupero fine giro")}
+                  <input type="number" inputMode="numeric" className="hud-input cham-s" value={circ.rest}
+                    onChange={(e) => { const v = e.target.value === "" ? "" : Number(e.target.value); upd((d) => ({ ...d, circuits: { ...d.circuits, [cp.id]: { ...circ, rest: v } } })); }}
+                    style={{ width: 52, textAlign: "center", padding: "4px 2px", fontSize: 12 }} />s
+                </span>
+                <span className="link-btn" style={{ marginLeft: "auto" }}
+                  onClick={() => upd((d) => ({ ...d, ...dissolveCircuit(d.exercises, d.circuits, cp.id) }))}>{tr("Sciogli")}</span>
+              </div>
+            )}
+            {circSel && (
+              <button type="button" className={`circ-check tap${picked ? " on" : ""}`} onClick={() => toggleCircSel(ei)}>
+                <span className="circ-box">{picked && <Check size={12} strokeWidth={3.5} />}</span>
+                {picked ? tr("Nel circuito") : tr("Aggiungi al circuito")}
+              </button>
+            )}
             {/* gruppo sopra il titolo, allineato come in allenamento */}
             <div className="micro t-dim" style={{ marginBottom: 3, marginLeft: 27 }}>{tr(ex.group || "").toUpperCase()}</div>
             <div className="row between g8" style={{ marginBottom: 4, alignItems: "flex-start" }}>
@@ -1060,7 +1106,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                   });
                 }}
                 placeholder={tr("Note esercizio...")} style={{ fontSize: 12, padding: "6px 8px", color: "#8fb2c9", minWidth: 0 }} />
-              <div className="row g4" style={{ alignItems: "center", flexShrink: 0 }}>
+              {!cp && <div className="row g4" style={{ alignItems: "center", flexShrink: 0 }}>
                 <span className="micro t-faint">REC</span>
                 <input type="number" inputMode="numeric" autoComplete="off" data-lpignore="true" data-form-type="other"
                   value={ex.rest ?? 90}
@@ -1071,7 +1117,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
                   className="hud-input cham-s"
                   style={{ width: 50, textAlign: "center", padding: "6px 4px", fontSize: 12 }} />
                 <span className="micro t-faint">s</span>
-              </div>
+              </div>}
             </div>
             {isDumbbell(ex.name) && !exMode(ex) && (
               <div className="micro t-faint" style={{ marginBottom: 8, lineHeight: 1.5 }}>ⓘ {tr("Inserisci il peso del singolo manubrio — il totale è calcolato da sé")}</div>
@@ -1185,7 +1231,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
               </div>
             ))}
             </div>
-            <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>{tr("+ SERIE")}</button>
+            {!cp && <button onClick={() => addSet(ei)} className="dash-btn cham-s tap" style={{ marginTop: 2 }}>{tr("+ SERIE")}</button>}
           </Panel>
         );
       })}
@@ -1199,10 +1245,28 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
 
       {/* L'elenco esercizi si apre in un popup: aggiunta multipla con conferma,
           sostituzione con un tap (il popup si apre da sé cliccando l'icona) */}
-      <button onClick={() => { setReplaceIdx(null); setShowPicker(true); }}
-        className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em" }}>
-        <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}
-      </button>
+      {circSel ? (
+        <div className="circ-bar">
+          <div className="tiny" style={{ flex: 1, minWidth: 0, lineHeight: 1.4 }}>
+            <b>{tr("Nuovo circuito")}</b> · {circSel.length < 2 ? tr("scegli almeno 2 esercizi") : `${circSel.length} ${tr("esercizi selezionati")}`}
+          </div>
+          <Btn small onClick={() => setCircSel(null)}>{tr("Annulla")}</Btn>
+          <Btn small primary disabled={circSel.length < 2} onClick={createCircuit}><Repeat size={12} style={{ display: "inline", verticalAlign: -2, marginRight: 4 }} />{tr("Crea")}</Btn>
+        </div>
+      ) : (
+        <div className="row g8">
+          <button onClick={() => { setReplaceIdx(null); setShowPicker(true); }}
+            className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em", flex: 2 }}>
+            <Plus size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Aggiungi esercizio")}
+          </button>
+          {draft.exercises.length >= 2 && (
+            <button onClick={() => setCircSel([])} title={tr("Raggruppa più esercizi da fare di fila, con giri e recupero a fine giro")}
+              className="dash-btn cham-s tap" style={{ padding: 13, fontWeight: 700, letterSpacing: ".15em", flex: 1 }}>
+              <Repeat size={13} style={{ display: "inline", verticalAlign: -2 }} /> {tr("Circuito")}
+            </button>
+          )}
+        </div>
+      )}
       {/* input fotocamera nascosto per l'analisi AI delle note PT */}
       <input ref={ptCamRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
         onChange={(e) => {
@@ -1223,7 +1287,7 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo extra
 
       {/* completa anche da fondo pagina: niente scroll fino in cima per salvare */}
       <Btn primary full disabled={!draft.name || !draft.exercises.length}
-        onClick={() => onSave({ ...draft, name: draft.name.toUpperCase() })}
+        onClick={() => onSave(finalize(draft))}
         style={{ padding: 14, marginTop: 6 }}>
         {tr("Salva")}
       </Btn>

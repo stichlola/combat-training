@@ -1,13 +1,14 @@
 /* ====================== EXERCISE LIBRARY (pre-loaded) ====================== */
 export const EXERCISE_DB = {
-  Petto: ["Panca Piana Bilanciere", "Panca Piana Manubri", "Panca Inclinata Bilanciere", "Panca Inclinata Manubri", "Panca Declinata", "Chest Press", "Croci Manubri", "Croci ai Cavi", "Pectoral Machine", "Push-Up", "Dip alle Parallele", "Panca Piana Smith Machine", "Panca Inclinata Smith Machine", "Croci Cavi dal Basso", "Croci Cavi dall'Alto", "Croci Manubri su Inclinata", "Dip Machine", "Push-Up Zavorrati", "Chest Press Presa Stretta", "Panca Piana con Fermi", "Chest Fly Macchina", "Floor Press", "Croci ai Cavi su Panca"],
-  Dorso: ["Trazioni", "Trazioni Presa Inversa", "Lat Machine Avanti", "Lat Machine Presa Stretta", "Rematore Bilanciere", "Rematore Manubrio", "Rematore T-Bar", "Pulley Basso", "Pull-Down Braccia Tese", "Hyperextension", "Stacco da Terra", "Pull-Up Assistito", "Lat Machine Presa Inversa", "Rematore Chest Support", "Rematore Smith Machine", "Rematore Pendlay", "Pullover Manubrio", "Pullover ai Cavi", "Rack Pull", "Good Morning", "Trazioni Presa Larga", "Seated Row", "Lat Machine Presa Neutra", "Seal Row", "Meadows Row", "Lat Prayer"],
-  Gambe: ["Squat Bilanciere", "Front Squat", "Leg Press", "Hack Squat", "Affondi Manubri", "Affondi Bulgari", "Stacco Rumeno", "Leg Extension", "Leg Curl Sdraiato", "Leg Curl Seduto", "Hip Thrust", "Calf Raise in Piedi", "Calf Raise Seduto", "Squat Smith Machine", "Goblet Squat", "Stacco Sumo", "Affondi in Camminata", "Leg Curl in Piedi", "Adductor Machine", "Abductor Machine", "Glute Bridge", "Box Step-Up", "Calf Raise alla Pressa", "Squat con Fermi", "Stacco Rumeno con Manubri", "Bulgarian Split Squat Smith Machine", "Belt Squat", "Sissy Squat", "Nordic Hamstring Curl", "Wall Sit"],
-  Spalle: ["Military Press", "Shoulder Press Manubri", "Arnold Press", "Alzate Laterali", "Alzate Laterali ai Cavi", "Alzate Frontali", "Alzate Posteriori", "Face Pull", "Shrug Bilanciere", "Military Press Seduto", "Shoulder Press Machine", "Alzate Laterali Macchina", "Alzate Laterali Seduto", "Reverse Pec Deck", "Tirate al Mento", "Alzate Frontali ai Cavi", "Shrug Manubri", "Rear Deltoid", "Rear Delt Fly", "Lu Raises", "Y-Raise"],
+  Petto: ["Panca Piana Bilanciere", "Panca Piana Manubri", "Panca Inclinata Bilanciere", "Panca Inclinata Manubri", "Panca Declinata", "Chest Press", "Croci Manubri", "Croci ai Cavi", "Pectoral Machine", "Push-Up", "Dip alle Parallele", "Panca Piana Smith Machine", "Panca Inclinata Smith Machine", "Croci Cavi dal Basso", "Croci Cavi dall'Alto", "Croci Manubri su Inclinata", "Dip Machine", "Push-Up Zavorrati", "Chest Press Presa Stretta", "Panca Piana con Fermi", "Chest Fly Macchina", "Floor Press", "Croci ai Cavi su Panca", "Push-Up Inclinati", "Push-Up Declinati", "Push-Up Larghi", "Push-Up Esplosivi", "Archer Push-Up"],
+  Dorso: ["Trazioni", "Trazioni Presa Inversa", "Lat Machine Avanti", "Lat Machine Presa Stretta", "Rematore Bilanciere", "Rematore Manubrio", "Rematore T-Bar", "Pulley Basso", "Pull-Down Braccia Tese", "Hyperextension", "Stacco da Terra", "Pull-Up Assistito", "Lat Machine Presa Inversa", "Rematore Chest Support", "Rematore Smith Machine", "Rematore Pendlay", "Pullover Manubrio", "Pullover ai Cavi", "Rack Pull", "Good Morning", "Trazioni Presa Larga", "Seated Row", "Lat Machine Presa Neutra", "Seal Row", "Meadows Row", "Lat Prayer", "Rematore Inverso a Corpo Libero", "Superman", "Chin-Up"],
+  Gambe: ["Squat Bilanciere", "Front Squat", "Leg Press", "Hack Squat", "Affondi Manubri", "Affondi Bulgari", "Stacco Rumeno", "Leg Extension", "Leg Curl Sdraiato", "Leg Curl Seduto", "Hip Thrust", "Calf Raise in Piedi", "Calf Raise Seduto", "Squat Smith Machine", "Goblet Squat", "Stacco Sumo", "Affondi in Camminata", "Leg Curl in Piedi", "Adductor Machine", "Abductor Machine", "Glute Bridge", "Box Step-Up", "Calf Raise alla Pressa", "Squat con Fermi", "Stacco Rumeno con Manubri", "Bulgarian Split Squat Smith Machine", "Belt Squat", "Sissy Squat", "Nordic Hamstring Curl", "Wall Sit", "Squat a Corpo Libero", "Jump Squat", "Affondi a Corpo Libero", "Affondi Indietro", "Affondi Laterali", "Pistol Squat", "Calf Raise a Corpo Libero", "Glute Bridge Monopodalico", "Donkey Kick", "Fire Hydrant"],
+  Spalle: ["Military Press", "Shoulder Press Manubri", "Arnold Press", "Alzate Laterali", "Alzate Laterali ai Cavi", "Alzate Frontali", "Alzate Posteriori", "Face Pull", "Shrug Bilanciere", "Military Press Seduto", "Shoulder Press Machine", "Alzate Laterali Macchina", "Alzate Laterali Seduto", "Reverse Pec Deck", "Tirate al Mento", "Alzate Frontali ai Cavi", "Shrug Manubri", "Rear Deltoid", "Rear Delt Fly", "Lu Raises", "Y-Raise", "Pike Push-Up", "Handstand Push-Up"],
   Bicipiti: ["Curl Bilanciere", "Curl Manubri Alternato", "Curl Panca Scott", "Hammer Curl", "Curl ai Cavi", "Curl Concentrato", "Spider Curl", "Curl Bilanciere EZ", "Curl su Panca Inclinata", "Curl Macchina", "Curl Presa Inversa", "Zottman Curl", "Hammer Curl ai Cavi", "Bayesian Curl", "Preacher Curl Manubri", "Drag Curl"],
-  Tricipiti: ["Pushdown Tricipiti", "Pushdown Corda", "French Press", "Estensioni Sopra la Testa", "Panca Presa Stretta", "Dip tra Panche", "Kickback Manubrio", "French Press Manubri", "Pushdown Presa Inversa", "Pushdown Braccio Singolo", "Kickback ai Cavi", "Estensione Singola Sopra la Testa", "Dip Machine Tricipiti", "Skull Crusher", "Overhead Cable Extension", "JM Press", "Tate Press"],
-  Core: ["Plank", "Crunch", "Crunch ai Cavi", "Russian Twist", "Leg Raise", "Hanging Leg Raise", "Ab Wheel", "Side Plank", "Crunch Inverso", "Crunch su Panca Declinata", "Sit-Up", "Mountain Climbers", "Dead Bug", "Hollow Hold", "Toes to Bar", "Pallof Press", "Ab Crunch Machine", "V-Up", "Bicycle Crunch", "Hanging Knee Raise", "Cable Woodchopper", "Dragon Flag"],
-  Cardio: ["Corsa", "Camminata Veloce", "Tapis Roulant", "Cyclette", "Ellittica", "Vogatore", "Salto della Corda", "Stepper", "Camminata in Salita", "Sprint", "Nuoto", "Assault Bike", "Spin Bike", "Burpees", "Jumping Jack", "Sacco da Boxe", "Battle Ropes", "SkiErg", "Stairmaster"],
+  Tricipiti: ["Pushdown Tricipiti", "Pushdown Corda", "French Press", "Estensioni Sopra la Testa", "Panca Presa Stretta", "Dip tra Panche", "Kickback Manubrio", "French Press Manubri", "Pushdown Presa Inversa", "Pushdown Braccio Singolo", "Kickback ai Cavi", "Estensione Singola Sopra la Testa", "Dip Machine Tricipiti", "Skull Crusher", "Overhead Cable Extension", "JM Press", "Tate Press", "Push-Up Diamante"],
+  Core: ["Plank", "Crunch", "Crunch ai Cavi", "Russian Twist", "Leg Raise", "Hanging Leg Raise", "Ab Wheel", "Side Plank", "Crunch Inverso", "Crunch su Panca Declinata", "Sit-Up", "Mountain Climbers", "Dead Bug", "Hollow Hold", "Toes to Bar", "Pallof Press", "Ab Crunch Machine", "V-Up", "Bicycle Crunch", "Hanging Knee Raise", "Cable Woodchopper", "Dragon Flag", "Bird Dog", "Flutter Kicks", "Plank Jacks", "Heel Touch", "Scissor Kicks", "L-Sit", "Plank con Tocco Spalle"],
+  Cardio: ["Corsa", "Camminata Veloce", "Tapis Roulant", "Cyclette", "Ellittica", "Vogatore", "Salto della Corda", "Stepper", "Camminata in Salita", "Sprint", "Nuoto", "Assault Bike", "Spin Bike", "Burpees", "Jumping Jack", "Sacco da Boxe", "Battle Ropes", "SkiErg", "Stairmaster", "High Knees", "Butt Kicks", "Squat Thrust", "Bear Crawl", "Shadow Boxing"],
+  Stretching: ["Allungamento Quadricipiti", "Allungamento Femorali", "Allungamento Polpacci", "Allungamento Flessori dell'Anca", "Figura 4 per Glutei", "Posizione del Piccione", "Farfalla per Adduttori", "Allungamento Pettorali al Muro", "Allungamento Dorsali", "Allungamento Spalle a Braccio Incrociato", "Allungamento Tricipiti", "Allungamento Laterale del Collo", "Cobra", "Posizione del Bambino", "Gatto-Mucca", "Torsione Spinale da Sdraiato", "Cane a Testa in Giù", "World's Greatest Stretch"],
 };
 export const GROUPS = Object.keys(EXERCISE_DB);
 export const findGroup = (name) => {
@@ -158,6 +159,58 @@ export const EXERCISE_INFO = {
   "Dragon Flag": "Sdraiato su panca afferrando i bordi dietro la testa. Solleva l'intero corpo rigido come una tavola facendo perno solo sulle scapole, scendi il più lentamente possibile.",
   "SkiErg": "Simulatore di sci di fondo: afferra le maniglie in alto, piega le braccia e spingi verso il basso flettendo anche busto e ginocchia con un movimento ritmico e potente.",
   "Stairmaster": "Camminata continua su gradini motorizzati: mantieni il busto eretto, non appoggiarti pesantemente sui corrimano e spingi a fondo con tutto il piede per coinvolgere glutei e polpacci.",
+  /* corpo libero e stretching */
+  "Push-Up Inclinati": "Mani su una panca o un rialzo, corpo in linea. Scendi con il petto verso il bordo e spingi via: più il rialzo è alto, più l'esercizio è facile. Ottimo per chi inizia.",
+  "Push-Up Declinati": "Piedi su una panca e mani a terra, corpo in linea. Scendi controllato e spingi: l'inclinazione sposta il lavoro sulla parte alta del petto e sulle spalle.",
+  "Push-Up Larghi": "Mani ben oltre la larghezza delle spalle, corpo rigido. Scendi aprendo i gomiti di lato e risali: enfatizza il pettorale rispetto ai tricipiti.",
+  "Push-Up Esplosivi": "Dalla posizione di push-up scendi e spingi con forza così che le mani si stacchino da terra, poi atterra morbido e ripeti. Lavora sulla potenza.",
+  "Archer Push-Up": "Mani molto larghe: scendi verso un lato piegando un braccio mentre l'altro resta quasi teso, poi alterna. Propedeutico al push-up a un braccio.",
+  "Rematore Inverso a Corpo Libero": "Sotto una sbarra bassa o un tavolo robusto, corpo in linea e talloni a terra. Tira il petto verso la sbarra stringendo le scapole e scendi controllato. Più sei orizzontale, più è difficile.",
+  "Superman": "Prono a terra, braccia tese in avanti. Solleva insieme braccia, petto e gambe contraendo glutei e lombari, tieni 1-2 secondi e torna giù lentamente.",
+  "Chin-Up": "Trazione con presa supina alla larghezza delle spalle. Tira il mento sopra la sbarra guidando con i gomiti verso i fianchi e scendi fino a braccia distese: coinvolge molto i bicipiti.",
+  "Squat a Corpo Libero": "Piedi alla larghezza delle spalle, punte leggermente aperte. Scendi portando il bacino indietro e in basso con petto alto e ginocchia in linea con i piedi, poi risali spingendo con tutto il piede.",
+  "Jump Squat": "Esegui uno squat e risali con un salto esplosivo, atterrando morbido sugli avampiedi e tornando subito in squat. Lavora su potenza e cardio.",
+  "Affondi a Corpo Libero": "Fai un passo avanti e scendi finché entrambe le ginocchia sono a circa 90°, busto eretto. Spingi con il tallone davanti per tornare in piedi e alterna le gambe.",
+  "Affondi Indietro": "Fai un passo indietro e scendi con il ginocchio posteriore verso terra, peso sulla gamba anteriore. Più gentile sulle ginocchia dell'affondo in avanti.",
+  "Affondi Laterali": "Passo ampio di lato, scendi piegando quella gamba e portando il bacino indietro mentre l'altra resta tesa. Lavora su adduttori, glutei e quadricipiti.",
+  "Pistol Squat": "Squat su una gamba sola con l'altra tesa in avanti. Scendi controllato fino in basso e risali senza appoggi: richiede forza, equilibrio e mobilità della caviglia.",
+  "Calf Raise a Corpo Libero": "In piedi, meglio con gli avampiedi sul bordo di un gradino. Sali sulle punte il più in alto possibile, tieni un attimo e scendi lentamente sotto il livello del gradino.",
+  "Glute Bridge Monopodalico": "Supino, un piede a terra e l'altra gamba sollevata. Spingi con il tallone e solleva il bacino fino ad allineare spalle, anca e ginocchio, stringi il gluteo e scendi.",
+  "Donkey Kick": "In quadrupedia, solleva una gamba piegata a 90° spingendo il tallone verso il soffitto con il gluteo, senza inarcare la schiena. Torna giù controllato.",
+  "Fire Hydrant": "In quadrupedia, solleva lateralmente una gamba piegata tenendo il bacino fermo, poi torna giù. Rinforza gluteo medio e stabilità dell'anca.",
+  "Pike Push-Up": "Da posizione a V rovesciata con il bacino alto, piega i gomiti portando la testa verso terra tra le mani e spingi su. Esercizio per le spalle e propedeutico all'handstand push-up.",
+  "Handstand Push-Up": "In verticale con i piedi appoggiati al muro, scendi controllato fino a sfiorare il pavimento con la testa e spingi fino a braccia tese. Esercizio avanzato: inizia dal pike push-up.",
+  "Push-Up Diamante": "Mani vicine sotto il petto con pollici e indici che formano un rombo. Scendi tenendo i gomiti vicini al corpo e spingi: sposta il lavoro sui tricipiti.",
+  "Bird Dog": "In quadrupedia, estendi insieme braccio e gamba opposti fino ad allinearli al busto, tieni 2 secondi senza ruotare il bacino e alterna. Ottimo per stabilità e zona lombare.",
+  "Flutter Kicks": "Supino, mani sotto i glutei e zona lombare a terra. Solleva le gambe tese di qualche centimetro e alterna piccoli calci su e giù mantenendo l'addome contratto.",
+  "Plank Jacks": "In plank sulle mani, apri e chiudi le gambe con piccoli salti come un jumping jack, tenendo bacino fermo e addome contratto.",
+  "Heel Touch": "Supino con ginocchia piegate e spalle leggermente sollevate. Fletti il busto di lato per toccare alternatamente i talloni con la mano: lavora sugli obliqui.",
+  "Scissor Kicks": "Supino, gambe tese sollevate da terra. Incrocia le gambe alternandole come forbici, mantenendo la zona lombare appoggiata e l'addome contratto.",
+  "L-Sit": "Mani a terra o sulle parallele, braccia tese: solleva il corpo e tieni le gambe tese in avanti parallele al pavimento, formando una L. Inizia con le ginocchia piegate.",
+  "Plank con Tocco Spalle": "In plank sulle mani con i piedi un po' larghi, tocca la spalla opposta alternando le mani senza far oscillare il bacino.",
+  "High Knees": "Corsa sul posto portando le ginocchia all'altezza del bacino, braccia che accompagnano il movimento e appoggio sugli avampiedi. Mantieni un ritmo veloce.",
+  "Butt Kicks": "Corsa sul posto portando i talloni verso i glutei, busto eretto e ritmo sostenuto. Ottimo anche come riscaldamento.",
+  "Squat Thrust": "Dalla posizione eretta scendi con le mani a terra, porta i piedi indietro in plank con un salto, poi richiamali verso le mani e rialzati. Come un burpee senza il piegamento.",
+  "Bear Crawl": "In quadrupedia con le ginocchia sollevate di pochi centimetri, avanza muovendo insieme mano e piede opposti, schiena piatta e bacino basso.",
+  "Shadow Boxing": "Tira combinazioni di pugni nel vuoto restando in guardia e muovendoti sulle gambe. Mantieni ritmo costante, espira a ogni colpo e non bloccare i gomiti.",
+  "Allungamento Quadricipiti": "In piedi, afferra la caviglia e porta il tallone verso il gluteo tenendo le ginocchia vicine e il bacino in avanti. Tieni 20-30 secondi per lato, appoggiandoti se serve.",
+  "Allungamento Femorali": "Seduto con una gamba tesa e l'altra piegata, piegati in avanti dal bacino verso il piede con la schiena dritta finché senti tirare dietro la coscia. Tieni 20-30 secondi per lato.",
+  "Allungamento Polpacci": "Mani al muro, una gamba indietro tesa con il tallone a terra. Spingi il bacino in avanti finché senti allungare il polpaccio. Tieni 20-30 secondi per lato.",
+  "Allungamento Flessori dell'Anca": "In affondo con il ginocchio posteriore a terra, porta il bacino in avanti stringendo il gluteo della gamba dietro. Senti allungare la parte anteriore dell'anca. 30 secondi per lato.",
+  "Figura 4 per Glutei": "Supino, appoggia la caviglia sul ginocchio opposto e tira verso il petto la coscia della gamba di sotto. Senti allungare il gluteo. Tieni 30 secondi per lato.",
+  "Posizione del Piccione": "Da quadrupedia porta un ginocchio in avanti verso la mano con la tibia di traverso e stendi l'altra gamba indietro, poi abbassa il busto. Allunga gluteo e anca: 30-60 secondi per lato.",
+  "Farfalla per Adduttori": "Seduto, unisci le piante dei piedi e avvicina i talloni al bacino. Schiena dritta, lascia scendere le ginocchia verso terra aiutandoti con i gomiti. Tieni 30 secondi.",
+  "Allungamento Pettorali al Muro": "Avambraccio appoggiato a uno stipite o al muro con il gomito all'altezza della spalla, ruota lentamente il busto dalla parte opposta finché senti aprire il petto. 30 secondi per lato.",
+  "Allungamento Dorsali": "Afferra un appoggio con le braccia tese e porta il bacino indietro abbassando il petto, oppure in piedi allunga un braccio sopra la testa inclinandoti di lato. Tieni 30 secondi.",
+  "Allungamento Spalle a Braccio Incrociato": "Porta un braccio teso davanti al petto e avvicinalo con l'altra mano sopra il gomito, spalle basse. Senti allungare la parte posteriore della spalla. 20-30 secondi per lato.",
+  "Allungamento Tricipiti": "Porta un braccio sopra la testa e piega il gomito facendo scendere la mano dietro la nuca, poi spingi delicatamente il gomito con l'altra mano. 20-30 secondi per lato.",
+  "Allungamento Laterale del Collo": "Seduto o in piedi con le spalle basse, inclina lentamente la testa verso una spalla, aiutandoti con la mano senza tirare forte. Tieni 20 secondi per lato.",
+  "Cobra": "Prono con le mani sotto le spalle, spingi sollevando il petto e lasciando il bacino a terra, spalle lontane dalle orecchie. Allunga addome e zona lombare. Tieni 20-30 secondi.",
+  "Posizione del Bambino": "In ginocchio, siediti sui talloni e porta il busto in avanti con le braccia tese sul pavimento e la fronte a terra. Respira profondamente rilassando la schiena. 30-60 secondi.",
+  "Gatto-Mucca": "In quadrupedia, alterna lentamente schiena arrotondata verso l'alto (gatto) e schiena inarcata con lo sguardo avanti (mucca), seguendo il respiro. Mobilizza tutta la colonna.",
+  "Torsione Spinale da Sdraiato": "Supino con le braccia aperte, porta le ginocchia piegate da un lato tenendo le spalle a terra e lo sguardo dalla parte opposta. 30 secondi per lato.",
+  "Cane a Testa in Giù": "Da quadrupedia solleva il bacino verso l'alto formando una V rovesciata, braccia e schiena in linea, talloni verso terra. Allunga polpacci, femorali e spalle. Tieni 30 secondi.",
+  "World's Greatest Stretch": "Da affondo profondo appoggia a terra la mano interna al piede davanti, porta il gomito verso la caviglia e poi ruota il busto aprendo il braccio verso il soffitto. Alterna i lati: mobilità completa.",
 };
 export const INFO_FALLBACK = {
   Petto: "Esercizio per il pettorale: scapole addotte, movimento controllato in discesa e spinta senza bloccare i gomiti. Concentrati sul sentire lavorare il petto, non solo braccia e spalle.",
@@ -168,6 +221,7 @@ export const INFO_FALLBACK = {
   Tricipiti: "Esercizio di estensione per i tricipiti: gomiti bloccati e vicini al corpo, estendi completamente contraendo e risali frenando il carico.",
   Core: "Esercizio per il core: bacino stabile, zona lombare protetta, movimento lento guidato dall'addome con espirazione nella fase di contrazione.",
   Cardio: "Attività aerobica: mantieni un ritmo sostenibile e costante, monitora respiro o frequenza cardiaca, e incrementa durata o intensità in modo graduale settimana dopo settimana.",
+  Stretching: "Allungamento statico: entra nella posizione lentamente fino a sentire tensione, non dolore. Respira profondamente e tieni 20-30 secondi senza molleggiare, poi cambia lato.",
   Altro: "Esegui il movimento in modo lento e controllato, con postura corretta e senza compensi. Se non conosci la tecnica, chiedi una dimostrazione al trainer della tua palestra.",
 };
 
@@ -368,8 +422,11 @@ export const EXERCISE_MEDIA = {
   "Stairmaster": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Stairmaster/0.jpg",
 };
 
-const HOLD_RE = /plank|hollow hold|wall sit/i;
-export const isHold = (name) => HOLD_RE.test(name || "");
+const HOLD_RE = /plank|hollow hold|wall sit|l-sit/i;
+const NOT_HOLD_RE = /plank jacks|plank con tocco/i; // varianti dinamiche: a ripetizioni
+/* tenute a tempo (secondi invece di kg × reps): plank & co. e tutti gli allungamenti */
+export const isHold = (name) => !NOT_HOLD_RE.test(name || "") &&
+  (HOLD_RE.test(name || "") || EXERCISE_DB.Stretching.includes(name));
 export const exMode = (ex) => ex.mode || (isHold(ex.name) ? "hold" : undefined);
 export const holdSets = (n = 3, sec = 60) => Array.from({ length: n }, () => ({ sec, elapsed: 0, done: false }));
 /* Esercizi con manubri: il peso inserito e' quello del SINGOLO manubrio */
